@@ -23,31 +23,40 @@ function assertSql() {
   if (!sql) throw new Error('Database is not configured: set DATABASE_URL');
 }
 
+// Lazy init: triggered by the first DB call, runs once per cold start.
+// If it ever fails, the promise is reset so a later request can retry.
+let initPromise = null;
+export function init() {
+  if (!sql) return Promise.resolve();
+  if (!initPromise) {
+    initPromise = (async () => {
+      await ensureSchema();
+      await seedIfEmpty();
+      await seedAdmin();
+    })().catch((e) => { initPromise = null; throw e; });
+  }
+  return initPromise;
+}
+
 // Helpers compatible with the rest of the code base.
 // `sql.query(text, params)` returns an array of row objects directly.
 export async function q(text, params = []) {
   assertSql();
+  await init();
   const rows = await sql.query(text, params);
   return { rows };
 }
 export async function one(text, params = []) {
   assertSql();
+  await init();
   const rows = await sql.query(text, params);
   return rows[0] || null;
 }
 export async function many(text, params = []) {
   assertSql();
+  await init();
   const rows = await sql.query(text, params);
   return rows;
-}
-
-let initialized = false;
-export async function init() {
-  if (initialized || !sql) return;
-  initialized = true;
-  await ensureSchema();
-  await seedIfEmpty();
-  await seedAdmin();
 }
 
 export async function ensureSchema() {

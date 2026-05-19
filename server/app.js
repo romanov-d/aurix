@@ -2,17 +2,9 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { init } from './db.js';
 import { loadUser, requireAuth } from './middleware/auth.js';
 import carsRouter from './routes/cars.js';
 import authRouter from './routes/auth.js';
-
-// Lazy init: runs once per cold start
-let initPromise;
-function ensureInit() {
-  if (!initPromise) initPromise = init().catch((e) => { initPromise = null; throw e; });
-  return initPromise;
-}
 
 export const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -24,14 +16,11 @@ app.use(cors({
     : ['http://localhost:5173', 'http://localhost:5174'],
 }));
 
-// Run DB init before every request (idempotent — guarded by `initialized` flag in db.js)
-app.use(async (_req, _res, next) => {
-  try { await ensureInit(); next(); } catch (e) { next(e); }
-});
+// Health must answer without touching the DB so we can verify the function
+// is alive even when Postgres is unreachable.
+app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 
 app.use(loadUser);
-
-app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toISOString() }));
 app.use('/api/cars', carsRouter);
 app.use('/api/auth', authRouter);
 app.get('/api/me', requireAuth, (req, res) => res.json({ user: req.user }));
