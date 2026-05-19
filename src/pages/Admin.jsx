@@ -159,11 +159,15 @@ export default function Admin() {
                         </span>
                       </td>
                       <td>
-                        {c.status === 'published' ? (
-                          <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'hidden')}>Скрыть</button>
-                        ) : (
-                          <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Опубликовать</button>
+                        {c.status === 'published' && <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'hidden')}>Скрыть</button>}
+                        {c.status === 'hidden' && <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Опубликовать</button>}
+                        {c.status === 'pending' && (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Одобрить</button>
+                            <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'rejected')}>Отклонить</button>
+                          </div>
                         )}
+                        {c.status === 'rejected' && <span className="muted" style={{ fontSize: 13 }}>Отклонено</span>}
                       </td>
                     </tr>
                   ))}

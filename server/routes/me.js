@@ -57,4 +57,53 @@ router.delete('/favorites/:carId', async (req, res, next) => {
   }
 });
 
+// Partner flow: Submit car for moderation
+import { z } from 'zod';
+const carSchema = z.object({
+  name: z.string().min(2),
+  brand: z.string().min(2),
+  year: z.number().int().min(1900).max(2100),
+  body: z.string().optional(),
+  fuel: z.string().optional(),
+  engine: z.string().optional(),
+  power_hp: z.number().int().optional(),
+  drive: z.string().optional(),
+  price_per_day: z.number().int().min(1000),
+  image_url: z.string().url(),
+  description: z.string().optional()
+});
+
+router.post('/cars', async (req, res, next) => {
+  try {
+    const body = carSchema.parse(req.body);
+    const id = 'C-' + Date.now(); // Generate simple ID
+    
+    const { rows } = await q(
+      `INSERT INTO cars (
+        id, name, brand, year, body, fuel, engine, power_hp, drive, 
+        price_per_day, image_url, description, status, owner_id
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, 'pending', $13)
+      RETURNING *`,
+      [
+        id, body.name, body.brand, body.year, body.body || null, 
+        body.fuel || null, body.engine || null, body.power_hp || null, 
+        body.drive || null, body.price_per_day, body.image_url, 
+        body.description || null, req.user.id
+      ]
+    );
+
+    // If user is 'user', upgrade them to 'partner'
+    if (req.user.role === 'user') {
+      await q(`UPDATE users SET role = 'partner' WHERE id = $1`, [req.user.id]);
+    }
+
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Bad input', detail: e.errors });
+    }
+    next(e);
+  }
+});
+
 export default router;
