@@ -1,6 +1,6 @@
-import serverless from 'serverless-http';
 import app from '../server/app.js';
 
-export const config = { api: { bodyParser: false } };
-
-export default serverless(app);
+// Vercel serverless functions expect a standard Node.js (req, res) handler.
+// Express app IS a (req, res) handler — export it directly.
+// (serverless-http is for AWS Lambda and does NOT work with Vercel)
+export default app;
