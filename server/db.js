@@ -168,8 +168,8 @@ export async function seedIfEmpty() {
 }
 
 export async function seedAdmin() {
-  const exists = await one('SELECT id FROM users WHERE email = $1', ['admin@aurix.local']);
-  if (exists) return;
+  const result = await pool.query('SELECT id FROM users WHERE email = $1', ['admin@aurix.local']);
+  if (result.rows.length > 0) return;
   const hash = bcrypt.hashSync('admin123', 10);
   await pool.query(
     'INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4)',
