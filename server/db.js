@@ -33,9 +33,11 @@ export function init() {
   if (!pool) return Promise.resolve();
   if (!initPromise) {
     initPromise = (async () => {
-      console.log('[db] init: starting schema + seed …');
+      console.log('[db] init: starting schema...');
       await ensureSchema();
+      console.log('[db] init: schema done, starting seedIfEmpty...');
       await seedIfEmpty();
+      console.log('[db] init: seedIfEmpty done, starting seedAdmin...');
       await seedAdmin();
       console.log('[db] init: done');
     })().catch((e) => {
@@ -131,8 +133,11 @@ const SCHEMA_STATEMENTS = [
 ];
 
 export async function ensureSchema() {
-  for (const s of SCHEMA_STATEMENTS) {
-    await pool.query(s);
+  console.log('[db] ensureSchema: running', SCHEMA_STATEMENTS.length, 'statements');
+  for (let i = 0; i < SCHEMA_STATEMENTS.length; i++) {
+    console.log(`[db] ensureSchema: running stmt ${i}...`);
+    await pool.query(SCHEMA_STATEMENTS[i]);
+    console.log(`[db] ensureSchema: stmt ${i} done`);
   }
 }
 
