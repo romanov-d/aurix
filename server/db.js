@@ -1,4 +1,4 @@
-import pg from 'pg';
+import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -7,38 +7,43 @@ import { FLEET } from '../src/data/fleet.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL;
+
 if (!connectionString) {
-  console.warn('[db] DATABASE_URL is not set — set it in .env.local for local dev or in Vercel env vars');
+  console.warn('[db] DATABASE_URL is not set');
 }
 
-// Single global pool, reused across serverless invocations
-export const pool = new pg.Pool({
-  connectionString,
-  ssl: connectionString && /sslmode=require|neon\.tech/.test(connectionString)
-    ? { rejectUnauthorized: false }
-    : undefined,
-  max: 5,
-});
+// HTTP-based Neon client — works perfectly in serverless cold starts, no connections to manage
+const sql = connectionString ? neon(connectionString) : null;
 
+function assertSql() {
+  if (!sql) throw new Error('Database is not configured: set DATABASE_URL');
+}
+
+// Helpers compatible with the rest of the code base.
+// `sql.query(text, params)` returns an array of row objects directly.
 export async function q(text, params = []) {
-  const res = await pool.query(text, params);
-  return res;
+  assertSql();
+  const rows = await sql.query(text, params);
+  return { rows };
 }
-
 export async function one(text, params = []) {
-  const { rows } = await pool.query(text, params);
+  assertSql();
+  const rows = await sql.query(text, params);
   return rows[0] || null;
 }
-
 export async function many(text, params = []) {
-  const { rows } = await pool.query(text, params);
+  assertSql();
+  const rows = await sql.query(text, params);
   return rows;
 }
 
 let initialized = false;
 export async function init() {
-  if (initialized) return;
+  if (initialized || !sql) return;
   initialized = true;
   await ensureSchema();
   await seedIfEmpty();
@@ -46,15 +51,22 @@ export async function init() {
 }
 
 export async function ensureSchema() {
-  const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
-  await pool.query(sql);
+  const sqlText = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
+  // Neon HTTP client doesn't support multi-statement queries — split & run each.
+  const statements = sqlText
+    .split(/;\s*\n/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0 && !s.startsWith('--'));
+  for (const s of statements) {
+    await sql.query(s);
+  }
 }
 
 export async function seedIfEmpty() {
-  const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM cars');
-  if (rows[0].c > 0) return;
+  const rows = await sql.query('SELECT COUNT(*)::int AS c FROM cars');
+  if (rows[0]?.c > 0) return;
   for (const i of FLEET) {
-    await pool.query(
+    await sql.query(
       `INSERT INTO cars (id, name, brand, year, body, fuel, engine, power_hp, drive, price_per_day, badge, image_url, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published')`,
       [
@@ -80,7 +92,7 @@ export async function seedAdmin() {
   const exists = await one('SELECT id FROM users WHERE email = $1', ['admin@aurix.local']);
   if (exists) return;
   const hash = bcrypt.hashSync('admin123', 10);
-  await pool.query(
+  await sql.query(
     'INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4)',
     ['admin@aurix.local', 'Администратор', hash, 'admin']
   );

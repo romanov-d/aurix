@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { one, pool } from '../db.js';
+import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
 
 const router = Router();
@@ -35,7 +35,7 @@ router.post('/register', async (req, res, next) => {
     if (existing) return res.status(409).json({ error: 'Email уже зарегистрирован' });
 
     const hash = bcrypt.hashSync(body.password, 10);
-    const { rows } = await pool.query(
+    const { rows } = await q(
       `INSERT INTO users (email, name, phone, password_hash, role)
        VALUES ($1,$2,$3,$4,'user') RETURNING *`,
       [body.email.toLowerCase(), body.name, body.phone || null, hash]
