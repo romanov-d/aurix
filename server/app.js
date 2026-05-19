@@ -6,6 +6,7 @@ import carsRouter from './routes/cars.js';
 import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
 import bookingsRouter from './routes/bookings.js';
+import adminRouter from './routes/admin.js';
 
 export const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -26,6 +27,7 @@ app.use('/api/cars', carsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
 app.use('/api/bookings', bookingsRouter);
+app.use('/api/admin', adminRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('[api error]', err);

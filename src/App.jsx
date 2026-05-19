@@ -15,6 +15,7 @@ import RentOut from './pages/RentOut.jsx';
 import Tariffs from './pages/Tariffs.jsx';
 import Login from './pages/Login.jsx';
 import Register from './pages/Register.jsx';
+import Admin from './pages/Admin.jsx';
 import RequireAuth from './components/RequireAuth.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 
@@ -52,6 +53,7 @@ export default function App() {
         <Route path="/terms" element={<Terms />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+        <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
         <Route path="/rent-out" element={<RentOut />} />
         <Route path="/tariffs" element={<Tariffs />} />
         <Route path="/login" element={<Login />} />

@@ -65,12 +65,20 @@ export default function Header() {
             <span>RUB</span>
           </div>
           {user ? (
-            <Link to="/account" className="account-btn hide-sm" title={user.name}>
-              {user.avatar_url
-                ? <img src={user.avatar_url} alt="" className="account-btn-ava" />
-                : <i className="ph-fill ph-user-circle" />}
-              <span>{user.name.split(' ')[0] || 'Кабинет'}</span>
-            </Link>
+            <>
+              {user.role === 'admin' && (
+                <Link to="/admin" className="account-btn hide-sm" style={{ marginRight: 8 }}>
+                  <i className="ph-fill ph-shield-check" />
+                  <span>Админка</span>
+                </Link>
+              )}
+              <Link to="/account" className="account-btn hide-sm" title={user.name}>
+                {user.avatar_url
+                  ? <img src={user.avatar_url} alt="" className="account-btn-ava" />
+                  : <i className="ph-fill ph-user-circle" />}
+                <span>{user.name.split(' ')[0] || 'Кабинет'}</span>
+              </Link>
+            </>
           ) : (
             <Link to="/login" className="account-btn hide-sm">
               <i className="ph-fill ph-user-circle" />
