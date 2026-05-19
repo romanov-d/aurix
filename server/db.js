@@ -11,8 +11,16 @@ if (!connectionString) {
   console.warn('[db] DATABASE_URL is not set');
 }
 
-// HTTP-based Neon client — works perfectly in serverless cold starts, no connections to manage
-const sql = connectionString ? neon(connectionString) : null;
+// Log host to verify if it's neon.tech
+if (connectionString) {
+  try {
+    const u = new URL(connectionString);
+    console.log('[db] host:', u.hostname);
+  } catch(e){}
+}
+
+// HTTP-based Neon client with 5s timeout to prevent 30s hang
+const sql = connectionString ? neon(connectionString, { fetchOptions: { signal: AbortSignal.timeout(5000) } }) : null;
 
 function assertSql() {
   if (!sql) throw new Error('Database is not configured: set DATABASE_URL');
