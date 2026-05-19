@@ -1,0 +1,128 @@
+import { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import Logo from './Logo.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
+
+const LINKS = [
+  ['/catalog', 'Категории'],
+  ['/long-term', 'Бренды'],
+  ['/contacts', 'Контакты'],
+];
+
+const SERVICES = [
+  ['#', 'Краткосрочная аренда'],
+  ['/long-term', 'Долгосрочная аренда'],
+  ['#', 'Аренда с водителем'],
+  ['#', 'Трансфер · аэропорт'],
+  ['#', 'Свадьбы и кортежи'],
+  ['#', 'Корпоративные тарифы'],
+];
+
+export default function Header() {
+  const location = useLocation();
+  const [open, setOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+  const { user, logout } = useAuth();
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  useEffect(() => { setOpen(false); }, [location.pathname]);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    onScroll();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const isActive = (path) => location.pathname === path;
+  const overlay = location.pathname === '/';
+
+  const renderLink = ([href, text]) => {
+    if (href.startsWith('/')) {
+      return (
+        <Link key={href + text} to={href} className={isActive(href) ? 'active' : ''}>{text}</Link>
+      );
+    }
+    return <a key={href + text} href={href}>{text}</a>;
+  };
+
+  return (
+    <>
+      <header className={`header${overlay ? ' header-overlay' : ''}${scrolled ? ' header-scrolled' : ''}`}><div className="container nav">
+        <Logo />
+        <nav className="nav-links">
+          {LINKS.map(renderLink)}
+        </nav>
+        <div className="nav-right">
+          <div className="lang-pill hide-sm">
+            <span className="lang-flag">🇷🇺</span>
+            <span>RUS</span>
+            <span className="lang-sep" />
+            <span>RUB</span>
+          </div>
+          {user ? (
+            <Link to="/account" className="account-btn hide-sm" title={user.name}>
+              {user.avatar_url
+                ? <img src={user.avatar_url} alt="" className="account-btn-ava" />
+                : <i className="ph-fill ph-user-circle" />}
+              <span>{user.name.split(' ')[0] || 'Кабинет'}</span>
+            </Link>
+          ) : (
+            <Link to="/login" className="account-btn hide-sm">
+              <i className="ph-fill ph-user-circle" />
+              <span>Войти</span>
+            </Link>
+          )}
+          <Link to="/contacts" className="contact-btn hide-sm">
+            <i className="ph-fill ph-phone" />
+            <span>Связаться</span>
+          </Link>
+          <button className="burger" id="burger" aria-label="Меню" onClick={() => setOpen(true)}>
+            <span></span><span></span><span></span>
+          </button>
+        </div>
+      </div></header>
+      <div className={`mobile-menu${open ? ' open' : ''}`} id="mobile-menu" aria-hidden={!open}>
+        <div className="mm-head">
+          <Logo />
+          <button className="mm-close" id="mm-close" aria-label="Закрыть" onClick={() => setOpen(false)}>×</button>
+        </div>
+        <div className="mm-body">
+          <nav className="mm-nav">
+            {LINKS.map(([href, text]) => (
+              href.startsWith('/')
+                ? <Link key={href} to={href} className={isActive(href) ? 'active' : ''} onClick={() => setOpen(false)}>{text}</Link>
+                : <a key={href} href={href} onClick={() => setOpen(false)}>{text}</a>
+            ))}
+          </nav>
+          <div className="mm-section">
+            <div className="mm-section-title">Услуги</div>
+            {SERVICES.map(([href, text], i) => (
+              href.startsWith('/')
+                ? <Link key={i} to={href} className="mm-sub" onClick={() => setOpen(false)}>{text}</Link>
+                : <a key={i} href={href} className="mm-sub" onClick={() => setOpen(false)}>{text}</a>
+            ))}
+          </div>
+          <div className="mm-section">
+            <div className="mm-section-title">Связь</div>
+            <a href="tel:+79991234567" className="mm-sub mm-icon"><i className="ph-fill ph-phone" /> +7 999 123 45 67</a>
+            <a href="https://wa.me/79991234567" className="mm-sub mm-icon"><i className="ph-fill ph-whatsapp-logo" /> WhatsApp</a>
+            <a href="https://t.me/aurixmotors" className="mm-sub mm-icon"><i className="ph-fill ph-telegram-logo" /> Telegram</a>
+            <a href="mailto:info@aurixmotors.com" className="mm-sub mm-icon"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a>
+          </div>
+          <div className="mm-foot">
+            <Link to="/account" className="btn" style={{ width: '100%', marginBottom: 10 }} onClick={() => setOpen(false)}><i className="ph-fill ph-user-circle" /> &nbsp;Личный кабинет</Link>
+            <Link to="/catalog" className="btn btn-filled" style={{ width: '100%' }} onClick={() => setOpen(false)}>Забронировать авто</Link>
+            <div className="mm-lang">
+              <span className="active">RU</span><span>EN</span><span>AR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
