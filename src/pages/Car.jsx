@@ -4,12 +4,14 @@ import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
+import { useFavorites } from '../api/useFavorites.js';
 
 export default function Car() {
   const { id } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
   const { items: FLEET, loading } = useCars({ limit: 100 });
+  const { favorites, toggleFavorite } = useFavorites();
   
   // Date state
   const [fromDt, setFromDt] = useState('');
@@ -17,6 +19,13 @@ export default function Car() {
   const [city, setCity] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewText, setReviewText] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewError, setReviewError] = useState('');
+  const [reviewing, setReviewing] = useState(false);
 
   // Default dates for the form
   useEffect(() => {
@@ -36,11 +45,17 @@ export default function Car() {
     setToDt(toLocalISO(d2));
   }, []);
 
+  useEffect(() => {
+    if (!id) return;
+    api(`/cars/${id}/reviews`).then(setReviews).catch(console.error);
+  }, [id]);
+
   if (loading && FLEET.length === 0) return <div className="container" style={{ padding: '120px 0', color: '#9a9a9a' }}>Загрузка…</div>;
   
   const car = FLEET.find(c => c.id === id) || FLEET[0];
   if (!car) return null;
   const similar = FLEET.filter(c => c.id !== car.id).slice(0, 4);
+  const isFav = favorites.has(car.id);
   
   // Calc days
   const d1 = new Date(fromDt);
@@ -81,6 +96,26 @@ export default function Car() {
     }
   };
 
+  const handleReview = async (e) => {
+    e.preventDefault();
+    if (!user) return nav('/login');
+    setReviewError('');
+    setReviewing(true);
+    try {
+      const res = await api(`/cars/${car.id}/reviews`, {
+        method: 'POST',
+        body: { rating: reviewRating, text: reviewText }
+      });
+      // Prepend to list
+      setReviews([{ ...res, user_name: user.name, user_avatar: user.avatar_url }, ...reviews]);
+      setReviewText('');
+    } catch (e) {
+      setReviewError(e.message || 'Ошибка');
+    } finally {
+      setReviewing(false);
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -90,7 +125,23 @@ export default function Car() {
             <Link to="/catalog">Автопарк</Link><span className="sep">/</span>
             <span>{car.name}</span>
           </div>
-          <h1>{car.name}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1>{car.name}</h1>
+            <button 
+              onClick={(e) => { e.preventDefault(); if(!user) nav('/login'); else toggleFavorite(car.id); }}
+              className={`btn btn-icon ${isFav ? 'active' : ''}`}
+              style={{
+                background: isFav ? 'var(--gold)' : 'rgba(255,255,255,0.05)',
+                color: isFav ? '#000' : '#fff',
+                border: 'none', borderRadius: '50%', width: 48, height: 48,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                cursor: 'pointer', transition: '0.2s',
+                marginLeft: 20
+              }}
+            >
+              <i className={isFav ? "ph-fill ph-heart" : "ph ph-heart"} style={{ fontSize: 24 }} />
+            </button>
+          </div>
           <div className="muted" style={{ marginTop: 10, fontSize: 13, letterSpacing: '.18em', textTransform: 'uppercase' }}>{car.year} · {car.body} · {car.power_hp || car.power} л.с.</div>
         </div>
       </div>
@@ -118,6 +169,50 @@ export default function Car() {
             <li>Полный бак при выдаче</li>
             <li>Поддержка 24/7 и эвакуация</li>
           </ul>
+
+          <h3 className="serif" style={{ color: 'var(--gold)', fontSize: 22, marginTop: 40, marginBottom: 20 }}>Отзывы ({reviews.length})</h3>
+          
+          {user && (
+            <form onSubmit={handleReview} style={{ background: '#111', padding: 20, borderRadius: 12, marginBottom: 30 }}>
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 13, color: '#888', marginBottom: 8 }}>Оценка</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {[1,2,3,4,5].map(r => (
+                    <i key={r} onClick={() => setReviewRating(r)} className={r <= reviewRating ? "ph-fill ph-star" : "ph ph-star"} style={{ color: 'var(--gold)', fontSize: 24, cursor: 'pointer' }} />
+                  ))}
+                </div>
+              </div>
+              <div className="field">
+                <textarea 
+                  value={reviewText} onChange={e => setReviewText(e.target.value)} 
+                  placeholder="Ваш отзыв..." rows={3}
+                  style={{ width: '100%', background: '#000', border: '1px solid #333', color: '#fff', padding: 12, borderRadius: 8, fontFamily: 'inherit' }}
+                />
+              </div>
+              {reviewError && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 10 }}>{reviewError}</div>}
+              <button type="submit" disabled={reviewing} className="btn btn-sm" style={{ marginTop: 14 }}>{reviewing ? 'Отправка...' : 'Оставить отзыв'}</button>
+            </form>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {reviews.length === 0 ? (
+              <p className="muted" style={{ fontSize: 14 }}>Пока нет отзывов. Станьте первым!</p>
+            ) : reviews.map(r => (
+              <div key={r.id} style={{ background: '#111', padding: 20, borderRadius: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                  <img src={r.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user_name || 'A')}&background=random&color=fff`} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 15 }}>{r.user_name}</div>
+                    <div style={{ display: 'flex', gap: 2, color: 'var(--gold)', marginTop: 4 }}>
+                       {[1,2,3,4,5].map(star => <i key={star} className={star <= r.rating ? "ph-fill ph-star" : "ph ph-star"} style={{ fontSize: 12 }} />)}
+                    </div>
+                  </div>
+                </div>
+                {r.text && <p style={{ fontSize: 14, color: '#bdbdbd', lineHeight: 1.6 }}>{r.text}</p>}
+              </div>
+            ))}
+          </div>
+
         </div>
 
         <aside className="detail-side">

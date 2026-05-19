@@ -2,18 +2,30 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
+import CarCard from '../components/CarCard.jsx';
+import { useCars } from '../api/useCars.js';
 
 export default function Account() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
+  const [favoriteIds, setFavoriteIds] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Load all cars to display in favorites
+  const { items: allCars } = useCars({ limit: 100 });
 
   useEffect(() => {
     if (!user) return;
-    api('/me/bookings')
-      .then(data => setBookings(data))
+    Promise.all([
+      api('/me/bookings'),
+      api('/me/favorites')
+    ])
+      .then(([bData, fData]) => {
+        setBookings(bData);
+        setFavoriteIds(fData);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [user]);
@@ -59,6 +71,7 @@ export default function Account() {
             <a href="#overview" onClick={(e) => { e.preventDefault(); setActiveTab('overview'); }} className={activeTab === 'overview' ? 'active' : ''}><i className="ph-fill ph-squares-four" /> Обзор</a>
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования {activeBookings.length > 0 && <span className="badge">{activeBookings.length}</span>}</a>
             <a href="#history" onClick={(e) => { e.preventDefault(); setActiveTab('history'); }} className={activeTab === 'history' ? 'active' : ''}><i className="ph-fill ph-clock-counter-clockwise" /> История</a>
+            <a href="#favorites" onClick={(e) => { e.preventDefault(); setActiveTab('favorites'); }} className={activeTab === 'favorites' ? 'active' : ''}><i className="ph-fill ph-heart" /> Избранное {favoriteIds.length > 0 && <span className="badge">{favoriteIds.length}</span>}</a>
             <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab('documents'); }} className={activeTab === 'documents' ? 'active' : ''}><i className="ph-fill ph-file-text" /> Документы</a>
             <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
@@ -158,6 +171,23 @@ export default function Account() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+
+              {activeTab === 'favorites' && (
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>Избранное</h3>
+                  </div>
+                  {favoriteIds.length > 0 ? (
+                    <div className="fleet-grid" data-limit="4" style={{ padding: 20 }}>
+                      {allCars.filter(c => favoriteIds.includes(c.id)).map(c => <CarCard key={c.id} car={c} />)}
+                    </div>
+                  ) : (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#888' }}>
+                      Вы еще не добавили ни одного автомобиля в избранное
+                    </div>
+                  )}
                 </div>
               )}
 

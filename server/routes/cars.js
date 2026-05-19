@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { many, one } from '../db.js';
+import { many, one, q } from '../db.js';
+import { requireAuth } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -65,3 +66,57 @@ router.get('/:id', async (req, res, next) => {
 });
 
 export default router;
+
+// Reviews
+router.get('/:id/reviews', async (req, res, next) => {
+  try {
+    const items = await many(
+      `SELECT r.*, u.name as user_name, u.avatar_url as user_avatar
+       FROM reviews r
+       JOIN users u ON r.user_id = u.id
+       WHERE r.car_id = $1
+       ORDER BY r.created_at DESC`,
+      [req.params.id]
+    );
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const reviewSchema = z.object({
+  rating: z.number().int().min(1).max(5),
+  text: z.string().optional()
+});
+
+router.post('/:id/reviews', requireAuth, async (req, res, next) => {
+  try {
+    const body = reviewSchema.parse(req.body);
+
+    // Check if user has a completed booking for this car
+    const hasCompletedBooking = await one(
+      `SELECT id FROM bookings
+       WHERE user_id = $1 AND car_id = $2 AND status = 'completed'
+       LIMIT 1`,
+      [req.user.id, req.params.id]
+    );
+
+    if (!hasCompletedBooking && req.user.role !== 'admin') {
+      return res.status(403).json({ error: 'Отзыв могут оставить только пользователи, которые успешно арендовали этот автомобиль.' });
+    }
+
+    const { rows } = await q(
+      `INSERT INTO reviews (car_id, user_id, rating, text)
+       VALUES ($1, $2, $3, $4)
+       RETURNING *`,
+      [req.params.id, req.user.id, body.rating, body.text || null]
+    );
+
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Bad input', detail: e.errors });
+    }
+    next(e);
+  }
+});
