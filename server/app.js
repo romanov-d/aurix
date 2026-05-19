@@ -4,6 +4,8 @@ import cookieParser from 'cookie-parser';
 import { loadUser, requireAuth } from './middleware/auth.js';
 import carsRouter from './routes/cars.js';
 import authRouter from './routes/auth.js';
+import meRouter from './routes/me.js';
+import bookingsRouter from './routes/bookings.js';
 
 export const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -22,7 +24,8 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, time: new Date().toIS
 app.use(loadUser);
 app.use('/api/cars', carsRouter);
 app.use('/api/auth', authRouter);
-app.get('/api/me', requireAuth, (req, res) => res.json({ user: req.user }));
+app.use('/api/me', meRouter);
+app.use('/api/bookings', bookingsRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('[api error]', err);

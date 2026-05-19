@@ -1,19 +1,40 @@
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { api } from '../api/client.js';
 
 export default function Account() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
+  const [activeTab, setActiveTab] = useState('overview');
+  const [bookings, setBookings] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) return;
+    api('/me/bookings')
+      .then(data => setBookings(data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [user]);
+
   const firstName = user?.name?.split(' ')[0] || 'Гость';
   const memberSince = user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear();
   const tierLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'partner' ? 'Партнёр' : `Member · с ${memberSince}`;
-  const avatar = user?.avatar_url || 'https://randomuser.me/api/portraits/men/41.jpg';
+  const avatar = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'A')}&background=random&color=fff&size=128`;
 
   const onLogout = async (e) => {
     e.preventDefault();
     await logout();
     nav('/', { replace: true });
   };
+
+  const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'pending');
+  const pastBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+  const totalSpent = pastBookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + b.total, 0);
+  
+  const formatDate = (iso) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const formatShortDate = (iso) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
     <>
@@ -35,15 +56,11 @@ export default function Account() {
             </div>
           </div>
           <nav className="acc-nav">
-            <a href="#" className="active"><i className="ph-fill ph-squares-four" /> Обзор</a>
-            <a href="#"><i className="ph-fill ph-calendar-check" /> Бронирования <span className="badge">2</span></a>
-            <a href="#"><i className="ph-fill ph-clock-counter-clockwise" /> История</a>
-            <a href="#"><i className="ph-fill ph-file-text" /> Документы</a>
-            <a href="#"><i className="ph-fill ph-credit-card" /> Платежи</a>
-            <a href="#"><i className="ph-fill ph-star" /> Клубная карта</a>
-            <a href="#"><i className="ph-fill ph-heart" /> Избранное</a>
-            <a href="#"><i className="ph-fill ph-user" /> Профиль</a>
-            <a href="#"><i className="ph-fill ph-bell" /> Уведомления</a>
+            <a href="#overview" onClick={(e) => { e.preventDefault(); setActiveTab('overview'); }} className={activeTab === 'overview' ? 'active' : ''}><i className="ph-fill ph-squares-four" /> Обзор</a>
+            <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования {activeBookings.length > 0 && <span className="badge">{activeBookings.length}</span>}</a>
+            <a href="#history" onClick={(e) => { e.preventDefault(); setActiveTab('history'); }} className={activeTab === 'history' ? 'active' : ''}><i className="ph-fill ph-clock-counter-clockwise" /> История</a>
+            <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab('documents'); }} className={activeTab === 'documents' ? 'active' : ''}><i className="ph-fill ph-file-text" /> Документы</a>
+            <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
           <div className="acc-logout">
             <a href="#logout" onClick={onLogout} className="acc-nav" style={{ display: 'flex', color: 'var(--muted)', fontSize: 13, padding: '8px 14px' }}><i className="ph-fill ph-sign-out" style={{ marginRight: 10, color: 'var(--muted)' }} /> Выйти</a>
@@ -51,153 +68,135 @@ export default function Account() {
         </aside>
 
         <main className="acc-content">
+          {loading ? (
+            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Загрузка данных...</div>
+          ) : (
+            <>
+              {(activeTab === 'overview' || activeTab === 'bookings') && (
+                <>
+                  <div className="acc-stats">
+                    <div className="acc-stat">
+                      <div className="lbl"><i className="ph-fill ph-car-profile" /> Аренд</div>
+                      <div className="v">{bookings.length}<small>всего</small></div>
+                    </div>
+                    <div className="acc-stat">
+                      <div className="lbl"><i className="ph-fill ph-calendar-check" /> Активных</div>
+                      <div className="v">{activeBookings.length}<small>сейчас</small></div>
+                    </div>
+                    <div className="acc-stat">
+                      <div className="lbl"><i className="ph-fill ph-currency-rub" /> Потрачено</div>
+                      <div className="v">{totalSpent > 0 ? (totalSpent / 1000000).toFixed(1) : 0}<small>млн ₽</small></div>
+                    </div>
+                  </div>
 
-          <div className="acc-stats">
-            <div className="acc-stat">
-              <div className="lbl"><i className="ph-fill ph-car-profile" /> Аренд</div>
-              <div className="v">12<small>всего</small></div>
-            </div>
-            <div className="acc-stat">
-              <div className="lbl"><i className="ph-fill ph-calendar-check" /> Активных</div>
-              <div className="v">1<small>сейчас</small></div>
-            </div>
-            <div className="acc-stat">
-              <div className="lbl"><i className="ph-fill ph-currency-rub" /> Потрачено</div>
-              <div className="v">2.4<small>млн ₽</small></div>
-            </div>
-            <div className="acc-stat">
-              <div className="lbl"><i className="ph-fill ph-star" /> Кэшбек</div>
-              <div className="v">68 200<small>₽</small></div>
-            </div>
-          </div>
+                  {activeBookings.length > 0 ? activeBookings.map(b => (
+                    <div className="acc-block" key={b.id}>
+                      <div className="acc-block-head">
+                        <h3>Активное бронирование #{b.id}</h3>
+                      </div>
+                      <div className="booking-active">
+                        <div className="img"><img src={b.car.image_url} alt={b.car.name} /></div>
+                        <div className="info">
+                          <div className="name">{b.car.name}</div>
+                          <div className="meta">{b.car.year} · {b.car.body}</div>
+                          <div className="dates">
+                            <div>Получение<b>{formatDate(b.from_dt)}</b></div>
+                            <div>Возврат<b>{formatDate(b.to_dt)}</b></div>
+                            <div>Сумма<b>{b.total.toLocaleString()} ₽</b></div>
+                          </div>
+                          <div className="status">{b.status === 'pending' ? 'Ожидает подтверждения' : 'В работе'}</div>
+                        </div>
+                        <div className="actions">
+                          <Link to={`/catalog/${b.car.id}`} className="btn btn-sm">Детали авто</Link>
+                        </div>
+                      </div>
+                    </div>
+                  )) : (
+                    <div className="acc-block">
+                      <div className="acc-block-head">
+                        <h3>У вас нет активных бронирований</h3>
+                      </div>
+                      <div style={{ padding: '30px 20px', textAlign: 'center' }}>
+                         <Link to="/catalog" className="btn">Перейти в каталог</Link>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
-          <div className="acc-block">
-            <div className="acc-block-head">
-              <h3>Активное бронирование</h3>
-              <a href="#">Все бронирования →</a>
-            </div>
-            <div className="booking-active">
-              <div className="img"><img src="https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=600&auto=format&fit=crop&q=80" alt="" /></div>
-              <div className="info">
-                <div className="name">Mercedes-AMG SL 43</div>
-                <div className="meta">2022 · Кабриолет · Чёрный · #BR-2026-0142</div>
-                <div className="dates">
-                  <div>Получение<b>15 мая, 12:00</b></div>
-                  <div>Возврат<b>22 мая, 12:00</b></div>
-                  <div>Адрес<b>Внуково · Терминал A</b></div>
+              {(activeTab === 'overview' || activeTab === 'history') && pastBookings.length > 0 && (
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>История аренды</h3>
+                  </div>
+                  <table className="acc-table" style={{ width: '100%' }}>
+                    <thead>
+                      <tr>
+                        <th>Автомобиль</th>
+                        <th>Период</th>
+                        <th>Стоимость</th>
+                        <th>Статус</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pastBookings.map(b => (
+                        <tr key={b.id}>
+                          <td>
+                            <div className="car-cell">
+                              <img src={b.car.image_url} alt={b.car.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 4 }} />
+                              <div><b>{b.car.name}</b></div>
+                            </div>
+                          </td>
+                          <td>{formatShortDate(b.from_dt)} — {formatShortDate(b.to_dt)}</td>
+                          <td className="price">{b.total.toLocaleString()} ₽</td>
+                          <td>
+                            <span className={`tag ${b.status === 'completed' ? 'done' : 'cancel'}`}>
+                              {b.status === 'completed' ? 'Завершена' : 'Отменена'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="status">В работе</div>
-              </div>
-              <div className="actions">
-                <a href="#" className="btn btn-sm">Детали</a>
-                <a href="#" className="btn btn-sm btn-ghost">Продлить</a>
-              </div>
-            </div>
-          </div>
+              )}
 
-          <div className="acc-block">
-            <div className="acc-block-head">
-              <h3>История аренды</h3>
-              <a href="#">Скачать отчёт →</a>
-            </div>
-            <table className="acc-table">
-              <thead>
-                <tr>
-                  <th>Автомобиль</th>
-                  <th>Период</th>
-                  <th>Город</th>
-                  <th>Стоимость</th>
-                  <th>Статус</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td><div className="car-cell"><img src="https://images.unsplash.com/photo-1617531653332-bd46c24f2068?w=300&auto=format&fit=crop&q=80" alt="" /><div><b>Mercedes-AMG SL 43</b><span>#BR-2026-0142</span></div></div></td>
-                  <td>15 — 22 мая 2026</td>
-                  <td>Москва</td>
-                  <td className="price">226 100 ₽</td>
-                  <td><span className="tag ok">Активна</span></td>
-                </tr>
-                <tr>
-                  <td><div className="car-cell"><img src="https://images.unsplash.com/photo-1631295868223-63265b40d9e4?w=300&auto=format&fit=crop&q=80" alt="" /><div><b>Rolls-Royce Cullinan</b><span>#BR-2026-0118</span></div></div></td>
-                  <td>20 — 24 апреля 2026</td>
-                  <td>Дубай</td>
-                  <td className="price">480 000 ₽</td>
-                  <td><span className="tag done">Завершена</span></td>
-                </tr>
-                <tr>
-                  <td><div className="car-cell"><img src="https://images.unsplash.com/photo-1633509817627-5b9c071e6126?w=300&auto=format&fit=crop&q=80" alt="" /><div><b>Lamborghini Urus</b><span>#BR-2026-0089</span></div></div></td>
-                  <td>1 — 3 марта 2026</td>
-                  <td>Москва</td>
-                  <td className="price">234 000 ₽</td>
-                  <td><span className="tag done">Завершена</span></td>
-                </tr>
-                <tr>
-                  <td><div className="car-cell"><img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=300&auto=format&fit=crop&q=80" alt="" /><div><b>Porsche 911 Carrera</b><span>#BR-2026-0061</span></div></div></td>
-                  <td>14 — 16 февраля 2026</td>
-                  <td>Сочи</td>
-                  <td className="price">126 000 ₽</td>
-                  <td><span className="tag done">Завершена</span></td>
-                </tr>
-                <tr>
-                  <td><div className="car-cell"><img src="https://images.unsplash.com/photo-1612825173281-9a193378527e?w=300&auto=format&fit=crop&q=80" alt="" /><div><b>Mercedes G63 AMG</b><span>#BR-2026-0034</span></div></div></td>
-                  <td>10 — 12 января 2026</td>
-                  <td>Москва</td>
-                  <td className="price">110 000 ₽</td>
-                  <td><span className="tag cancel">Отменена</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+              {activeTab === 'documents' && (
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>Документы</h3>
+                    <a href="#">Загрузить →</a>
+                  </div>
+                  <div className="doc-list">
+                    <div className="doc-item">
+                      <div className="ico"><i className="ph-fill ph-identification-card" /></div>
+                      <div className="meta"><b>Паспорт</b><small>Требуется загрузить</small></div>
+                      <a href="#" className="dl"><i className="ph-fill ph-upload-simple" /></a>
+                    </div>
+                    <div className="doc-item">
+                      <div className="ico"><i className="ph-fill ph-car" /></div>
+                      <div className="meta"><b>Водительское удостоверение</b><small>Требуется загрузить</small></div>
+                      <a href="#" className="dl"><i className="ph-fill ph-upload-simple" /></a>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-          <div className="acc-grid-2">
-            <div className="acc-block">
-              <div className="acc-block-head">
-                <h3>Документы</h3>
-                <a href="#">Загрузить →</a>
-              </div>
-              <div className="doc-list">
-                <div className="doc-item">
-                  <div className="ico"><i className="ph-fill ph-identification-card" /></div>
-                  <div className="meta"><b>Паспорт РФ</b><small>Загружено · 18 марта 2024</small></div>
-                  <a href="#" className="dl"><i className="ph-fill ph-download-simple" /></a>
+              {activeTab === 'profile' && (
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>Профиль</h3>
+                  </div>
+                  <div className="profile-card">
+                    <div className="profile-row"><span className="lbl">ФИО</span><span className="v">{user?.name}</span></div>
+                    <div className="profile-row"><span className="lbl">Телефон</span><span className="v">{user?.phone || '—'}</span></div>
+                    <div className="profile-row"><span className="lbl">Email</span><span className="v">{user?.email}</span></div>
+                    <div className="profile-row"><span className="lbl">Уровень клуба</span><span className="v gold">{tierLabel}</span></div>
+                  </div>
                 </div>
-                <div className="doc-item">
-                  <div className="ico"><i className="ph-fill ph-car" /></div>
-                  <div className="meta"><b>Водительское удостоверение</b><small>Действует до 2032 · стаж 8 лет</small></div>
-                  <a href="#" className="dl"><i className="ph-fill ph-download-simple" /></a>
-                </div>
-                <div className="doc-item">
-                  <div className="ico"><i className="ph-fill ph-file-text" /></div>
-                  <div className="meta"><b>Договор аренды #BR-2026-0142</b><small>15 мая 2026 · Mercedes-AMG SL 43</small></div>
-                  <a href="#" className="dl"><i className="ph-fill ph-download-simple" /></a>
-                </div>
-                <div className="doc-item">
-                  <div className="ico"><i className="ph-fill ph-receipt" /></div>
-                  <div className="meta"><b>Счёт-фактура за апрель</b><small>480 000 ₽ · оплачено</small></div>
-                  <a href="#" className="dl"><i className="ph-fill ph-download-simple" /></a>
-                </div>
-              </div>
-            </div>
-
-            <div className="acc-block">
-              <div className="acc-block-head">
-                <h3>Профиль и карта</h3>
-                <a href="#">Изменить →</a>
-              </div>
-              <div className="profile-card">
-                <div className="profile-row"><span className="lbl">ФИО</span><span className="v">Иван Петров</span></div>
-                <div className="profile-row"><span className="lbl">Телефон</span><span className="v">+7 999 ··· 45 67</span></div>
-                <div className="profile-row"><span className="lbl">Email</span><span className="v">i.petrov@mail.com</span></div>
-                <div className="profile-row"><span className="lbl">Дата рождения</span><span className="v">14.07.1988</span></div>
-                <div className="profile-row"><span className="lbl">Уровень клуба</span><span className="v gold">Gold Member</span></div>
-                <div className="profile-row"><span className="lbl">Карта №</span><span className="v gold">5224 8842 1027</span></div>
-                <div className="profile-row"><span className="lbl">Скидка</span><span className="v gold">−18%</span></div>
-                <div className="profile-row"><span className="lbl">Действует до</span><span className="v">12 / 2028</span></div>
-              </div>
-            </div>
-          </div>
-
+              )}
+            </>
+          )}
         </main>
       </div>
     </>
