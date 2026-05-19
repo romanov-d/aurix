@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless';
+import { Pool } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 import { FLEET } from '../src/data/fleet.js';
 
@@ -19,18 +19,18 @@ if (connectionString) {
   } catch(e){}
 }
 
-// HTTP-based Neon client with 5s timeout to prevent 30s hang
-const sql = connectionString ? neon(connectionString, { fetchOptions: { signal: AbortSignal.timeout(5000) } }) : null;
+// Use Pool instead of HTTP neon() to avoid timeout issues
+const pool = connectionString ? new Pool({ connectionString }) : null;
 
 function assertSql() {
-  if (!sql) throw new Error('Database is not configured: set DATABASE_URL');
+  if (!pool) throw new Error('Database is not configured: set DATABASE_URL');
 }
 
 // Lazy init: triggered by the first DB call, runs once per cold start.
 // If it ever fails, the promise is reset so a later request can retry.
 let initPromise = null;
 export function init() {
-  if (!sql) return Promise.resolve();
+  if (!pool) return Promise.resolve();
   if (!initPromise) {
     initPromise = (async () => {
       console.log('[db] init: starting schema + seed …');
@@ -52,20 +52,20 @@ export function init() {
 export async function q(text, params = []) {
   assertSql();
   await init();
-  const rows = await sql.query(text, params);
-  return { rows };
+  const result = await pool.query(text, params);
+  return { rows: result.rows };
 }
 export async function one(text, params = []) {
   assertSql();
   await init();
-  const rows = await sql.query(text, params);
-  return rows[0] || null;
+  const result = await pool.query(text, params);
+  return result.rows[0] || null;
 }
 export async function many(text, params = []) {
   assertSql();
   await init();
-  const rows = await sql.query(text, params);
-  return rows;
+  const result = await pool.query(text, params);
+  return result.rows;
 }
 
 // ─── Schema (inlined so it works in Vercel serverless without fs) ────────────
@@ -132,15 +132,15 @@ const SCHEMA_STATEMENTS = [
 
 export async function ensureSchema() {
   for (const s of SCHEMA_STATEMENTS) {
-    await sql.query(s);
+    await pool.query(s);
   }
 }
 
 export async function seedIfEmpty() {
-  const rows = await sql.query('SELECT COUNT(*)::int AS c FROM cars');
-  if (rows[0]?.c > 0) return;
+  const result = await pool.query('SELECT COUNT(*)::int AS c FROM cars');
+  if (result.rows[0]?.c > 0) return;
   for (const i of FLEET) {
-    await sql.query(
+    await pool.query(
       `INSERT INTO cars (id, name, brand, year, body, fuel, engine, power_hp, drive, price_per_day, badge, image_url, status)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published')`,
       [
@@ -166,7 +166,7 @@ export async function seedAdmin() {
   const exists = await one('SELECT id FROM users WHERE email = $1', ['admin@aurix.local']);
   if (exists) return;
   const hash = bcrypt.hashSync('admin123', 10);
-  await sql.query(
+  await pool.query(
     'INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4)',
     ['admin@aurix.local', 'Администратор', hash, 'admin']
   );
