@@ -21,7 +21,7 @@ const loginSchema = z.object({
 function publicUser(u) {
   return {
     id: u.id, email: u.email, name: u.name, phone: u.phone,
-    avatar_url: u.avatar_url, role: u.role, created_at: u.created_at,
+    avatar_url: u.avatar_url, role: u.role, is_verified: u.is_verified ?? false, created_at: u.created_at,
   };
 }
 

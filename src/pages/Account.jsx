@@ -72,6 +72,7 @@ export default function Account() {
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования {activeBookings.length > 0 && <span className="badge">{activeBookings.length}</span>}</a>
             <a href="#history" onClick={(e) => { e.preventDefault(); setActiveTab('history'); }} className={activeTab === 'history' ? 'active' : ''}><i className="ph-fill ph-clock-counter-clockwise" /> История</a>
             <a href="#favorites" onClick={(e) => { e.preventDefault(); setActiveTab('favorites'); }} className={activeTab === 'favorites' ? 'active' : ''}><i className="ph-fill ph-heart" /> Избранное {favoriteIds.length > 0 && <span className="badge">{favoriteIds.length}</span>}</a>
+            <a href="#bonuses" onClick={(e) => { e.preventDefault(); setActiveTab('bonuses'); }} className={activeTab === 'bonuses' ? 'active' : ''}><i className="ph-fill ph-gift" /> Бонусы</a>
             <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab('documents'); }} className={activeTab === 'documents' ? 'active' : ''}><i className="ph-fill ph-file-text" /> Документы</a>
             <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
@@ -191,6 +192,60 @@ export default function Account() {
                 </div>
               )}
 
+              {activeTab === 'bonuses' && (
+                <>
+                  <div className="acc-block">
+                    <div className="acc-block-head">
+                      <h3><i className="ph-fill ph-gift" style={{ marginRight: 10, color: 'var(--gold)' }} />Бонусная программа</h3>
+                    </div>
+                    <div style={{ padding: '20px 24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(200,166,96,0.08)', border: '1px solid rgba(200,166,96,0.25)', borderRadius: 12, padding: '18px 24px', marginBottom: 28 }}>
+                        <i className="ph-fill ph-coins" style={{ fontSize: 36, color: 'var(--gold)' }} />
+                        <div>
+                          <div style={{ fontSize: 13, color: '#888', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Ваш баланс</div>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>0 <span style={{ fontSize: 16, color: '#888' }}>баллов</span></div>
+                          <div style={{ fontSize: 13, color: '#bdbdbd', marginTop: 2 }}>= 0 ₽</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                          <i className="ph-fill ph-percent" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Приветственный бонус</div>
+                            <div style={{ fontSize: 14, color: '#bdbdbd', lineHeight: 1.7 }}>
+                              При регистрации вы получаете скидку <b style={{ color: '#fff' }}>10%</b> на первую аренду (1 сутки).
+                              Применяется автоматически при оформлении первого заказа.
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                          <i className="ph-fill ph-star" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Кэшбэк с аренды</div>
+                            <div style={{ fontSize: 14, color: '#bdbdbd', lineHeight: 1.7 }}>
+                              С каждой завершённой аренды на ваш счёт возвращается <b style={{ color: '#fff' }}>5%</b> от суммы в виде бонусных баллов.
+                              {' '}<b style={{ color: '#fff' }}>1 балл = 1 рубль.</b>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                          <i className="ph-fill ph-coins" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
+                          <div>
+                            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Оплата баллами</div>
+                            <div style={{ fontSize: 14, color: '#bdbdbd', lineHeight: 1.7 }}>
+                              Накопленными баллами можно оплатить до <b style={{ color: '#fff' }}>100%</b> стоимости аренды любого автомобиля.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
               {activeTab === 'documents' && (
                 <div className="acc-block">
                   <div className="acc-block-head">
@@ -222,6 +277,12 @@ export default function Account() {
                     <div className="profile-row"><span className="lbl">Телефон</span><span className="v">{user?.phone || '—'}</span></div>
                     <div className="profile-row"><span className="lbl">Email</span><span className="v">{user?.email}</span></div>
                     <div className="profile-row"><span className="lbl">Уровень клуба</span><span className="v gold">{tierLabel}</span></div>
+                    <div className="profile-row">
+                      <span className="lbl">Верификация СБ</span>
+                      <span className="v" style={{ color: user?.is_verified ? '#22c55e' : '#888' }}>
+                        {user?.is_verified ? '✓ Пройдена' : 'Не пройдена'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}

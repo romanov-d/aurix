@@ -50,6 +50,15 @@ export default function Admin() {
     }
   };
 
+  const verifyUser = async (id, is_verified) => {
+    try {
+      const updated = await api(`/admin/users/${id}`, { method: 'PATCH', body: { is_verified } });
+      setUsers(users.map(u => u.id === id ? { ...u, is_verified: updated.is_verified } : u));
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
   if (loading) return <div className="container" style={{ padding: '120px 0', color: '#888' }}>Загрузка панели управления...</div>;
 
   const formatDate = (iso) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
@@ -187,6 +196,7 @@ export default function Admin() {
                     <th>ID / Имя</th>
                     <th>Email / Тел</th>
                     <th>Роль</th>
+                    <th>СБ</th>
                     <th>Регистрация</th>
                   </tr>
                 </thead>
@@ -205,6 +215,20 @@ export default function Admin() {
                         <span className={`tag ${u.role === 'admin' ? 'done' : u.role === 'partner' ? 'ok' : ''}`}>
                           {u.role}
                         </span>
+                      </td>
+                      <td>
+                        {u.is_verified ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                            <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 12, letterSpacing: '.04em' }}>✓ СБ</span>
+                            <span style={{ fontSize: 12, color: '#22c55e' }}>Верифицирован</span>
+                            <button className="btn btn-sm btn-ghost" style={{ marginTop: 2, fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, false)}>Снять</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                            <span style={{ color: '#555', fontSize: 13 }}>—</span>
+                            <button className="btn btn-sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, true)}>Верифицировать</button>
+                          </div>
+                        )}
                       </td>
                       <td>{formatDate(u.created_at)}</td>
                     </tr>

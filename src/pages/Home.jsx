@@ -1,7 +1,20 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { SearchProvider } from '../components/SearchWidget.jsx';
 import { useCars } from '../api/useCars.js';
+
+const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
+
+const pad = (n) => String(n).padStart(2, '0');
+const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
+
+function fmtDate(s) {
+  if (!s) return '';
+  const d = new Date(s + 'T00:00:00');
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
 
 function brandLogo(name) {
   if (/^mercedes/i.test(name)) return '/mercedes.svg';
@@ -13,6 +26,10 @@ function brandLogo(name) {
 }
 
 export default function Home() {
+  const nav = useNavigate();
+  const [fromDate, setFromDate] = useState(toDateStr(tomorrow));
+  const [toDate, setToDate]   = useState(toDateStr(dayAfter4));
+  const [brand, setBrand]     = useState('');
   const { items: allCars } = useCars({ limit: 12 });
   const specials = allCars.slice(0, 3);
   const hot = allCars.slice(3, 6);
@@ -34,45 +51,68 @@ export default function Home() {
 
           <div className="fs-search">
             <div className="fs-search-bar">
-              <div className="fs-seg fs-seg-input">
-                <i className="ph-fill ph-magnifying-glass" />
-                <input type="text" placeholder="Найти авто" />
-              </div>
-              <div className="fs-chip">Без залога</div>
               <div className="fs-seg fs-seg-pick">
                 <i className="ph-fill ph-map-pin" />
                 <span>Москва</span>
-                <i className="ph-fill ph-caret-down fs-caret" />
               </div>
               <div className="fs-seg fs-seg-date">
                 <div className="fs-seg-stack">
                   <span className="fs-seg-lbl">Получение</span>
-                  <span className="fs-seg-val">15 мая 26</span>
+                  <span className="fs-seg-val">{fmtDate(fromDate)}</span>
                 </div>
-                <i className="ph-fill ph-calendar-blank" />
+                <input
+                  type="date"
+                  value={fromDate}
+                  min={toDateStr(tomorrow)}
+                  onChange={e => setFromDate(e.target.value)}
+                  className="fs-date-input"
+                />
               </div>
               <div className="fs-seg fs-seg-date">
                 <div className="fs-seg-stack">
                   <span className="fs-seg-lbl">Возврат</span>
-                  <span className="fs-seg-val">22 мая 26</span>
+                  <span className="fs-seg-val">{fmtDate(toDate)}</span>
                 </div>
-                <i className="ph-fill ph-calendar-blank" />
+                <input
+                  type="date"
+                  value={toDate}
+                  min={fromDate}
+                  onChange={e => setToDate(e.target.value)}
+                  className="fs-date-input"
+                />
               </div>
-              <button className="fs-cta">Показать авто</button>
+              <div className="fs-seg fs-seg-brand">
+                <div className="fs-seg-stack">
+                  <span className="fs-seg-lbl">Марка</span>
+                  <span className="fs-seg-val">{brand || 'Любая'}</span>
+                </div>
+                <select
+                  value={brand}
+                  onChange={e => setBrand(e.target.value)}
+                  className="fs-brand-select"
+                >
+                  <option value="">Любая марка</option>
+                  {BRANDS.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+              </div>
+              <button className="fs-cta" onClick={() => {
+                const p = new URLSearchParams({ from: fromDate, to: toDate });
+                if (brand) p.set('brand', brand);
+                nav(`/catalog?${p.toString()}`);
+              }}>Показать авто</button>
             </div>
           </div>
 
           <div className="fs-cats">
             <div className="fs-cats-grid">
               {[
-                ['ph-car-profile', 'Люкс'],
-                ['ph-car-simple', 'Эконом'],
-                ['ph-car-profile', 'Спорт'],
-                ['ph-car', 'Бизнес'],
-                ['ph-jeep', 'Внедорожник'],
-                ['ph-car-profile', 'Премиум'],
-              ].map(([ico, name]) => (
-                <Link key={name} to="/catalog" className="fs-cat">
+                ['ph-jeep', 'Внедорожник', 'Внедорожник'],
+                ['ph-car-profile', 'Купе', 'Купе'],
+                ['ph-car-profile', 'Кабриолет', 'Кабриолет'],
+                ['ph-car-profile', 'Купе/Кабриолет', 'Купе/Кабриолет'],
+                ['ph-car', 'Седан', 'Седан'],
+              ].map(([ico, name, body]) => (
+                <Link key={name} to={`/catalog?body=${encodeURIComponent(body)}`} className="fs-cat">
                   <i className={`ph ${ico}`} />
                   <span>{name}</span>
                 </Link>
@@ -83,14 +123,15 @@ export default function Home() {
           <div className="fs-brands">
             <div className="fs-brands-grid">
               {[
-                ['Audi', 'https://cdn.simpleicons.org/audi'],
-                ['BMW', 'https://cdn.simpleicons.org/bmw'],
-                ['Ferrari', 'https://cdn.simpleicons.org/ferrari'],
-                ['Lamborghini', 'https://cdn.simpleicons.org/lamborghini'],
+                ['Lexus', 'https://cdn.simpleicons.org/lexus'],
                 ['Mercedes', '/mercedes.svg'],
+                ['Lamborghini', 'https://cdn.simpleicons.org/lamborghini'],
+                ['Ferrari', 'https://cdn.simpleicons.org/ferrari'],
+                ['BMW', 'https://cdn.simpleicons.org/bmw'],
                 ['Porsche', 'https://cdn.simpleicons.org/porsche'],
+                ['Rolls-Royce', 'https://cdn.simpleicons.org/rolls-royce'],
               ].map(([name, url]) => (
-                <Link key={name} to="/catalog" className="fs-brand">
+                <Link key={name} to={`/catalog?brand=${encodeURIComponent(name)}`} className="fs-brand">
                   <img src={url} alt={name} />
                   <span>{name}</span>
                 </Link>
@@ -302,7 +343,7 @@ export default function Home() {
             <iframe
               className="dl-map"
               title="Карта"
-              src="https://maps.google.com/maps?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C%20%D0%9F%D1%80%D0%B5%D1%81%D0%BD%D0%B5%D0%BD%D1%81%D0%BA%D0%B0%D1%8F%20%D0%BD%D0%B0%D0%B1%2C%2012&t=&z=13&ie=UTF8&iwloc=&output=embed"
+              src="https://maps.google.com/maps?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C+%D0%9E%D0%BB%D0%B8%D0%BC%D0%BF%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B9+%D0%BF%D1%80%D0%BE%D1%81%D0%BF%D0%B5%D0%BA%D1%82+12&t=&z=15&ie=UTF8&iwloc=&output=embed"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />
@@ -310,9 +351,8 @@ export default function Home() {
               <div className="dl-pin-ico"><i className="ph-fill ph-buildings" /></div>
               <div className="dl-pin-info">
                 <div className="dl-pin-title">Наш офис</div>
-                <div className="dl-pin-line">Пресненская наб., 12, Москва</div>
-                <div className="dl-pin-line">+7 999 123 45 67</div>
-                <div className="dl-pin-line">info@aurixmotors.com</div>
+                <div className="dl-pin-line">Москва, Олимпийский проспект, 12</div>
+                <div className="dl-pin-line">Работаем 24/7</div>
               </div>
             </div>
           </div>
@@ -325,8 +365,8 @@ export default function Home() {
           <div className="why-grid">
             <div className="why-card why-yellow">
               <div className="why-num">01</div>
-              <h4>Без залога</h4>
-              <p>Никаких больших предоплат. У нас можно арендовать премиум-авто <strong>с нулевым залогом</strong> — без сюрпризов, всё прозрачно.</p>
+              <h4>Полная страховка</h4>
+              <p>В стоимость включены КАСКО и ОСАГО. При ДТП не по вашей вине — <strong>ответственность 0 ₽</strong>. Никаких скрытых доплат.</p>
             </div>
             <div className="why-card why-dark why-tall">
               <div className="why-num">02</div>

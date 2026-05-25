@@ -29,11 +29,7 @@ export default function Contacts() {
               </div>
               <div className="contact-box">
                 <div className="lbl">Шоурум</div>
-                <div className="v">Москва, Пресненская наб., 12<small>Башня «Федерация», вход с набережной · Ежедневно 09:00–22:00</small></div>
-              </div>
-              <div className="contact-box">
-                <div className="lbl">Дубай</div>
-                <div className="v">Downtown Dubai, Emaar Square<small>Building 4, ground floor · Ежедневно 10:00–23:00</small></div>
+                <div className="v">Москва, Олимпийский проспект, 12<small>Ежедневно, 24 часа</small></div>
               </div>
             </div>
 

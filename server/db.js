@@ -101,6 +101,13 @@ const SCHEMA_STATEMENTS = [
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_cars_status ON cars(status)`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS deposit INTEGER DEFAULT 0`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS mileage_limit INTEGER DEFAULT 250`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS overmileage_rate INTEGER DEFAULT 200`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS photo_rate INTEGER DEFAULT 0`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_6_12 INTEGER`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_30 INTEGER`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE`,
   `CREATE TABLE IF NOT EXISTS bookings (
     id           BIGSERIAL PRIMARY KEY,
     car_id       TEXT NOT NULL REFERENCES cars(id) ON DELETE RESTRICT,
@@ -114,6 +121,7 @@ const SCHEMA_STATEMENTS = [
     status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled')),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS with_delivery BOOLEAN NOT NULL DEFAULT FALSE`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_car ON bookings(car_id)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id)`,
   `CREATE TABLE IF NOT EXISTS favorites (
@@ -142,12 +150,32 @@ export async function ensureSchema() {
 }
 
 export async function seedIfEmpty() {
-  const result = await pool.query('SELECT COUNT(*)::int AS c FROM cars');
-  if (result.rows[0]?.c > 0) return;
   for (const i of FLEET) {
     await pool.query(
-      `INSERT INTO cars (id, name, brand, year, body, fuel, engine, power_hp, drive, price_per_day, badge, image_url, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published')`,
+      `INSERT INTO cars (
+         id, name, brand, year, body, fuel, engine, power_hp, drive,
+         price_per_day, badge, image_url, status,
+         deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18)
+       ON CONFLICT (id) DO UPDATE SET
+         name            = EXCLUDED.name,
+         brand           = EXCLUDED.brand,
+         year            = EXCLUDED.year,
+         body            = EXCLUDED.body,
+         fuel            = EXCLUDED.fuel,
+         engine          = EXCLUDED.engine,
+         power_hp        = EXCLUDED.power_hp,
+         drive           = EXCLUDED.drive,
+         price_per_day   = EXCLUDED.price_per_day,
+         badge           = EXCLUDED.badge,
+         image_url       = EXCLUDED.image_url,
+         deposit         = EXCLUDED.deposit,
+         mileage_limit   = EXCLUDED.mileage_limit,
+         overmileage_rate= EXCLUDED.overmileage_rate,
+         photo_rate      = EXCLUDED.photo_rate,
+         price_6_12      = EXCLUDED.price_6_12,
+         price_30        = EXCLUDED.price_30`,
       [
         i.id,
         i.name,
@@ -161,10 +189,16 @@ export async function seedIfEmpty() {
         i.price,
         i.badge || null,
         i.img,
+        i.deposit,
+        i.mileage_limit,
+        i.overmileage_rate,
+        i.photo_rate,
+        i.price_6_12 ?? null,
+        i.price_30 ?? null,
       ]
     );
   }
-  console.log(`[db] seeded ${FLEET.length} cars`);
+  console.log(`[db] upserted ${FLEET.length} cars`);
 }
 
 export async function seedAdmin() {

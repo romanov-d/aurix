@@ -66,8 +66,22 @@ router.patch('/cars/:id', async (req, res, next) => {
 // Users
 router.get('/users', async (req, res, next) => {
   try {
-    const items = await many(`SELECT id, email, name, phone, role, created_at FROM users ORDER BY created_at DESC`);
+    const items = await many(`SELECT id, email, name, phone, role, is_verified, created_at FROM users ORDER BY created_at DESC`);
     res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.patch('/users/:id', async (req, res, next) => {
+  try {
+    const body = z.object({ is_verified: z.boolean() }).parse(req.body);
+    const { rows } = await q(
+      `UPDATE users SET is_verified = $1 WHERE id = $2 RETURNING id, email, name, phone, role, is_verified, created_at`,
+      [body.is_verified, req.params.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json(rows[0]);
   } catch (e) {
     next(e);
   }

@@ -13,12 +13,26 @@ export default function Car() {
   const { items: FLEET, loading } = useCars({ limit: 100 });
   const { favorites, toggleFavorite } = useFavorites();
   
-  // Date state
-  const [fromDt, setFromDt] = useState('');
-  const [toDt, setToDt] = useState('');
+  // Date state — separate date + time for proper styling
+  const pad = (n) => String(n).padStart(2, '0');
+  const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
+
+  const [fromDate, setFromDate] = useState(toDateStr(tomorrow));
+  const [fromTime, setFromTime] = useState('12:00');
+  const [toDate, setToDate] = useState(toDateStr(dayAfter4));
+  const [toTime, setToTime] = useState('12:00');
   const [city, setCity] = useState('');
+  const [needDelivery, setNeedDelivery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  const fromDt = `${fromDate}T${fromTime}`;
+  const toDt = `${toDate}T${toTime}`;
+
+  const TIMES = ['08:00','09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00','18:00','19:00','20:00','21:00','22:00','23:00'];
 
   // Reviews state
   const [reviews, setReviews] = useState([]);
@@ -26,24 +40,6 @@ export default function Car() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewError, setReviewError] = useState('');
   const [reviewing, setReviewing] = useState(false);
-
-  // Default dates for the form
-  useEffect(() => {
-    const d1 = new Date();
-    d1.setHours(12, 0, 0, 0);
-    d1.setDate(d1.getDate() + 1); // tomorrow
-    const d2 = new Date(d1);
-    d2.setDate(d2.getDate() + 3); // +3 days
-    
-    // format as YYYY-MM-DDTHH:MM for native datetime-local input
-    const toLocalISO = (d) => {
-      const pad = (n) => n.toString().padStart(2, '0');
-      return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    };
-    
-    setFromDt(toLocalISO(d1));
-    setToDt(toLocalISO(d2));
-  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -64,9 +60,14 @@ export default function Car() {
   let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
   if (isNaN(days) || days < 1) days = 1;
 
-  const subtotal = car.price_per_day * days;
-  const discount = days >= 7 ? Math.round(subtotal * 0.15) : (days >= 3 ? Math.round(subtotal * 0.10) : 0);
-  const total = subtotal - discount;
+  function getDayPrice(c, d) {
+    if (d >= 30 && c.price_30) return c.price_30;
+    if (d >= 6 && c.price_6_12) return c.price_6_12;
+    return c.price_per_day || c.price || 0;
+  }
+  const isNegotiated = days >= 13 && days < 30;
+  const dayPrice = getDayPrice(car, days);
+  const total = (dayPrice || 0) * days;
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -85,7 +86,8 @@ export default function Car() {
           from_dt: new Date(fromDt).toISOString(),
           to_dt: new Date(toDt).toISOString(),
           pickup_city: city,
-          with_driver: false
+          with_driver: false,
+          with_delivery: needDelivery
         }
       });
       nav('/account');
@@ -165,7 +167,7 @@ export default function Car() {
           <ul className="muted" style={{ margin: '14px 0 0 20px', color: '#bdbdbd', fontSize: 14, lineHeight: 2 }}>
             <li>Полная страховка КАСКО + ОСАГО</li>
             <li>Бесплатная подача в пределах МКАД</li>
-            <li>200 км/сутки включено</li>
+            <li>{car.mileage_limit || 200} км/сутки включено</li>
             <li>Полный бак при выдаче</li>
             <li>Поддержка 24/7 и эвакуация</li>
           </ul>
@@ -220,37 +222,72 @@ export default function Car() {
           <div className="submeta">{car.year} · {car.body} · Чёрный</div>
 
           <div className="price-block">
-            <div className="row"><span>1 сутки</span><b>{car.price_per_day?.toLocaleString('ru-RU')} ₽</b></div>
-            <div className="row"><span>От 3 суток</span><b>−10%</b></div>
-            <div className="row"><span>От 7 суток</span><b>−15%</b></div>
-            <div className="row"><span>Залог</span><b style={{ fontSize: 14, color: '#fff' }}>150 000 ₽</b></div>
+            <div className="row"><span>1–5 суток</span><b>{car.price_per_day?.toLocaleString('ru-RU')} ₽</b></div>
+            <div className="row"><span>6–12 суток</span><b>{car.price_6_12 ? `${car.price_6_12.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
+            <div className="row"><span>от 13 суток</span><b style={{ color: '#bdbdbd', fontSize: 13 }}>договорная</b></div>
+            <div className="row"><span>от 30 суток</span><b>{car.price_30 ? `${car.price_30.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
+            <div className="row"><span>Залог</span><b style={{ fontSize: 14, color: '#fff' }}>{car.deposit ? `${car.deposit.toLocaleString('ru-RU')} ₽` : '—'}</b></div>
+            <div className="row"><span>Лимит пробега</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.mileage_limit || 250} км/сут</b></div>
+            <div className="row"><span>Перекат</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.overmileage_rate || '—'} ₽/км</b></div>
           </div>
 
           <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: 12 }}>
             <div className="field">
-              <label>Получение</label>
-              <input type="datetime-local" value={fromDt} onChange={e => setFromDt(e.target.value)} />
+              <label>Получение — дата</label>
+              <input type="date" value={fromDate} min={toDateStr(tomorrow)} onChange={e => setFromDate(e.target.value)} />
             </div>
             <div className="field">
-              <label>Возврат</label>
-              <input type="datetime-local" value={toDt} onChange={e => setToDt(e.target.value)} />
+              <label>Возврат — дата</label>
+              <input type="date" value={toDate} min={fromDate} onChange={e => setToDate(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Время получения</label>
+              <select value={fromTime} onChange={e => setFromTime(e.target.value)}>
+                {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div className="field">
+              <label>Время возврата</label>
+              <select value={toTime} onChange={e => setToTime(e.target.value)}>
+                {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
           </div>
           <div className="field" style={{ marginTop: 14 }}>
             <label>Адрес подачи</label>
-            <input placeholder="г. Москва, ..." value={city} onChange={e => setCity(e.target.value)} />
+            <input placeholder="г. Москва, ул. Пушкина, д. 1" value={city} onChange={e => setCity(e.target.value)} />
           </div>
 
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, cursor: 'pointer', fontSize: 14, color: '#bdbdbd' }}>
+            <input
+              type="checkbox"
+              checked={needDelivery}
+              onChange={e => setNeedDelivery(e.target.checked)}
+              style={{ accentColor: 'var(--gold)', width: 16, height: 16 }}
+            />
+            Нужна подача и забор авто
+          </label>
+          {needDelivery && (
+            <div style={{ marginTop: 10, padding: '12px 14px', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: 8, fontSize: 13, color: '#bdbdbd', lineHeight: 1.6 }}>
+              Стоимость подачи и забора рассчитывается индивидуально. Менеджер свяжется с вами для уточнения деталей после оформления заявки.
+            </div>
+          )}
+
           <div className="price-block" style={{ marginTop: 20 }}>
-            <div className="row"><span>{days} суток × {car.price_per_day?.toLocaleString('ru-RU')}</span><span>{subtotal.toLocaleString('ru-RU')} ₽</span></div>
-            {discount > 0 && <div className="row"><span>Скидка</span><span style={{ color: 'var(--gold)' }}>−{discount.toLocaleString('ru-RU')} ₽</span></div>}
-            <div className="row"><span style={{ fontSize: 15 }}>Итого</span><b style={{ fontSize: 24 }}>{total.toLocaleString('ru-RU')} ₽</b></div>
+            <div className="row"><span>{days} суток × {dayPrice?.toLocaleString('ru-RU')}</span><span>{isNegotiated ? '—' : `${total.toLocaleString('ru-RU')} ₽`}</span></div>
+            {isNegotiated ? (
+              <div className="row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                <span style={{ fontSize: 13, color: 'var(--gold)', lineHeight: 1.5 }}>От 13 до 29 дней — цена договорная. Позвоните нам.</span>
+              </div>
+            ) : (
+              <div className="row"><span style={{ fontSize: 15 }}>Итого</span><b style={{ fontSize: 24 }}>{total.toLocaleString('ru-RU')} ₽</b></div>
+            )}
           </div>
 
           {error && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 14, textAlign: 'center' }}>{error}</div>}
 
-          <button onClick={handleBook} disabled={isSubmitting} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14 }}>
-            {isSubmitting ? 'Оформление...' : (user ? 'Забронировать' : 'Войти для бронирования')}
+          <button onClick={handleBook} disabled={isSubmitting || isNegotiated} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14, opacity: isNegotiated ? 0.45 : 1 }}>
+            {isSubmitting ? 'Оформление...' : isNegotiated ? 'Уточните цену по телефону' : (user ? 'Забронировать' : 'Войти для бронирования')}
           </button>
           <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 14, letterSpacing: '.06em' }}>Мгновенное подтверждение · Оплата частями</p>
 

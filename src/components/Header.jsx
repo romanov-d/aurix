@@ -4,8 +4,8 @@ import Logo from './Logo.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 
 const LINKS = [
-  ['/catalog', 'Категории'],
-  ['/long-term', 'Бренды'],
+  ['/catalog', 'Автопарк'],
+  ['/tariffs', 'Тарифы'],
   ['/contacts', 'Контакты'],
 ];
 
@@ -15,7 +15,7 @@ const SERVICES = [
   ['#', 'Аренда с водителем'],
   ['#', 'Трансфер · аэропорт'],
   ['#', 'Свадьбы и кортежи'],
-  ['#', 'Корпоративные тарифы'],
+  ['/tariffs', 'Юридическим лицам'],
 ];
 
 export default function Header() {

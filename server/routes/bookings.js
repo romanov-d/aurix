@@ -13,7 +13,14 @@ const bookSchema = z.object({
   pickup_city: z.string().optional(),
   return_city: z.string().optional(),
   with_driver: z.boolean().default(false),
+  with_delivery: z.boolean().default(false),
 });
+
+function getDayPrice(car, days) {
+  if (days >= 30 && car.price_30) return car.price_30;
+  if (days >= 6 && car.price_6_12) return car.price_6_12;
+  return car.price_per_day;
+}
 
 router.post('/', async (req, res, next) => {
   try {
@@ -42,12 +49,13 @@ router.post('/', async (req, res, next) => {
     let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
     if (days < 1) days = 1;
 
-    // Calculate total price
-    const total = days * car.price_per_day;
+    // Calculate total price using tiered rates (mirrors frontend logic)
+    const dayPrice = getDayPrice(car, days);
+    const total = days * dayPrice;
 
     const { rows } = await q(
-      `INSERT INTO bookings (car_id, user_id, from_dt, to_dt, pickup_city, return_city, with_driver, total, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'pending')
+      `INSERT INTO bookings (car_id, user_id, from_dt, to_dt, pickup_city, return_city, with_driver, with_delivery, total, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
        RETURNING *`,
       [
         body.car_id,
@@ -57,6 +65,7 @@ router.post('/', async (req, res, next) => {
         body.pickup_city || null,
         body.return_city || null,
         body.with_driver,
+        body.with_delivery,
         total
       ]
     );

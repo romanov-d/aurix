@@ -66,10 +66,13 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .fs-chip{display:inline-flex;align-items:center;padding:0 18px;color:#cfcfcf;font-size:13px;white-space:nowrap;align-self:center;border-right:1px solid rgba(255,255,255,.08);height:36px}
 .fs-seg-pick{cursor:pointer}
 .fs-seg-pick .fs-caret{font-size:12px;color:var(--gold)}
-.fs-seg-date{cursor:pointer;align-items:center;gap:16px}
+.fs-seg-date{cursor:pointer;align-items:center;gap:16px;position:relative}
+.fs-seg-brand{cursor:pointer;align-items:center;gap:16px;position:relative}
 .fs-seg-stack{display:flex;flex-direction:column;line-height:1.2}
 .fs-seg-lbl{font-size:11px;color:#9a9a9a;margin-bottom:5px}
 .fs-seg-val{font-size:14px;color:#fff;font-weight:500}
+.fs-date-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.fs-brand-select{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
 .fs-cta{margin-left:10px;background:var(--gold);color:#0a0a0a;border:0;padding:0 36px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s;border-radius:12px !important;align-self:stretch;min-height:56px;white-space:nowrap}
 .fs-cta:hover{background:var(--gold-soft)}
 

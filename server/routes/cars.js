@@ -2,8 +2,31 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { many, one, q } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { FLEET } from '../../src/data/fleet.js';
 
 const router = Router();
+
+const DB_AVAILABLE = !!(process.env.DATABASE_URL || process.env.POSTGRES_URL || process.env.POSTGRES_PRISMA_URL);
+
+// Normalize fleet.js shape to match DB row shape
+function fleetToRow(c) {
+  return {
+    id: c.id, name: c.name,
+    brand: c.name.split(/[\s-]/)[0],
+    year: c.year, body: c.body, fuel: c.fuel,
+    engine: c.engine, power_hp: parseInt(c.power) || null,
+    drive: c.drive, price_per_day: c.price,
+    price_6_12: c.price_6_12 ?? null,
+    price_30: c.price_30 ?? null,
+    deposit: c.deposit ?? 0,
+    mileage_limit: c.mileage_limit ?? 250,
+    overmileage_rate: c.overmileage_rate ?? 200,
+    photo_rate: c.photo_rate ?? 0,
+    badge: c.badge ?? null, image_url: c.img,
+    description: null, status: 'published',
+    owner_id: null, created_at: new Date().toISOString(),
+  };
+}
 
 const listQuery = z.object({
   body: z.string().optional(),
@@ -19,21 +42,35 @@ const listQuery = z.object({
 
 router.get('/', async (req, res, next) => {
   try {
-    let q;
-    try { q = listQuery.parse(req.query); }
+    let qs;
+    try { qs = listQuery.parse(req.query); }
     catch (e) { return res.status(400).json({ error: 'Bad query', detail: e.errors }); }
+
+    if (!DB_AVAILABLE) {
+      let rows = FLEET.map(fleetToRow);
+      if (qs.body) rows = rows.filter(c => c.body === qs.body);
+      if (qs.brand) rows = rows.filter(c => c.brand.toLowerCase() === qs.brand.toLowerCase());
+      if (qs.price_min != null) rows = rows.filter(c => c.price_per_day >= qs.price_min);
+      if (qs.price_max != null) rows = rows.filter(c => c.price_per_day <= qs.price_max);
+      if (qs.sort === 'price-asc') rows.sort((a, b) => a.price_per_day - b.price_per_day);
+      else if (qs.sort === 'price-desc') rows.sort((a, b) => b.price_per_day - a.price_per_day);
+      else if (qs.sort === 'power') rows.sort((a, b) => (b.power_hp || 0) - (a.power_hp || 0));
+      const total = rows.length;
+      rows = rows.slice(qs.offset, qs.offset + qs.limit);
+      return res.json({ items: rows, total });
+    }
 
     const where = [`status = 'published'`];
     const params = [];
     const add = (sql, value) => { params.push(value); where.push(sql.replace('$?', `$${params.length}`)); };
 
-    if (q.body) add('body = $?', q.body);
-    if (q.brand) add('LOWER(brand) = LOWER($?)', q.brand);
-    if (q.price_min != null) add('price_per_day >= $?', q.price_min);
-    if (q.price_max != null) add('price_per_day <= $?', q.price_max);
-    if (q.from && q.to) {
-      params.push(q.from); const pFrom = params.length;
-      params.push(q.to); const pTo = params.length;
+    if (qs.body) add('body = $?', qs.body);
+    if (qs.brand) add('LOWER(brand) = LOWER($?)', qs.brand);
+    if (qs.price_min != null) add('price_per_day >= $?', qs.price_min);
+    if (qs.price_max != null) add('price_per_day <= $?', qs.price_max);
+    if (qs.from && qs.to) {
+      params.push(qs.from); const pFrom = params.length;
+      params.push(qs.to); const pTo = params.length;
       where.push(`id NOT IN (
         SELECT car_id FROM bookings
         WHERE status IN ('pending','active')
@@ -42,12 +79,12 @@ router.get('/', async (req, res, next) => {
     }
 
     let order = 'created_at DESC, id';
-    if (q.sort === 'price-asc') order = 'price_per_day ASC';
-    else if (q.sort === 'price-desc') order = 'price_per_day DESC';
-    else if (q.sort === 'power') order = 'power_hp DESC NULLS LAST';
+    if (qs.sort === 'price-asc') order = 'price_per_day ASC';
+    else if (qs.sort === 'price-desc') order = 'price_per_day DESC';
+    else if (qs.sort === 'power') order = 'power_hp DESC NULLS LAST';
 
-    params.push(q.limit); const pLimit = params.length;
-    params.push(q.offset); const pOffset = params.length;
+    params.push(qs.limit); const pLimit = params.length;
+    params.push(qs.offset); const pOffset = params.length;
 
     const sql = `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${pLimit} OFFSET $${pOffset}`;
     const items = await many(sql, params);
@@ -59,6 +96,11 @@ router.get('/', async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
+    if (!DB_AVAILABLE) {
+      const car = FLEET.map(fleetToRow).find(c => c.id === req.params.id);
+      if (!car) return res.status(404).json({ error: 'Not found' });
+      return res.json(car);
+    }
     const car = await one(`SELECT * FROM cars WHERE id = $1 AND status = 'published'`, [req.params.id]);
     if (!car) return res.status(404).json({ error: 'Not found' });
     res.json(car);
