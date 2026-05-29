@@ -25,6 +25,7 @@ function normalize(row) {
     img: row.image_url,
     image_url: row.image_url,
     description: row.description,
+    photos: Array.isArray(row.photos) ? row.photos : [],
   };
 }
 

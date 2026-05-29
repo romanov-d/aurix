@@ -86,7 +86,13 @@ router.get('/', async (req, res, next) => {
     params.push(qs.limit); const pLimit = params.length;
     params.push(qs.offset); const pOffset = params.length;
 
-    const sql = `SELECT * FROM cars WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${pLimit} OFFSET $${pOffset}`;
+    const sql = `
+      SELECT c.*,
+        COALESCE((
+          SELECT json_agg(p.url ORDER BY p.sort_order, p.id)
+          FROM car_photos p WHERE p.car_id = c.id
+        ), '[]'::json) AS photos
+      FROM cars c WHERE ${where.join(' AND ')} ORDER BY ${order} LIMIT $${pLimit} OFFSET $${pOffset}`;
     const items = await many(sql, params);
     const countSql = `SELECT COUNT(*)::int AS c FROM cars WHERE ${where.join(' AND ')}`;
     const countRow = await one(countSql, params.slice(0, params.length - 2));
@@ -101,7 +107,15 @@ router.get('/:id', async (req, res, next) => {
       if (!car) return res.status(404).json({ error: 'Not found' });
       return res.json(car);
     }
-    const car = await one(`SELECT * FROM cars WHERE id = $1 AND status = 'published'`, [req.params.id]);
+    const car = await one(
+      `SELECT c.*,
+        COALESCE((
+          SELECT json_agg(p.url ORDER BY p.sort_order, p.id)
+          FROM car_photos p WHERE p.car_id = c.id
+        ), '[]'::json) AS photos
+       FROM cars c WHERE c.id = $1 AND c.status = 'published'`,
+      [req.params.id]
+    );
     if (!car) return res.status(404).json({ error: 'Not found' });
     res.json(car);
   } catch (e) { next(e); }

@@ -41,6 +41,11 @@ export default function Admin() {
     }
   };
 
+  const [expandedCar, setExpandedCar] = useState(null);
+  const [carPhotos, setCarPhotos] = useState({});
+  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [badgeEdit, setBadgeEdit] = useState({});
+
   const updateCarStatus = async (id, status) => {
     try {
       const updated = await api(`/admin/cars/${id}`, { method: 'PATCH', body: { status } });
@@ -48,6 +53,46 @@ export default function Admin() {
     } catch (e) {
       alert(e.message);
     }
+  };
+
+  const saveBadge = async (id) => {
+    try {
+      const badge = badgeEdit[id] ?? '';
+      const updated = await api(`/admin/cars/${id}`, { method: 'PATCH', body: { badge: badge || null } });
+      setCars(cars.map(c => c.id === id ? { ...c, badge: updated.badge } : c));
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const loadPhotos = async (carId) => {
+    if (carPhotos[carId]) return;
+    const photos = await api(`/admin/cars/${carId}/photos`);
+    setCarPhotos(p => ({ ...p, [carId]: photos }));
+  };
+
+  const toggleCarExpand = async (carId) => {
+    if (expandedCar === carId) { setExpandedCar(null); return; }
+    setExpandedCar(carId);
+    await loadPhotos(carId);
+    setBadgeEdit(b => ({ ...b, [carId]: cars.find(c => c.id === carId)?.badge ?? '' }));
+    setNewPhotoUrl('');
+  };
+
+  const addPhoto = async (carId) => {
+    if (!newPhotoUrl.trim()) return;
+    try {
+      const photo = await api(`/admin/cars/${carId}/photos`, { method: 'POST', body: { url: newPhotoUrl.trim() } });
+      setCarPhotos(p => ({ ...p, [carId]: [...(p[carId] || []), photo] }));
+      setNewPhotoUrl('');
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  const deletePhoto = async (carId, photoId) => {
+    await api(`/admin/cars/${carId}/photos/${photoId}`, { method: 'DELETE' });
+    setCarPhotos(p => ({ ...p, [carId]: p[carId].filter(ph => ph.id !== photoId) }));
   };
 
   const verifyUser = async (id, is_verified) => {
@@ -146,8 +191,8 @@ export default function Admin() {
               <table className="acc-table" style={{ width: '100%' }}>
                 <thead>
                   <tr>
-                    <th>ID / Модель</th>
-                    <th>Год</th>
+                    <th>Модель</th>
+                    <th>Плашка</th>
                     <th>Цена</th>
                     <th>Статус</th>
                     <th>Действия</th>
@@ -155,30 +200,85 @@ export default function Admin() {
                 </thead>
                 <tbody>
                   {cars.map(c => (
-                    <tr key={c.id}>
-                      <td>
-                        <Link to={`/car/${c.id}`} style={{ color: '#fff', textDecoration: 'none' }}><b>{c.name}</b></Link><br/>
-                        <span style={{ fontSize: 13, color: '#888' }}>{c.id}</span>
-                      </td>
-                      <td>{c.year}</td>
-                      <td>{c.price_per_day.toLocaleString()} ₽</td>
-                      <td>
-                         <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td>
-                        {c.status === 'published' && <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'hidden')}>Скрыть</button>}
-                        {c.status === 'hidden' && <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Опубликовать</button>}
-                        {c.status === 'pending' && (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Одобрить</button>
-                            <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'rejected')}>Отклонить</button>
+                    <>
+                      <tr key={c.id} style={{ borderBottom: expandedCar === c.id ? '0' : undefined }}>
+                        <td>
+                          <Link to={`/car/${c.id}`} style={{ color: '#fff', textDecoration: 'none' }}><b>{c.name}</b></Link><br/>
+                          <span style={{ fontSize: 12, color: '#555' }}>{c.id}</span>
+                        </td>
+                        <td>
+                          <span style={{ fontSize: 12, color: c.badge ? 'var(--gold)' : '#555' }}>
+                            {c.badge || '—'}
+                          </span>
+                        </td>
+                        <td>{c.price_per_day?.toLocaleString()} ₽</td>
+                        <td>
+                          <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>
+                            {c.status}
+                          </span>
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button className="btn btn-sm btn-ghost" onClick={() => toggleCarExpand(c.id)}>
+                              <i className={`ph ph-${expandedCar === c.id ? 'x' : 'pencil-simple'}`} /> {expandedCar === c.id ? 'Закрыть' : 'Ред.'}
+                            </button>
+                            {c.status === 'published' && <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'hidden')}>Скрыть</button>}
+                            {c.status === 'hidden' && <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Опубл.</button>}
+                            {c.status === 'pending' && <>
+                              <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Одобрить</button>
+                              <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'rejected')}>Откл.</button>
+                            </>}
                           </div>
-                        )}
-                        {c.status === 'rejected' && <span className="muted" style={{ fontSize: 13 }}>Отклонено</span>}
-                      </td>
-                    </tr>
+                        </td>
+                      </tr>
+                      {expandedCar === c.id && (
+                        <tr key={`${c.id}-edit`}>
+                          <td colSpan={5} style={{ background: '#0d0d0d', padding: '18px 16px', borderRadius: 10 }}>
+                            {/* Badge */}
+                            <div style={{ marginBottom: 18 }}>
+                              <div style={{ fontSize: 12, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>Плашка</div>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                  value={badgeEdit[c.id] ?? c.badge ?? ''}
+                                  onChange={e => setBadgeEdit(b => ({ ...b, [c.id]: e.target.value }))}
+                                  placeholder="Спецпредложение, Новинка, Хит..."
+                                  style={{ flex: 1, background: '#111', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
+                                />
+                                <button className="btn btn-sm" onClick={() => saveBadge(c.id)}>Сохранить</button>
+                                {(badgeEdit[c.id] || c.badge) && (
+                                  <button className="btn btn-sm btn-ghost" onClick={() => { setBadgeEdit(b => ({ ...b, [c.id]: '' })); setTimeout(() => saveBadge(c.id), 0); }}>Убрать</button>
+                                )}
+                              </div>
+                            </div>
+                            {/* Photos */}
+                            <div>
+                              <div style={{ fontSize: 12, color: '#888', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Фотографии</div>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                                {(carPhotos[c.id] || []).map(ph => (
+                                  <div key={ph.id} style={{ position: 'relative', width: 100, height: 70, borderRadius: 8, overflow: 'hidden', background: '#111' }}>
+                                    <img src={ph.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                    <button
+                                      onClick={() => deletePhoto(c.id, ph.id)}
+                                      style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,.7)', border: 'none', color: '#fff', borderRadius: '50%', width: 22, height: 22, cursor: 'pointer', fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    ><i className="ph ph-x" /></button>
+                                  </div>
+                                ))}
+                              </div>
+                              <div style={{ display: 'flex', gap: 8 }}>
+                                <input
+                                  value={newPhotoUrl}
+                                  onChange={e => setNewPhotoUrl(e.target.value)}
+                                  onKeyDown={e => e.key === 'Enter' && addPhoto(c.id)}
+                                  placeholder="https://... URL фотографии"
+                                  style={{ flex: 1, background: '#111', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
+                                />
+                                <button className="btn btn-sm" onClick={() => addPhoto(c.id)}>Добавить</button>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>

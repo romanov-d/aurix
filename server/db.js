@@ -138,6 +138,14 @@ const SCHEMA_STATEMENTS = [
     text       TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
+  `CREATE TABLE IF NOT EXISTS car_photos (
+    id         BIGSERIAL PRIMARY KEY,
+    car_id     TEXT NOT NULL REFERENCES cars(id) ON DELETE CASCADE,
+    url        TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_car_photos_car ON car_photos(car_id)`,
 ];
 
 export async function ensureSchema() {

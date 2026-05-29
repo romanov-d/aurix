@@ -51,16 +51,60 @@ router.get('/cars', async (req, res, next) => {
 
 router.patch('/cars/:id', async (req, res, next) => {
   try {
-    const body = z.object({ status: z.enum(['published', 'hidden', 'pending', 'rejected']) }).parse(req.body);
+    const body = z.object({
+      status: z.enum(['published', 'hidden', 'pending', 'rejected']).optional(),
+      badge: z.string().max(60).nullable().optional(),
+    }).parse(req.body);
+
+    const sets = [];
+    const vals = [];
+    if (body.status !== undefined) { vals.push(body.status);  sets.push(`status = $${vals.length}`); }
+    if (body.badge  !== undefined) { vals.push(body.badge);   sets.push(`badge  = $${vals.length}`); }
+    if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
+
+    vals.push(req.params.id);
     const { rows } = await q(
-      `UPDATE cars SET status = $1 WHERE id = $2 RETURNING *`,
-      [body.status, req.params.id]
+      `UPDATE cars SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`,
+      vals
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (e) {
     next(e);
   }
+});
+
+// Car photos
+router.get('/cars/:id/photos', async (req, res, next) => {
+  try {
+    const photos = await many(
+      `SELECT id, url, sort_order FROM car_photos WHERE car_id = $1 ORDER BY sort_order, id`,
+      [req.params.id]
+    );
+    res.json(photos);
+  } catch (e) { next(e); }
+});
+
+router.post('/cars/:id/photos', async (req, res, next) => {
+  try {
+    const { url } = z.object({ url: z.string().url() }).parse(req.body);
+    const maxOrder = await one(
+      `SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM car_photos WHERE car_id = $1`,
+      [req.params.id]
+    );
+    const { rows } = await q(
+      `INSERT INTO car_photos (car_id, url, sort_order) VALUES ($1, $2, $3) RETURNING id, url, sort_order`,
+      [req.params.id, url, maxOrder?.next ?? 0]
+    );
+    res.json(rows[0]);
+  } catch (e) { next(e); }
+});
+
+router.delete('/cars/:id/photos/:photoId', async (req, res, next) => {
+  try {
+    await q(`DELETE FROM car_photos WHERE id = $1 AND car_id = $2`, [req.params.photoId, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 // Users

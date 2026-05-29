@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { SearchProvider } from '../components/SearchWidget.jsx';
 import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
+import CarCard from '../components/CarCard.jsx';
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
 
@@ -13,9 +14,13 @@ const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
 
 function brandLogo(name) {
   if (/^mercedes/i.test(name)) return '/mercedes.svg';
-  if (/^rolls/i.test(name)) return 'https://logo.clearbit.com/rolls-roycemotorcars.com';
-  if (/^lambo/i.test(name)) return 'https://cdn.simpleicons.org/lamborghini';
+  if (/^rolls/i.test(name)) return '/rolls-royce.svg';
+  if (/^lambo/i.test(name)) return '/lamborghini.svg';
   if (/^bentley/i.test(name)) return 'https://logo.clearbit.com/bentleymotors.com';
+  if (/^lexus/i.test(name)) return '/lexus.svg';
+  if (/^ferrari/i.test(name)) return '/ferrari.svg';
+  if (/^bmw/i.test(name)) return '/bmw.svg';
+  if (/^porsche/i.test(name)) return '/porsche.svg';
   const slug = name.split(/[\s-]/)[0].toLowerCase();
   return `https://cdn.simpleicons.org/${slug}`;
 }
@@ -25,9 +30,10 @@ export default function Home() {
   const [fromDate, setFromDate] = useState(toDateStr(tomorrow));
   const [toDate, setToDate]   = useState(toDateStr(dayAfter4));
   const [brand, setBrand]     = useState('');
-  const { items: allCars } = useCars({ limit: 12 });
-  const specials = allCars.slice(0, 3);
-  const hot = allCars.slice(3, 6);
+  const [visibleCount, setVisibleCount] = useState(6);
+  const { items: allCars } = useCars({ limit: 100 });
+  const specials = allCars.slice(0, visibleCount);
+  const hot = allCars.slice(0, 6);
   return (
     <>
       <SearchProvider>
@@ -101,13 +107,13 @@ export default function Home() {
           <div className="fs-brands">
             <div className="fs-brands-grid">
               {[
-                ['Lexus', 'https://cdn.simpleicons.org/lexus'],
+                ['Lexus', '/lexus.svg'],
                 ['Mercedes', '/mercedes.svg'],
-                ['Lamborghini', 'https://cdn.simpleicons.org/lamborghini'],
-                ['Ferrari', 'https://cdn.simpleicons.org/ferrari'],
-                ['BMW', 'https://cdn.simpleicons.org/bmw'],
-                ['Porsche', 'https://cdn.simpleicons.org/porsche'],
-                ['Rolls-Royce', 'https://cdn.simpleicons.org/rolls-royce'],
+                ['Lamborghini', '/lamborghini.svg'],
+                ['Ferrari', '/ferrari.svg'],
+                ['BMW', '/bmw.svg'],
+                ['Porsche', '/porsche.svg'],
+                ['Rolls-Royce', '/rolls-royce.svg'],
               ].map(([name, url]) => (
                 <Link key={name} to={`/catalog?brand=${encodeURIComponent(name)}`} className="fs-brand">
                   <img src={url} alt={name} />
@@ -123,35 +129,23 @@ export default function Home() {
       <section className="specials reveal">
         <div className="sp-wrap">
           <div className="sp-head">
-            <h2>Специальные предложения</h2>
+            <h2>Наш автопарк</h2>
             <Link to="/catalog" className="sp-all">Смотреть все</Link>
           </div>
-          <div className="sp-grid">
-            {specials.map(c => (
-              <div className="sp-card" key={c.id}>
-                <div className="sp-img">
-                  <span className="sp-badge">Спецпредложение</span>
-                  <button className="sp-nav sp-prev" aria-label="prev"><i className="ph ph-caret-left" /></button>
-                  <button className="sp-nav sp-next" aria-label="next"><i className="ph ph-caret-right" /></button>
-                  <img src={c.img} alt={c.name} />
-                </div>
-                <div className="sp-info">
-                  <div className="sp-info-head">
-                    <div>
-                      <div className="sp-name">{c.name}</div>
-                      <div className="sp-meta">{c.year}, {c.drive}</div>
-                    </div>
-                    <div className="sp-mark"><i className="ph-fill ph-medal" /></div>
-                  </div>
-                  <div className="sp-info-foot">
-                    <div className="sp-price">{c.price.toLocaleString('ru-RU')} ₽<span>/сутки</span></div>
-                    <Link to={`/car/${c.id}`} className="sp-details">Подробнее</Link>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="catalog-grid" style={{ marginTop: 24 }}>
+            {specials.map(c => <CarCard key={c.id} car={c} />)}
           </div>
-
+          {visibleCount < allCars.length && (
+            <div style={{ textAlign: 'center', marginTop: 32 }}>
+              <button
+                className="btn"
+                style={{ padding: '14px 48px', fontSize: 15 }}
+                onClick={() => setVisibleCount(v => v + 6)}
+              >
+                Ещё авто
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

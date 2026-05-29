@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useFavorites } from '../api/useFavorites.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -6,18 +7,28 @@ export default function CarCard({ car, days }) {
   const { user } = useAuth();
   const nav = useNavigate();
   const { favorites, toggleFavorite } = useFavorites();
-  
+  const [idx, setIdx] = useState(0);
+
   const price = car.price_per_day || car.price || 0;
-  const image = car.image_url || car.img || '';
+  const mainImg = car.image_url || car.img || '';
+  const allPhotos = mainImg
+    ? [mainImg, ...car.photos.filter(p => p !== mainImg)]
+    : car.photos;
   const total = days ? price * days : null;
   const isFav = favorites.has(car.id);
 
+  const prev = (e) => {
+    e.preventDefault();
+    setIdx(i => (i - 1 + allPhotos.length) % allPhotos.length);
+  };
+  const next = (e) => {
+    e.preventDefault();
+    setIdx(i => (i + 1) % allPhotos.length);
+  };
+
   const handleFavoriteClick = async (e) => {
     e.preventDefault();
-    if (!user) {
-      nav('/login');
-      return;
-    }
+    if (!user) { nav('/login'); return; }
     await toggleFavorite(car.id);
   };
 
@@ -25,20 +36,41 @@ export default function CarCard({ car, days }) {
     <Link to={`/car/${car.id}`} className="card">
       <div className="card-img">
         {car.badge && <div className="card-badge">{car.badge}</div>}
-        <button 
+        <button
           className={`card-fav-btn ${isFav ? 'active' : ''}`}
           onClick={handleFavoriteClick}
           style={{
             position: 'absolute', top: 12, right: 12, zIndex: 10,
-            background: isFav ? 'rgba(255, 255, 255, 0.9)' : 'rgba(0,0,0,0.4)',
+            background: isFav ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.4)',
             border: 'none', borderRadius: '50%', width: 36, height: 36,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', transition: '0.2s'
           }}
         >
-          <i className={isFav ? "ph-fill ph-heart" : "ph ph-heart"} style={{ color: isFav ? '#ef4444' : '#fff', fontSize: 20 }} />
+          <i className={isFav ? 'ph-fill ph-heart' : 'ph ph-heart'} style={{ color: isFav ? '#ef4444' : '#fff', fontSize: 20 }} />
         </button>
-        <img src={image} alt={car.name} />
+
+        {allPhotos.length > 1 && (
+          <>
+            <button className="card-nav card-prev" onClick={prev} aria-label="prev">
+              <i className="ph ph-caret-left" />
+            </button>
+            <button className="card-nav card-next" onClick={next} aria-label="next">
+              <i className="ph ph-caret-right" />
+            </button>
+            <div className="card-dots">
+              {allPhotos.map((_, i) => (
+                <span key={i} className={`card-dot${i === idx ? ' active' : ''}`} />
+              ))}
+            </div>
+          </>
+        )}
+
+        <img
+          src={allPhotos[idx] || mainImg}
+          alt={car.name}
+          style={{ transition: 'opacity .2s' }}
+        />
       </div>
       <div className="card-body">
         <div className="card-name">{car.name}</div>
