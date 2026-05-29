@@ -94,7 +94,7 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .fs-cats-head h3{margin:0;font-size:24px;font-weight:600;color:#fff;font-family:inherit}
 .fs-cats-all{font-size:13px;color:#cfcfcf;padding:10px 20px;background:#0a0a0a;border-radius:12px !important;transition:.2s}
 .fs-cats-all:hover{background:#1a1a1a;color:#fff}
-.fs-cats-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.fs-cats-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:16px}
 .fs-cat{background:#0a0a0a;padding:30px 18px;display:flex;flex-direction:column;align-items:center;gap:14px;transition:.2s;text-align:center;border-radius:12px !important}
 .fs-cat:hover{background:#1a1a1a;transform:translateY(-3px)}
 .fs-cat i{font-size:48px;color:#cfcfcf;transition:.2s;line-height:1}
