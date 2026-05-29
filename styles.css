@@ -1563,4 +1563,15 @@ html{scroll-behavior:smooth}
   color: #666666 !important;
 }
 
-
+.contacts-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+  margin-bottom: 40px;
+}
+@media (max-width: 800px) {
+  .contacts-top-row {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
