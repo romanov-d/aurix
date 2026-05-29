@@ -151,25 +151,34 @@ export default function Home() {
 
       <section className="reviews reveal">
         <div className="rv-wrap">
-          <div className="trust">
-            <div className="trust-left">
-              <h3>Нам доверяют тысячи довольных клиентов</h3>
-              <p>Наша репутация построена на надёжности, качестве сервиса и премиум-авто.</p>
-            </div>
-            <div className="trust-right">
-              <div className="trust-rating">
-                <i className="ph-fill ph-google-logo" />
-                <span>Google</span>
-              </div>
-              <div className="trust-stars">
-                <i className="ph-fill ph-star" />
-                <i className="ph-fill ph-star" />
-                <i className="ph-fill ph-star" />
-                <i className="ph-fill ph-star" />
-                <i className="ph-fill ph-star-half" />
-              </div>
-              <div className="trust-score">5.0/5.0 (227 отзывов)</div>
-            </div>
+          <div className="trust-heading">
+            <p className="trust-eyebrow">Отзывы клиентов</p>
+            <h2 className="trust-h">
+              Нам доверяют
+              <span className="rph-wrap">
+                <span className="rph">
+                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="" />
+                </span>
+              </span>
+              тысячи
+            </h2>
+            <h2 className="trust-h">
+              довольных
+              <span className="rph-wrap">
+                <span className="rph">
+                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="" />
+                </span>
+              </span>
+              клиентов
+              <span className="rph-wrap">
+                <span className="rph">
+                  <img src="https://randomuser.me/api/portraits/men/68.jpg" alt="" />
+                </span>
+              </span>
+            </h2>
+            <h2 className="trust-h trust-h-muted">
+              по всей Москве
+            </h2>
           </div>
 
         </div>
