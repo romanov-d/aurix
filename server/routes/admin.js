@@ -49,27 +49,56 @@ router.get('/cars', async (req, res, next) => {
   }
 });
 
+const updateCarSchema = z.object({
+  name: z.string().min(2).optional(),
+  brand: z.string().min(2).optional(),
+  year: z.coerce.number().int().min(1900).max(2100).optional(),
+  body: z.string().min(2).optional(),
+  fuel: z.string().min(2).optional(),
+  engine: z.string().min(2).optional(),
+  power_hp: z.coerce.number().int().min(1).optional(),
+  drive: z.string().min(2).optional(),
+  price_per_day: z.coerce.number().int().min(0).optional(),
+  deposit: z.coerce.number().int().min(0).optional(),
+  mileage_limit: z.coerce.number().int().min(0).optional(),
+  overmileage_rate: z.coerce.number().int().min(0).optional(),
+  photo_rate: z.coerce.number().int().min(0).optional(),
+  price_6_12: z.coerce.number().int().optional().nullable(),
+  price_30: z.coerce.number().int().optional().nullable(),
+  image_url: z.string().min(1).optional(),
+  description: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  badge: z.string().optional().nullable(),
+  status: z.enum(['published', 'hidden', 'pending', 'rejected']).optional()
+});
+
 router.patch('/cars/:id', async (req, res, next) => {
   try {
-    const body = z.object({
-      status: z.enum(['published', 'hidden', 'pending', 'rejected']).optional(),
-      badge: z.string().max(60).nullable().optional(),
-    }).parse(req.body);
-
+    const body = updateCarSchema.parse(req.body);
     const sets = [];
     const vals = [];
-    if (body.status !== undefined) { vals.push(body.status);  sets.push(`status = $${vals.length}`); }
-    if (body.badge  !== undefined) { vals.push(body.badge);   sets.push(`badge  = $${vals.length}`); }
+    let idx = 1;
+
+    for (const [k, v] of Object.entries(body)) {
+      if (v !== undefined) {
+        sets.push(`${k} = $${idx++}`);
+        vals.push(v);
+      }
+    }
+
     if (!sets.length) return res.status(400).json({ error: 'Nothing to update' });
 
     vals.push(req.params.id);
     const { rows } = await q(
-      `UPDATE cars SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING *`,
+      `UPDATE cars SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`,
       vals
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Неверно заполнены поля формы', detail: e.errors });
+    }
     next(e);
   }
 });

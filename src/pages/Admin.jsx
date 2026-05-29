@@ -105,8 +105,9 @@ export default function Admin() {
   const [newPhotoUrl, setNewPhotoUrl] = useState('');
   const [badgeEdit, setBadgeEdit] = useState({});
   
-  // Add Car Modal states
+  // Add/Edit Car Modal states
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingCarId, setEditingCarId] = useState(null);
   const [addForm, setAddForm] = useState({
     id: '', name: '', brand: '', year: 2024, body: 'Купе', fuel: 'Бензин',
     engine: '', power_hp: 300, drive: 'Автомат', price_per_day: 10000,
@@ -116,7 +117,7 @@ export default function Admin() {
   const [addError, setAddError] = useState('');
   const [adding, setAdding] = useState(false);
 
-  const handleAddCar = async (e) => {
+  const handleSaveCar = async (e) => {
     e.preventDefault();
     setAddError('');
     setAdding(true);
@@ -132,15 +133,29 @@ export default function Admin() {
         photo_rate: parseInt(addForm.photo_rate) || 0,
         price_6_12: addForm.price_6_12 ? parseInt(addForm.price_6_12) : null,
         price_30: addForm.price_30 ? parseInt(addForm.price_30) : null,
+        description: addForm.description || null,
+        color: addForm.color || null,
+        badge: addForm.badge || null,
       };
 
-      const created = await api('/admin/cars', {
-        method: 'POST',
-        body: payload
-      });
+      if (editingCarId) {
+        // Update existing car
+        const updated = await api(`/admin/cars/${editingCarId}`, {
+          method: 'PATCH',
+          body: payload
+        });
+        setCars(cars.map(c => c.id === editingCarId ? updated : c));
+      } else {
+        // Create new car
+        const created = await api('/admin/cars', {
+          method: 'POST',
+          body: payload
+        });
+        setCars([created, ...cars]);
+      }
 
-      setCars([created, ...cars]);
       setShowAddModal(false);
+      setEditingCarId(null);
       setAddForm({
         id: '', name: '', brand: '', year: 2024, body: 'Купе', fuel: 'Бензин',
         engine: '', power_hp: 300, drive: 'Автомат', price_per_day: 10000,
@@ -148,10 +163,50 @@ export default function Admin() {
         price_6_12: '', price_30: '', image_url: '', description: '', color: '', badge: ''
       });
     } catch (err) {
-      setAddError(err.message || 'Ошибка при добавлении автомобиля');
+      setAddError(err.message || 'Ошибка при сохранении автомобиля');
     } finally {
       setAdding(false);
     }
+  };
+
+  const openAddCarModal = () => {
+    setEditingCarId(null);
+    setAddForm({
+      id: '', name: '', brand: '', year: 2024, body: 'Купе', fuel: 'Бензин',
+      engine: '', power_hp: 300, drive: 'Автомат', price_per_day: 10000,
+      deposit: 50000, mileage_limit: 250, overmileage_rate: 200, photo_rate: 5000,
+      price_6_12: '', price_30: '', image_url: '', description: '', color: '', badge: ''
+    });
+    setAddError('');
+    setShowAddModal(true);
+  };
+
+  const openEditCarModal = (car) => {
+    setEditingCarId(car.id);
+    setAddForm({
+      id: car.id,
+      name: car.name,
+      brand: car.brand,
+      year: car.year,
+      body: car.body || 'Купе',
+      fuel: car.fuel || 'Бензин',
+      engine: car.engine || '',
+      power_hp: car.power_hp || 300,
+      drive: car.drive || 'Автомат',
+      price_per_day: car.price_per_day || 10000,
+      deposit: car.deposit || 50000,
+      mileage_limit: car.mileage_limit || 250,
+      overmileage_rate: car.overmileage_rate || 200,
+      photo_rate: car.photo_rate || 5000,
+      price_6_12: car.price_6_12 || '',
+      price_30: car.price_30 || '',
+      image_url: car.image_url || '',
+      description: car.description || '',
+      color: car.color || '',
+      badge: car.badge || ''
+    });
+    setAddError('');
+    setShowAddModal(true);
   };
 
   const updateCarStatus = async (id, status) => {
@@ -295,7 +350,7 @@ export default function Admin() {
             <div className="acc-block">
               <div className="acc-block-head">
                 <h3>Автопарк ({cars.length})</h3>
-                <button className="btn btn-sm" onClick={() => setShowAddModal(true)}>Добавить авто</button>
+                <button className="btn btn-sm" onClick={openAddCarModal}>Добавить авто</button>
               </div>
               <table className="acc-table" style={{ width: '100%' }}>
                 <thead>
@@ -328,8 +383,11 @@ export default function Admin() {
                         </td>
                         <td>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button className="btn btn-sm" onClick={() => openEditCarModal(c)}>
+                              <i className="ph ph-pencil-simple" /> Ред.
+                            </button>
                             <button className="btn btn-sm btn-ghost" onClick={() => toggleCarExpand(c.id)}>
-                              <i className={`ph ph-${expandedCar === c.id ? 'x' : 'pencil-simple'}`} /> {expandedCar === c.id ? 'Закрыть' : 'Ред.'}
+                              <i className={`ph ph-${expandedCar === c.id ? 'x' : 'image'}`} /> {expandedCar === c.id ? 'Скрыть фото' : 'Фото/Плашка'}
                             </button>
                             {c.status === 'published' && <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'hidden')}>Скрыть</button>}
                             {c.status === 'hidden' && <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Опубл.</button>}
@@ -493,14 +551,14 @@ export default function Admin() {
         <div className="modal-overlay">
           <div className="modal-card">
             <button className="modal-close" onClick={() => setShowAddModal(false)}><i className="ph ph-x" /></button>
-            <h3>Добавить автомобиль</h3>
+            <h3>{editingCarId ? 'Редактировать автомобиль' : 'Добавить автомобиль'}</h3>
             {addError && <div className="auth-error" style={{ marginBottom: 16 }}>{addError}</div>}
             
-            <form onSubmit={handleAddCar} className="modal-form">
+            <form onSubmit={handleSaveCar} className="modal-form">
               <div className="modal-grid-2">
                 <div className="field">
                   <label>ID (латиница без пробелов, уникальный)</label>
-                  <input value={addForm.id} onChange={e => setAddForm({...addForm, id: e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '')})} placeholder="porsche-911-carrera" required />
+                  <input value={addForm.id} onChange={e => setAddForm({...addForm, id: e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '')})} placeholder="porsche-911-carrera" required disabled={editingCarId !== null} />
                 </div>
                 <div className="field">
                   <label>Название автомобиля</label>
@@ -608,7 +666,7 @@ export default function Admin() {
 
               <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
                 <button type="button" className="btn btn-ghost" onClick={() => setShowAddModal(false)} disabled={adding}>Отмена</button>
-                <button type="submit" className="btn btn-filled" disabled={adding}>{adding ? 'Создание...' : 'Создать'}</button>
+                <button type="submit" className="btn btn-filled" disabled={adding}>{adding ? 'Сохранение...' : editingCarId ? 'Сохранить' : 'Создать'}</button>
               </div>
             </form>
           </div>
