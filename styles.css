@@ -55,7 +55,7 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .fs-line{display:block;width:100%;height:2px;background:var(--gold);margin-bottom:18px}
 .fs-hero-right p{margin:0;color:#cfcfcf;font-size:14px;line-height:1.55}
 
-.fs-search{position:relative;z-index:3;margin:6px auto 4px;width:calc(100% - 48px);max-width:1440px;padding:0 28px;box-sizing:border-box}
+.fs-search{position:relative;z-index:100;margin:6px auto 4px;width:calc(100% - 48px);max-width:1440px;padding:0 28px;box-sizing:border-box}
 .fs-search-bar{background:#0a0a0a;display:flex;align-items:stretch;gap:0;padding:14px 14px 14px 28px;border-radius:12px !important;min-height:84px}
 .fs-seg{display:flex;align-items:center;gap:12px;padding:0 26px;color:#fff;font-size:14px;border-right:1px solid rgba(255,255,255,.08)}
 .fs-seg:last-of-type{border-right:0}
@@ -1300,7 +1300,7 @@ html{scroll-behavior:smooth}
 .drp-popup{
   position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);
   background:#0d0d0d;border:1px solid rgba(255,255,255,.1);border-radius:16px;
-  padding:20px;z-index:300;width:320px;
+  padding:20px;z-index:9999;width:320px;
   box-shadow:0 24px 64px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.04);
   animation:drpIn .15s cubic-bezier(.2,.8,.2,1);
 }
