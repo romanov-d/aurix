@@ -41,6 +41,7 @@ export default function Car() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewError, setReviewError] = useState('');
   const [reviewing, setReviewing] = useState(false);
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
   useEffect(() => {
     if (!id) return;
@@ -145,24 +146,44 @@ export default function Car() {
               <i className={isFav ? "ph-fill ph-heart" : "ph ph-heart"} style={{ fontSize: 24 }} />
             </button>
           </div>
-          <div className="muted" style={{ marginTop: 10, fontSize: 13, letterSpacing: '.18em', textTransform: 'uppercase' }}>{car.year} · {car.body} · {car.power_hp || car.power} л.с.</div>
+          <div className="car-badges">
+            <span className="car-badge">{car.year}</span>
+            <span className="car-badge">{car.body}</span>
+            {(car.power_hp || car.power) && <span className="car-badge">{car.power_hp || car.power} л.с.</span>}
+            {car.fuel && <span className="car-badge">{car.fuel}</span>}
+            {car.engine && <span className="car-badge">{car.engine}</span>}
+          </div>
         </div>
       </div>
 
       <div className="container detail">
         <div className="gallery">
-          <div className="main-img"><img src={car.image_url || car.img} alt="" /></div>
-          <div className="thumbs">
-            <div className="t active"><img src={car.image_url || car.img} alt="" /></div>
-            <div className="t"><img src="https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?w=600&auto=format&fit=crop&q=80" alt="" /></div>
-            <div className="t"><img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=600&auto=format&fit=crop&q=80" alt="" /></div>
-            <div className="t"><img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&q=80" alt="" /></div>
-            <div className="t"><img src="https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=600&auto=format&fit=crop&q=80" alt="" /></div>
-          </div>
+          {(() => {
+            const mainImg = car.image_url || car.img;
+            const allPhotos = mainImg
+              ? [mainImg, ...(car.photos || []).filter(p => p !== mainImg)]
+              : (car.photos || []);
+            return (
+              <>
+                <div className="main-img"><img src={allPhotos[activePhotoIdx] || mainImg} alt="" /></div>
+                {allPhotos.length > 1 && (
+                  <div className="thumbs">
+                    {allPhotos.map((src, i) => (
+                      <div key={i} className={`t${i === activePhotoIdx ? ' active' : ''}`} onClick={() => setActivePhotoIdx(i)}>
+                        <img src={src} alt="" />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           <div className="divider-h"></div>
           <h3 className="serif" style={{ color: 'var(--gold)', fontSize: 22 }}>Описание</h3>
-          <p className="muted" style={{ marginTop: 14, fontSize: 14, lineHeight: 1.85, color: '#bdbdbd' }}>{car.name} — премиальный автомобиль из автопарка AURIX MOTORS. Двигатель {car.engine}, мощность {car.power_hp || car.power} л.с., коробка {car.drive}. Полностью укомплектованный салон, премиальная аудиосистема и безупречное техническое состояние.</p>
+          <p className="muted" style={{ marginTop: 14, fontSize: 14, lineHeight: 1.85, color: '#bdbdbd' }}>
+            {car.description || `${car.name} — премиальный автомобиль из автопарка AURIX MOTORS. Двигатель ${car.engine}, мощность ${car.power_hp || car.power} л.с., коробка ${car.drive}. Полностью укомплектованный салон, премиальная аудиосистема и безупречное техническое состояние.`}
+          </p>
 
           <h3 className="serif" style={{ color: 'var(--gold)', fontSize: 22, marginTop: 36 }}>Что включено</h3>
           <ul className="muted" style={{ margin: '14px 0 0 20px', color: '#bdbdbd', fontSize: 14, lineHeight: 2 }}>
@@ -176,7 +197,7 @@ export default function Car() {
           <h3 className="serif" style={{ color: 'var(--gold)', fontSize: 22, marginTop: 40, marginBottom: 20 }}>Отзывы ({reviews.length})</h3>
           
           {user && (
-            <form onSubmit={handleReview} style={{ background: '#111', padding: 20, borderRadius: 12, marginBottom: 30 }}>
+            <form onSubmit={handleReview} style={{ background: 'var(--bg-2)', padding: 20, borderRadius: 12, marginBottom: 30 }}>
               <div style={{ marginBottom: 14 }}>
                 <label style={{ display: 'block', fontSize: 13, color: '#888', marginBottom: 8 }}>Оценка</label>
                 <div style={{ display: 'flex', gap: 8 }}>
@@ -201,7 +222,7 @@ export default function Car() {
             {reviews.length === 0 ? (
               <p className="muted" style={{ fontSize: 14 }}>Пока нет отзывов. Станьте первым!</p>
             ) : reviews.map(r => (
-              <div key={r.id} style={{ background: '#111', padding: 20, borderRadius: 12 }}>
+              <div key={r.id} style={{ background: 'var(--bg-2)', padding: 20, borderRadius: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
                   <img src={r.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user_name || 'A')}&background=random&color=fff`} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
                   <div>
@@ -220,7 +241,7 @@ export default function Car() {
 
         <aside className="detail-side">
           <h1>{car.name}</h1>
-          <div className="submeta">{car.year} · {car.body} · Чёрный</div>
+          <div className="submeta">{car.year} · {car.body} · {car.color || 'Чёрный'}</div>
 
           <div className="price-block">
             <div className="row"><span>1–5 суток</span><b>{car.price_per_day?.toLocaleString('ru-RU')} ₽</b></div>
@@ -301,7 +322,7 @@ export default function Car() {
             <div className="s"><div className="lbl">Двигатель</div><div className="v">{car.engine} · {car.fuel?.toLowerCase()}</div></div>
             <div className="s"><div className="lbl">Мощность</div><div className="v">{car.power_hp || car.power} л.с.</div></div>
             <div className="s"><div className="lbl">Коробка</div><div className="v">{car.drive} · 9</div></div>
-            <div className="s"><div className="lbl">Мест</div><div className="v">2 + 2</div></div>
+            <div className="s"><div className="lbl">Цвет</div><div className="v">{car.color || '—'}</div></div>
           </div>
         </aside>
       </div>
@@ -310,7 +331,7 @@ export default function Car() {
         <div className="container">
           <div className="section-head">
             <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Похожие</span></div>
-            <h2>Также вам <em>понравится</em></h2>
+            <h2>Также вам понравится</h2>
           </div>
           <div id="fleet-slot" className="fleet-grid" data-limit="4">
             {similar.map(c => <CarCard key={c.id} car={c} />)}

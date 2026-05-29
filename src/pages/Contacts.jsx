@@ -1,6 +1,42 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { api } from '../api/client.js';
 
 export default function Contacts() {
+  const [form, setForm] = useState({ name: '', phone: '', car: '', message: '' });
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (k) => (e) => {
+    setForm({ ...form, [k]: e.target.value });
+    if (error) setError('');
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError('Имя и телефон обязательны для заполнения');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    setSuccess(false);
+
+    try {
+      await api('/contact', {
+        method: 'POST',
+        body: form,
+      });
+      setSuccess(true);
+      setForm({ name: '', phone: '', car: '', message: '' });
+    } catch (err) {
+      setError(err.message || 'Произошла ошибка при отправке заявки');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -36,19 +72,68 @@ export default function Contacts() {
             <div>
               <div className="map"></div>
 
-              <div className="form-card" style={{ marginTop: 24, padding: 32 }}>
+              <form className="form-card" onSubmit={onSubmit} style={{ marginTop: 24, padding: 32 }}>
                 <h3 className="serif" style={{ color: 'var(--gold)', fontSize: 22, marginBottom: 18 }}>Оставьте заявку</h3>
+                
+                {success && (
+                  <div style={{ color: '#2ecc71', marginBottom: 18, fontSize: 14, background: 'rgba(46, 204, 113, 0.1)', padding: '12px 16px', borderRadius: 6 }}>
+                    Заявка успешно отправлена! Мы перезвоним вам в течение 5 минут.
+                  </div>
+                )}
+
+                {error && (
+                  <div style={{ color: '#e74c3c', marginBottom: 18, fontSize: 14, background: 'rgba(231, 76, 60, 0.1)', padding: '12px 16px', borderRadius: 6 }}>
+                    {error}
+                  </div>
+                )}
+
                 <div className="form-row">
-                  <div className="field"><label>Имя</label><input placeholder="Иван" /></div>
-                  <div className="field"><label>Телефон</label><input placeholder="+7 ___ ___ __ __" /></div>
+                  <div className="field">
+                    <label>Имя</label>
+                    <input 
+                      value={form.name}
+                      onChange={handleChange('name')}
+                      placeholder="Иван" 
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="field">
+                    <label>Телефон</label>
+                    <input 
+                      value={form.phone}
+                      onChange={handleChange('phone')}
+                      placeholder="+7 999 123 45 67" 
+                      required
+                      disabled={loading}
+                    />
+                  </div>
                 </div>
-                <div className="field" style={{ marginBottom: 18 }}><label>Какой автомобиль вас интересует</label><input placeholder="Mercedes-AMG SL 43" /></div>
-                <div className="field"><label>Сообщение</label><textarea placeholder="Даты, пожелания, дополнительные услуги" /></div>
+                <div className="field" style={{ marginBottom: 18 }}>
+                  <label>Какой автомобиль вас интересует</label>
+                  <input 
+                    value={form.car}
+                    onChange={handleChange('car')}
+                    placeholder="Mercedes-AMG SL 43" 
+                    disabled={loading}
+                  />
+                </div>
+                <div className="field">
+                  <label>Сообщение</label>
+                  <textarea 
+                    value={form.message}
+                    onChange={handleChange('message')}
+                    placeholder="Даты, пожелания, дополнительные услуги" 
+                    disabled={loading}
+                  />
+                </div>
                 <div className="form-actions">
                   <p className="note">Перезвоним в течение 5 минут</p>
-                  <button className="btn btn-filled">Отправить</button>
+                  <button className="btn btn-filled" type="submit" disabled={loading}>
+                    {loading ? 'Отправка...' : 'Отправить'}
+                  </button>
                 </div>
-              </div>
+              </form>
             </div>
           </div>
         </div>
@@ -56,3 +141,4 @@ export default function Contacts() {
     </>
   );
 }
+

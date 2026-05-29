@@ -7,6 +7,8 @@ import authRouter from './routes/auth.js';
 import meRouter from './routes/me.js';
 import bookingsRouter from './routes/bookings.js';
 import adminRouter from './routes/admin.js';
+import contactRouter from './routes/contact.js';
+import faqRouter from './routes/faq.js';
 
 export const app = express();
 app.use(express.json({ limit: '1mb' }));
@@ -28,6 +30,8 @@ app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/contact', contactRouter);
+app.use('/api/faq', faqRouter);
 
 app.use((err, _req, res, _next) => {
   console.error('[api error]', err);

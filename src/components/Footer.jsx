@@ -1,42 +1,57 @@
 import { Link } from 'react-router-dom';
+import { GrainGradient } from '@paper-design/shaders-react';
+
+/* ── Цветные SVG иконки платёжных систем ── */
+function IconVisa() {
+  return (
+    <svg viewBox="0 0 50 16" width="42" height="14" xmlns="http://www.w3.org/2000/svg">
+      <rect width="50" height="16" rx="3" fill="#1A1F71"/>
+      <text x="25" y="12" textAnchor="middle" fill="#FFFFFF" fontSize="11" fontFamily="Arial" fontWeight="bold" letterSpacing="1">VISA</text>
+    </svg>
+  );
+}
+
+function IconMastercard() {
+  return (
+    <svg viewBox="0 0 38 24" width="38" height="24" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="14" cy="12" r="10" fill="#EB001B"/>
+      <circle cx="24" cy="12" r="10" fill="#F79E1B"/>
+      <path d="M19 4.8a10 10 0 0 1 0 14.4A10 10 0 0 1 19 4.8z" fill="#FF5F00"/>
+    </svg>
+  );
+}
+
+function IconMir() {
+  return (
+    <svg viewBox="0 0 50 16" width="42" height="14" xmlns="http://www.w3.org/2000/svg">
+      <rect width="50" height="16" rx="3" fill="#00B4E6"/>
+      <text x="25" y="12" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontFamily="Arial" fontWeight="bold" letterSpacing="0.5">МИР</text>
+    </svg>
+  );
+}
 
 export default function Footer() {
   return (
     <footer className="ft">
-      <div className="ft-wrap">
-        <div className="ft-top">
-          <div className="ft-promo">
-            <div className="ft-promo-text">
-              <div className="ft-promo-eyebrow">Приложение для аренды авто</div>
-              <div className="ft-promo-title">Арендуйте авто или сдавайте свой —<br />всё в одном удобном приложении.</div>
-              <div className="ft-promo-badges">
-                <a href="#" className="ft-badge">
-                  <i className="ph-fill ph-apple-logo" />
-                  <span><small>Скачать в</small>App Store</span>
-                </a>
-                <a href="#" className="ft-badge">
-                  <i className="ph-fill ph-google-play-logo" />
-                  <span><small>Доступно в</small>Google Play</span>
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="ft-rating">
-            <div className="ft-rating-head">
-              <i className="ph-fill ph-google-logo" />
-              <span>Google</span>
-            </div>
-            <div className="ft-rating-stars">
-              <i className="ph-fill ph-star" />
-              <i className="ph-fill ph-star" />
-              <i className="ph-fill ph-star" />
-              <i className="ph-fill ph-star" />
-              <i className="ph-fill ph-star" />
-            </div>
-            <div className="ft-rating-score">5.0/5.0 (227 отзывов)</div>
-          </div>
-        </div>
+      {/* Animated gradient behind glass */}
+      <div className="ft-shader">
+        <GrainGradient
+          style={{ width: '100%', height: '100%' }}
+          colorBack="hsl(0,0%,0%)"
+          softness={0.6}
+          intensity={0.7}
+          noise={0}
+          shape="corners"
+          offsetX={0}
+          offsetY={0}
+          scale={1}
+          rotation={0}
+          speed={1.8}
+          colors={['hsl(45,96%,52%)', 'hsl(38,88%,42%)', 'hsl(30,60%,18%)']}
+        />
+      </div>
 
+      <div className="ft-wrap">
         <div className="ft-cols">
           <div className="ft-col ft-col-brand">
             <img src="/logo.svg" alt="AURIX" className="ft-logo-img" />
@@ -44,11 +59,10 @@ export default function Footer() {
           </div>
           <div className="ft-col">
             <h5>Правовая информация</h5>
-
             <ul>
               <li><Link to="/terms">Условия и положения</Link></li>
-              <li><Link to="/terms">Политика конфиденциальности</Link></li>
-              <li><a href="#">Блог</a></li>
+              <li><Link to="/privacy">Политика конфиденциальности</Link></li>
+              <li><Link to="/blog">Блог</Link></li>
             </ul>
           </div>
           <div className="ft-col">
@@ -69,23 +83,22 @@ export default function Footer() {
           </div>
           <div className="ft-col">
             <h5>Адрес</h5>
-            <p>Москва, Пресненская наб., 12<br />Бизнес-центр «Москва-Сити»</p>
+            <p>Москва, Олимпийский проспект, 12<br />Ежедневно, 24 часа</p>
           </div>
         </div>
 
         <div className="ft-bot">
           <div className="ft-social">
             <span>Подписывайтесь</span>
-            <a href="#"><i className="ph-fill ph-instagram-logo" /></a>
-            <a href="#"><i className="ph-fill ph-telegram-logo" /></a>
-            <a href="#"><i className="ph-fill ph-youtube-logo" /></a>
+            <a href="https://instagram.com/aurixmotors" target="_blank" rel="noopener noreferrer"><i className="ph-fill ph-instagram-logo" /></a>
+            <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"><i className="ph-fill ph-telegram-logo" /></a>
+            <a href="https://youtube.com/@aurixmotors" target="_blank" rel="noopener noreferrer"><i className="ph-fill ph-youtube-logo" /></a>
           </div>
           <div className="ft-pay">
             <span>Способы оплаты</span>
-            <i className="ph-fill ph-credit-card" />
-            <i className="ph-fill ph-currency-circle-dollar" />
-            <i className="ph-fill ph-currency-btc" />
-            <i className="ph-fill ph-money" />
+            <IconVisa />
+            <IconMastercard />
+            <IconMir />
           </div>
           <div className="ft-error">
             <span>Нашли ошибку? Напишите нам</span>

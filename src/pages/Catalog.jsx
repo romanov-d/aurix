@@ -58,6 +58,7 @@ export default function Catalog() {
   const [minPrice,   setMinPrice]   = useState(30000);
   const [maxPrice,   setMaxPrice]   = useState(200000);
   const [sort,       setSort]       = useState('Рекомендуемые');
+  const [brandsOpen, setBrandsOpen] = useState(false);
 
   function toggleBrand(brand) {
     setSelectedBrands(prev => {
@@ -120,7 +121,7 @@ export default function Catalog() {
               placeholder="Lexus, Ferrari, BMW…"
               value={textSearch}
               onChange={e => setTextSearch(e.target.value)}
-              style={{ width: '100%', background: '#111', border: '1px solid #2a2a2a', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 14 }}
+              style={{ width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: '#fff', padding: '10px 12px', borderRadius: 8, fontSize: 14 }}
             />
           </div>
 
@@ -157,17 +158,41 @@ export default function Catalog() {
             </div>
           </div>
 
-          {/* Марка */}
-          <div className="filter-group">
-            <h5>Марка</h5>
-            <div className="checks">
-              {BRANDS.map(brand => (
-                <label key={brand}>
-                  <input type="checkbox" checked={selectedBrands.has(brand)} onChange={() => toggleBrand(brand)} />
-                  {' '}{brand}
-                </label>
-              ))}
-            </div>
+          {/* Марка — попап */}
+          <div className="filter-group" style={{ position: 'relative' }}>
+            <h5
+              onClick={() => setBrandsOpen(v => !v)}
+              style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}
+            >
+              Марка
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 400 }}>
+                {selectedBrands.size < BRANDS.length && <span style={{ color: 'var(--gold)' }}>{selectedBrands.size}/{BRANDS.length}</span>}
+                <i className={`ph ph-caret-${brandsOpen ? 'up' : 'down'}`} style={{ fontSize: 13, color: '#888' }} />
+              </span>
+            </h5>
+            {brandsOpen && (
+              <>
+                <div className="brand-popup-backdrop" onClick={() => setBrandsOpen(false)} />
+                <div className="brand-popup">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '0 4px' }}>
+                    <span style={{ fontSize: 12, color: '#888' }}>Выберите марки</span>
+                    <button onClick={() => setSelectedBrands(new Set(BRANDS))} style={{ fontSize: 11, color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Все</button>
+                  </div>
+                  {BRANDS.map(brand => (
+                    <div
+                      key={brand}
+                      className={`brand-option${selectedBrands.has(brand) ? ' selected' : ''}`}
+                      onClick={() => toggleBrand(brand)}
+                    >
+                      <span className="brand-check">
+                        {selectedBrands.has(brand) && <i className="ph-fill ph-check" />}
+                      </span>
+                      {brand}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Цена */}

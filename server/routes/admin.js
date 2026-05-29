@@ -74,6 +74,62 @@ router.patch('/cars/:id', async (req, res, next) => {
   }
 });
 
+const createCarSchema = z.object({
+  id: z.string().min(2),
+  name: z.string().min(2),
+  brand: z.string().min(2),
+  year: z.coerce.number().int().min(1900).max(2100),
+  body: z.string().min(2),
+  fuel: z.string().min(2),
+  engine: z.string().min(2),
+  power_hp: z.coerce.number().int().min(1),
+  drive: z.string().min(2),
+  price_per_day: z.coerce.number().int().min(0),
+  deposit: z.coerce.number().int().min(0),
+  mileage_limit: z.coerce.number().int().min(0),
+  overmileage_rate: z.coerce.number().int().min(0),
+  photo_rate: z.coerce.number().int().min(0),
+  price_6_12: z.coerce.number().int().optional().nullable(),
+  price_30: z.coerce.number().int().optional().nullable(),
+  image_url: z.string().min(1),
+  description: z.string().optional().nullable(),
+  color: z.string().optional().nullable(),
+  badge: z.string().optional().nullable()
+});
+
+router.post('/cars', async (req, res, next) => {
+  try {
+    const body = createCarSchema.parse(req.body);
+
+    const exists = await one(`SELECT id FROM cars WHERE id = $1`, [body.id]);
+    if (exists) {
+      return res.status(400).json({ error: 'Автомобиль с таким ID уже существует' });
+    }
+
+    const { rows } = await q(
+      `INSERT INTO cars (
+        id, name, brand, year, body, fuel, engine, power_hp, drive,
+        price_per_day, deposit, mileage_limit, overmileage_rate, photo_rate,
+        price_6_12, price_30, image_url, description, color, badge, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 'published')
+      RETURNING *`,
+      [
+        body.id, body.name, body.brand, body.year, body.body, body.fuel, body.engine, body.power_hp, body.drive,
+        body.price_per_day, body.deposit, body.mileage_limit, body.overmileage_rate, body.photo_rate,
+        body.price_6_12 || null, body.price_30 || null, body.image_url, body.description || null,
+        body.color || null, body.badge || null
+      ]
+    );
+
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      return res.status(400).json({ error: 'Неверно заполнены обязательные поля формы', detail: e.errors });
+    }
+    next(e);
+  }
+});
+
 // Car photos
 router.get('/cars/:id/photos', async (req, res, next) => {
   try {

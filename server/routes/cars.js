@@ -23,8 +23,9 @@ function fleetToRow(c) {
     overmileage_rate: c.overmileage_rate ?? 200,
     photo_rate: c.photo_rate ?? 0,
     badge: c.badge ?? null, image_url: c.img,
-    description: null, status: 'published',
+    description: c.description ?? null, status: 'published',
     owner_id: null, created_at: new Date().toISOString(),
+    color: c.color ?? null,
   };
 }
 

@@ -121,7 +121,21 @@ router.patch('/:id', async (req, res, next) => {
       params
     );
     
-    res.json(rows[0]);
+    const updated = rows[0];
+
+    // Award cashback points if status transitions to completed
+    if (updates.status === 'completed' && booking.status !== 'completed') {
+      const cashback = Math.round(updated.total * 0.05);
+      if (cashback > 0) {
+        await q(`UPDATE users SET points = points + $1 WHERE id = $2`, [cashback, updated.user_id]);
+        await q(
+          `INSERT INTO user_points (user_id, amount, reason) VALUES ($1, $2, $3)`,
+          [updated.user_id, cashback, `Кэшбэк 5% за завершение аренды #${updated.id}`]
+        );
+      }
+    }
+    
+    res.json(updated);
   } catch (e) {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'Bad input', detail: e.errors });

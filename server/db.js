@@ -39,6 +39,8 @@ export function init() {
       await seedIfEmpty();
       console.log('[db] init: seedIfEmpty done, starting seedAdmin...');
       await seedAdmin();
+      console.log('[db] init: seedAdmin done, starting seedFaq...');
+      await seedFaq();
       console.log('[db] init: done');
     })().catch((e) => {
       console.error('[db] init failed:', e);
@@ -108,6 +110,17 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_6_12 INTEGER`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_30 INTEGER`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMPTZ`,
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
+  `CREATE TABLE IF NOT EXISTS user_points (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    amount     INTEGER NOT NULL,
+    reason     TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
   `CREATE TABLE IF NOT EXISTS bookings (
     id           BIGSERIAL PRIMARY KEY,
     car_id       TEXT NOT NULL REFERENCES cars(id) ON DELETE RESTRICT,
@@ -146,6 +159,13 @@ const SCHEMA_STATEMENTS = [
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_car_photos_car ON car_photos(car_id)`,
+  `CREATE TABLE IF NOT EXISTS faq (
+    id         BIGSERIAL PRIMARY KEY,
+    question   TEXT NOT NULL,
+    answer     TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`
 ];
 
 export async function ensureSchema() {
@@ -163,9 +183,9 @@ export async function seedIfEmpty() {
       `INSERT INTO cars (
          id, name, brand, year, body, fuel, engine, power_hp, drive,
          price_per_day, badge, image_url, status,
-         deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30
+         deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30, color, description
        )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18,$19,$20)
        ON CONFLICT (id) DO UPDATE SET
          name            = EXCLUDED.name,
          brand           = EXCLUDED.brand,
@@ -183,7 +203,9 @@ export async function seedIfEmpty() {
          overmileage_rate= EXCLUDED.overmileage_rate,
          photo_rate      = EXCLUDED.photo_rate,
          price_6_12      = EXCLUDED.price_6_12,
-         price_30        = EXCLUDED.price_30`,
+         price_30        = EXCLUDED.price_30,
+         color           = EXCLUDED.color,
+         description     = EXCLUDED.description`,
       [
         i.id,
         i.name,
@@ -203,6 +225,8 @@ export async function seedIfEmpty() {
         i.photo_rate,
         i.price_6_12 ?? null,
         i.price_30 ?? null,
+        i.color || null,
+        i.description || null,
       ]
     );
   }
@@ -218,4 +242,24 @@ export async function seedAdmin() {
     ['admin@aurix.local', 'Администратор', hash, 'admin']
   );
   console.log('[db] seeded admin: admin@aurix.local / admin123');
+}
+
+export async function seedFaq() {
+  const result = await pool.query('SELECT COUNT(*) as count FROM faq');
+  const count = parseInt(result.rows[0].count);
+  if (count > 0) return;
+
+  const items = [
+    ['Можно ли арендовать авто в аэропорту даже поздно ночью?', 'Конечно. AURIX осуществляет круглосуточную доставку, включая аэропорты Москвы. Просто сообщите номер рейса и время прибытия — автомобиль будет ждать вас, без задержек и ожиданий.', 10],
+    ['Может ли управлять автомобилем кто-то ещё, например, друг или член семьи?', 'Да, при оформлении договора можно указать дополнительного водителя. У него должны быть права с необходимым стажем и подходящий возраст.', 20],
+    ['Какие документы нужны для аренды авто в Москве?', 'Паспорт, водительское удостоверение со стажем от 3 лет и банковская карта на имя арендатора. Для некоторых классов авто требуется дополнительный документ.', 30],
+    ['Можно ли арендовать без банковской карты?', 'В большинстве случаев нужна именная банковская карта для авторизации залога. Возможна оплата наличными после подтверждения личности.', 40],
+    ['Что входит в договор аренды?', 'Договор включает полную страховку КАСКО и ОСАГО, базовый километраж, техподдержку 24/7 и круглосуточную помощь на дороге.', 50],
+    ['Как работают платные дороги и проезды?', 'Все платные участки автоматически фиксируются и оплачиваются через ваш договор. Подробный отчёт приходит на email после возврата авто.', 60],
+  ];
+
+  for (const [qText, aText, order] of items) {
+    await pool.query('INSERT INTO faq (question, answer, sort_order) VALUES ($1, $2, $3)', [qText, aText, order]);
+  }
+  console.log('[db] seeded faq items');
 }

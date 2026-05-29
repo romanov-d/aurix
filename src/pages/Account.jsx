@@ -6,12 +6,14 @@ import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
 
 export default function Account() {
-  const { user, logout } = useAuth();
+  const { user, logout, refresh } = useAuth();
   const nav = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
   const [bookings, setBookings] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
+  const [pointsHistory, setPointsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   // Load all cars to display in favorites
   const { items: allCars } = useCars({ limit: 100 });
@@ -20,11 +22,13 @@ export default function Account() {
     if (!user) return;
     Promise.all([
       api('/me/bookings'),
-      api('/me/favorites')
+      api('/me/favorites'),
+      api('/me/points')
     ])
-      .then(([bData, fData]) => {
+      .then(([bData, fData, pData]) => {
         setBookings(bData);
         setFavoriteIds(fData);
+        setPointsHistory(pData);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -34,6 +38,33 @@ export default function Account() {
   const memberSince = user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear();
   const tierLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'partner' ? 'Партнёр' : `Member · с ${memberSince}`;
   const avatar = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'A')}&background=random&color=fff&size=128`;
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 1024 * 1024) {
+      alert('Файл слишком большой. Максимальный размер — 1 МБ.');
+      return;
+    }
+
+    setUploading(true);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        await api('/me', {
+          method: 'PATCH',
+          body: { avatar_url: reader.result }
+        });
+        await refresh();
+      } catch (err) {
+        alert(err.message || 'Ошибка при загрузке аватара');
+      } finally {
+        setUploading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const onLogout = async (e) => {
     e.preventDefault();
@@ -61,7 +92,20 @@ export default function Account() {
       <div className="container account">
         <aside className="acc-side">
           <div className="acc-user">
-            <img className="acc-avatar" src={avatar} alt={user?.name || ''} />
+            <div className="acc-avatar-wrapper">
+              <img className="acc-avatar" src={avatar} alt={user?.name || ''} />
+              <label htmlFor="avatar-upload" className={`avatar-overlay ${uploading ? 'loading' : ''}`} title="Сменить аватар">
+                <i className={uploading ? "ph ph-spinner-gap spin" : "ph ph-camera"} />
+              </label>
+              <input
+                id="avatar-upload"
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                style={{ display: 'none' }}
+                disabled={uploading}
+              />
+            </div>
             <div className="info">
               <div className="name">{user?.name}</div>
               <div className="tier">{tierLabel}</div>
@@ -203,13 +247,13 @@ export default function Account() {
                         <i className="ph-fill ph-coins" style={{ fontSize: 36, color: 'var(--gold)' }} />
                         <div>
                           <div style={{ fontSize: 13, color: '#888', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Ваш баланс</div>
-                          <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>0 <span style={{ fontSize: 16, color: '#888' }}>баллов</span></div>
-                          <div style={{ fontSize: 13, color: '#bdbdbd', marginTop: 2 }}>= 0 ₽</div>
+                          <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>{(user.points || 0).toLocaleString()} <span style={{ fontSize: 16, color: '#888' }}>баллов</span></div>
+                          <div style={{ fontSize: 13, color: '#bdbdbd', marginTop: 2 }}>= {(user.points || 0).toLocaleString()} ₽</div>
                         </div>
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-percent" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Приветственный бонус</div>
@@ -220,7 +264,7 @@ export default function Account() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-star" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Кэшбэк с аренды</div>
@@ -231,7 +275,7 @@ export default function Account() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 16, background: '#111', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-coins" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Оплата баллами</div>
@@ -241,6 +285,32 @@ export default function Account() {
                           </div>
                         </div>
                       </div>
+
+                      {pointsHistory.length > 0 && (
+                        <div style={{ marginTop: 32 }}>
+                          <h4 style={{ color: 'var(--gold)', marginBottom: 16, fontSize: 15, fontWeight: 600 }}>История начислений</h4>
+                          <table className="acc-table" style={{ width: '100%' }}>
+                            <thead>
+                              <tr>
+                                <th>Дата</th>
+                                <th>Назначение</th>
+                                <th style={{ textAlign: 'right' }}>Баллы</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pointsHistory.map(p => (
+                                <tr key={p.id}>
+                                  <td>{formatShortDate(p.created_at)}</td>
+                                  <td>{p.reason}</td>
+                                  <td className="price" style={{ textAlign: 'right', color: p.amount > 0 ? '#2ecc71' : '#e74c3c', fontWeight: 600 }}>
+                                    {p.amount > 0 ? `+${p.amount}` : p.amount}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </>

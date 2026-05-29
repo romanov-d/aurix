@@ -1,9 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchProvider } from '../components/SearchWidget.jsx';
 import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 import CarCard from '../components/CarCard.jsx';
+import CircularGallery from '../components/CircularGallery.jsx';
+import { api } from '../api/client.js';
+
+const REVIEWS = [
+  { name: 'Дмитрий Волков',  when: 'месяц назад',     rating: 5, text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
+  { name: 'Артём Орлов',     when: '3 недели назад',   rating: 5, text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
+  { name: 'Иван Соколов',    when: '3 недели назад',   rating: 5, text: 'Огромный выбор машин в AURIX поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
+  { name: 'Анна Петрова',    when: 'месяц назад',      rating: 5, text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
+  { name: 'Сергей Кузнецов', when: '2 недели назад',   rating: 5, text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
+  { name: 'Михаил Иванов',   when: 'неделю назад',     rating: 5, text: 'Арендовал Porsche Panamera — незабываемо. AURIX — это другой уровень аренды авто в Москве.' },
+];
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
 
@@ -149,120 +160,29 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="reviews reveal">
-        <div className="rv-wrap">
-          <div className="trust-heading">
+      <section className="rv2-section reveal">
+        <div className="rv2-inner">
+          <div className="trust-heading" style={{ paddingBottom: 0 }}>
             <h2 className="trust-h">
-              Нам доверяют
+              Что говорят
               <span className="rph-wrap">
-                <span className="rph rph-car">
-                  <img src="/cars/bmw_m4.png" alt="BMW M4" />
+                <span className="rph-car">
+                  <img src="/cars/ferrari_f8_hero.png" alt="" />
                 </span>
               </span>
-              тысячи
+              о нас
             </h2>
-            <h2 className="trust-h">
-              довольных
-              <span className="rph-wrap">
-                <span className="rph rph-car">
-                  <img src="/cars/ferrari_f8.png" alt="Ferrari F8" />
-                </span>
-              </span>
-              клиентов
-              <span className="rph-wrap">
-                <span className="rph rph-car">
-                  <img src="/cars/lexus_lx_white.png" alt="Lexus LX" />
-                </span>
-              </span>
-            </h2>
-            <h2 className="trust-h trust-h-muted">
-              по всей Москве
-            </h2>
+            <h2 className="trust-h trust-h-muted">тысячи клиентов</h2>
           </div>
-
-        </div>
-        <div className="rv-stage">
-          <div className="rv-stage-bg" />
-          <img src="/letter.svg" alt="AURIX" className="rv-brand-img" />
-          <div className="rv-top">
-            <div className="rv-card">
-              <div className="rv-stars"><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/></div>
-              <p>Первый раз арендовал авто и исследовал город — впечатления отличные. Команда очень профессиональная и надёжная, особенно Дим…</p>
-              <a href="#" className="rv-more">Читать дальше</a>
-              <div className="rv-author">
-                <img className="rv-ava" src="https://randomuser.me/api/portraits/men/32.jpg" alt="" />
-                <div><div className="rv-name">Дмитрий Волков</div><div className="rv-when">месяц назад</div></div>
-              </div>
-            </div>
-            <div className="rv-card">
-              <div className="rv-stars"><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/></div>
-              <p>Автомобиль был чистым и в идеальном состоянии. Получил совершенно новую модель с отличными опциями!</p>
-              <div className="rv-author">
-                <img className="rv-ava" src="https://randomuser.me/api/portraits/men/45.jpg" alt="" />
-                <div><div className="rv-name">Артём Орлов</div><div className="rv-when">3 недели назад</div></div>
-              </div>
-            </div>
-          </div>
-          <div className="rv-bot">
-            <div className="rv-card">
-              <div className="rv-stars"><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/></div>
-              <p>Отличный выбор авто. Огромное разнообразие машин в AURIX поразило. Нашёл идеальный вариант для поездки.</p>
-              <div className="rv-author">
-                <img className="rv-ava" src="https://randomuser.me/api/portraits/men/68.jpg" alt="" />
-                <div><div className="rv-name">Иван Соколов</div><div className="rv-when">3 недели назад</div></div>
-              </div>
-            </div>
-            <div className="rv-card">
-              <div className="rv-stars"><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/><i className="ph-fill ph-star"/></div>
-              <p>Получил отличный опыт аренды этого авто. Спасибо за сервис.</p>
-              <div className="rv-author">
-                <img className="rv-ava" src="https://randomuser.me/api/portraits/women/52.jpg" alt="" />
-                <div><div className="rv-name">Анна Петрова</div><div className="rv-when">месяц назад</div></div>
-              </div>
-            </div>
-          </div>
-          <div className="rv-dots">
-            <span className="rv-dot active" />
-            <span className="rv-dot" />
-            <span className="rv-dot" />
-            <span className="rv-dot" />
+          <div className="rv2-gallery">
+            <CircularGallery reviews={REVIEWS} bend={2} scrollSpeed={2} scrollEase={0.04} />
           </div>
         </div>
       </section>
 
-      <section className="hot reveal">
-        <div className="hot-wrap">
-          <div className="hot-head">
-            <h2>Самые горячие спорткары</h2>
-            <Link to="/catalog" className="hot-all">Смотреть все</Link>
-          </div>
-          <div className="hot-grid">
-            {hot.map(c => (
-              <div className="hot-card" key={c.id}>
-                <div className="hot-img">
-                  <button className="sp-nav sp-prev" aria-label="prev"><i className="ph ph-caret-left" /></button>
-                  <button className="sp-nav sp-next" aria-label="next"><i className="ph ph-caret-right" /></button>
-                  <img src={c.img} alt={c.name} />
-                </div>
-                <div className="hot-info">
-                  <div className="hot-info-head">
-                    <div>
-                      <div className="hot-name">{c.name}</div>
-                      <div className="hot-meta">{c.year}, {c.drive}</div>
-                    </div>
-                    <img className="hot-mark" src={brandLogo(c.name)} alt="" />
-                  </div>
-                  <div className="hot-info-foot">
-                    <div className="hot-price">{c.price.toLocaleString('ru-RU')} ₽<span>/сутки</span></div>
-                    <Link to={`/car/${c.id}`} className="hot-details">Подробнее</Link>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="sub-banner">
-            <div className="sub-banner-bg" />
+      <div className="sp-wrap">
+        <div className="sub-banner">
+          <div className="sub-banner-left">
             <div className="sub-mark">
               <img src="/letter.svg" alt="A" className="sub-mark-letter" />
               <span className="sub-mark-text">АРЕНДА</span>
@@ -273,8 +193,11 @@ export default function Home() {
             </div>
             <Link to="/long-term" className="sub-banner-cta">Подобрать подписку</Link>
           </div>
+          <div className="sub-banner-right">
+            <img src="/cars/lexus_lx_hero.png" alt="Lexus LX" className="sub-banner-car" />
+          </div>
         </div>
-      </section>
+      </div>
 
       <section className="partner reveal">
         <div className="pt-wrap">
@@ -376,15 +299,15 @@ export default function Home() {
 }
 
 function Faq() {
-  const items = [
-    ['Можно ли арендовать авто в аэропорту даже поздно ночью?', 'Конечно. AURIX осуществляет круглосуточную доставку, включая аэропорты Москвы. Просто сообщите номер рейса и время прибытия — автомобиль будет ждать вас, без задержек и ожиданий.'],
-    ['Может ли управлять автомобилем кто-то ещё, например, друг или член семьи?', 'Да, при оформлении договора можно указать дополнительного водителя. У него должны быть права с необходимым стажем и подходящий возраст.'],
-    ['Какие документы нужны для аренды авто в Москве?', 'Паспорт, водительское удостоверение со стажем от 3 лет и банковская карта на имя арендатора. Для некоторых классов авто требуется дополнительный документ.'],
-    ['Можно ли арендовать без банковской карты?', 'В большинстве случаев нужна именная банковская карта для авторизации залога. Возможна оплата наличными после подтверждения личности.'],
-    ['Что входит в договор аренды?', 'Договор включает полную страховку КАСКО и ОСАГО, базовый километраж, техподдержку 24/7 и круглосуточную помощь на дороге.'],
-    ['Как работают платные дороги и проезды?', 'Все платные участки автоматически фиксируются и оплачиваются через ваш договор. Подробный отчёт приходит на email после возврата авто.'],
-  ];
+  const [items, setItems] = useState([]);
   const [open, setOpen] = useState(0);
+
+  useEffect(() => {
+    api('/faq')
+      .then((data) => setItems(data))
+      .catch((err) => console.error('Ошибка загрузки FAQ:', err));
+  }, []);
+
   return (
     <section className="faq reveal">
       <div className="faq-wrap">
@@ -393,13 +316,13 @@ function Faq() {
           <p>Собрали ответы на самые популярные вопросы об аренде премиум-авто в AURIX, чтобы вы могли спокойно планировать поездку без сомнений.</p>
         </div>
         <div className="faq-right">
-          {items.map(([q, a], i) => (
-            <div key={i} className={`faq-item${open === i ? ' open' : ''}`}>
+          {items.map((item, i) => (
+            <div key={item.id || i} className={`faq-item${open === i ? ' open' : ''}`}>
               <button className="faq-q" onClick={() => setOpen(open === i ? -1 : i)}>
-                <span>{q}</span>
+                <span>{item.question}</span>
                 <i className={`ph ${open === i ? 'ph-x' : 'ph-plus'}`} />
               </button>
-              <div className="faq-a-wrap"><div><div className="faq-a">{a}</div></div></div>
+              <div className="faq-a-wrap"><div><div className="faq-a">{item.answer}</div></div></div>
             </div>
           ))}
         </div>

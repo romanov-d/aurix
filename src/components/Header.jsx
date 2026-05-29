@@ -52,18 +52,13 @@ export default function Header() {
 
   return (
     <>
-      <header className={`header${overlay ? ' header-overlay' : ''}${scrolled ? ' header-scrolled' : ''}`}><div className="container nav">
+      <header className={`header${overlay ? ' header-overlay' : ''}${scrolled ? ' header-scrolled' : ''}`}><div className="nav">
         <Logo />
         <nav className="nav-links">
           {LINKS.map(renderLink)}
         </nav>
         <div className="nav-right">
-          <div className="lang-pill hide-sm">
-            <span className="lang-flag">🇷🇺</span>
-            <span>RUS</span>
-            <span className="lang-sep" />
-            <span>RUB</span>
-          </div>
+
           {user ? (
             <>
               {user.role === 'admin' && (

@@ -78,7 +78,7 @@ export default function RentOut() {
               <Link to="/login" className="btn btn-filled">Войти</Link>
             </div>
           ) : success ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', background: '#111', borderRadius: 20 }}>
+            <div style={{ textAlign: 'center', padding: '60px 0', background: 'var(--bg-2)', borderRadius: 20 }}>
               <i className="ph-fill ph-check-circle" style={{ fontSize: 64, color: 'var(--gold)', marginBottom: 20 }} />
               <h2>Заявка успешно отправлена!</h2>
               <p className="muted" style={{ marginTop: 10, maxWidth: 400, margin: '10px auto 0' }}>

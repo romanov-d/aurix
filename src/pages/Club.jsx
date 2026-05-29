@@ -1,4 +1,7 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext.jsx';
+import { api } from '../api/client.js';
 
 const tiers = [
   {
@@ -7,6 +10,7 @@ const tiers = [
     discount: '5%',
     period: '1 год',
     popular: false,
+    minSpent: 500000,
     perks: [
       'Скидка 5% на все аренды',
       'Приоритетная поддержка',
@@ -20,6 +24,7 @@ const tiers = [
     discount: '15%',
     period: '1 год',
     popular: false,
+    minSpent: 1000000,
     perks: [
       'Скидка 15% на все аренды',
       'Приоритет на дефицитные модели',
@@ -33,6 +38,7 @@ const tiers = [
     discount: '25%',
     period: 'без срока',
     popular: true,
+    minSpent: 2000000,
     perks: [
       'Скидка 25% на все аренды',
       'Бессрочная карта',
@@ -46,8 +52,9 @@ const tiers = [
     discount: '40%',
     period: 'без срока',
     popular: false,
+    minSpent: 4000000,
     perks: [
-      'Скидка 40% — максимальная привилегия',
+      'Скидка 40% — максимальная privilege',
       'Бессрочная карта',
       'Личный менеджер 24/7',
       'Все закрытые ивенты и партнёрские мероприятия',
@@ -57,6 +64,32 @@ const tiers = [
 ];
 
 export default function Club() {
+  const { user } = useAuth();
+  const [bookings, setBookings] = useState([]);
+
+  useEffect(() => {
+    if (!user) return;
+    api('/me/bookings')
+      .then(setBookings)
+      .catch(console.error);
+  }, [user]);
+
+  const totalSpent = bookings
+    .filter(b => b.status === 'completed')
+    .reduce((sum, b) => sum + b.total, 0);
+
+  let currentTier = 'Club Member';
+  if (totalSpent >= 4000000) currentTier = 'Black';
+  else if (totalSpent >= 2000000) currentTier = 'Премиум';
+  else if (totalSpent >= 1000000) currentTier = 'Комфорт';
+  else if (totalSpent >= 500000) currentTier = 'Старт';
+
+  const formatCardName = (name) => {
+    if (!name) return 'GUEST USER';
+    // Translate cyrillic to latin simply or uppercase cyrillic
+    return name.toUpperCase();
+  };
+
   return (
     <>
       <div className="page-head">
@@ -72,16 +105,21 @@ export default function Club() {
         <div className="container">
           <div className="club-hero">
             <div>
-              <div className="club-card">
+              <div className={`club-card ${currentTier.toLowerCase()}`}>
                 <div className="ctop">
                   <div className="logo-mark">A</div>
-                  <div className="ctier">Club Member</div>
+                  <div className="ctier" style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>{currentTier}</div>
                 </div>
-                <div className="cnum">5224 · 8842 · 1027</div>
+                <div className="cnum">
+                  {user 
+                    ? `5224 · ${String(user.id).padStart(4, '0')} · ${(user.points || 0).toString().padStart(4, '0')}`
+                    : '5224 · 0000 · 0000'
+                  }
+                </div>
                 <div className="cname">
                   <div>
                     <div className="who">Member</div>
-                    <div className="nm">IVAN PETROV</div>
+                    <div className="nm">{user ? formatCardName(user.name) : 'IVAN PETROV'}</div>
                   </div>
                   <div>
                     <div className="who">Valid Thru</div>
@@ -131,35 +169,53 @@ export default function Club() {
               <span className="bar"></span><span className="eyebrow">Уровни членства</span><span className="bar"></span>
             </div>
             <h2>Выберите свой <em>статус</em></h2>
+            {user && (
+              <p style={{ color: '#bdbdbd', fontSize: 14, marginTop: 8 }}>
+                Сумма завершенных аренд: <strong style={{ color: 'var(--gold)' }}>{totalSpent.toLocaleString()} ₽</strong>. 
+                Ваш уровень: <strong style={{ color: 'var(--gold)' }}>{currentTier}</strong>
+              </p>
+            )}
           </div>
 
           <div className="tariffs" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            {tiers.map(tier => (
-              <div key={tier.label} className={`tariff${tier.popular ? ' pop' : ''}`}>
-                {tier.popular && (
-                  <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: '#000', background: 'var(--gold)', padding: '4px 10px', marginBottom: 12, display: 'inline-block', fontWeight: 700 }}>
-                    Популярно
-                  </div>
-                )}
-                <h3 style={{ color: tier.label === 'Black' ? '#fff' : undefined }}>{tier.label}</h3>
-                <div style={{ marginTop: 10, marginBottom: 2 }}>
-                  <span className="serif gold" style={{ fontSize: 36, fontWeight: 700 }}>{tier.discount}</span>
-                </div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>скидка на аренду</div>
-                <div className="price" style={{ fontSize: 18 }}>{tier.deposit}</div>
-                <div className="per">депозит · {tier.period}</div>
-                <ul>
-                  {tier.perks.map(p => <li key={p}>{p}</li>)}
-                </ul>
-                <Link
-                  to="/contacts"
-                  className={`btn${tier.popular ? ' btn-filled' : ''}`}
-                  style={{ width: '100%' }}
+            {tiers.map(tier => {
+              const isActive = currentTier === tier.label;
+              return (
+                <div 
+                  key={tier.label} 
+                  className={`tariff${tier.popular ? ' pop' : ''}`}
+                  style={isActive ? { border: '2px solid var(--gold)', boxShadow: '0 0 15px rgba(212, 175, 55, 0.2)' } : undefined}
                 >
-                  Получить карту
-                </Link>
-              </div>
-            ))}
+                  {isActive && (
+                    <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: '#000', background: 'var(--gold)', padding: '4px 10px', marginBottom: 12, display: 'inline-block', fontWeight: 700 }}>
+                      Ваш статус
+                    </div>
+                  )}
+                  {!isActive && tier.popular && (
+                    <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: '#000', background: 'var(--gold)', padding: '4px 10px', marginBottom: 12, display: 'inline-block', fontWeight: 700 }}>
+                      Популярно
+                    </div>
+                  )}
+                  <h3 style={{ color: tier.label === 'Black' ? '#fff' : undefined }}>{tier.label}</h3>
+                  <div style={{ marginTop: 10, marginBottom: 2 }}>
+                    <span className="serif gold" style={{ fontSize: 36, fontWeight: 700 }}>{tier.discount}</span>
+                  </div>
+                  <div className="muted" style={{ fontSize: 12, marginBottom: 6 }}>скидка на аренду</div>
+                  <div className="price" style={{ fontSize: 18 }}>{tier.deposit}</div>
+                  <div className="per">депозит · {tier.period}</div>
+                  <ul>
+                    {tier.perks.map(p => <li key={p}>{p}</li>)}
+                  </ul>
+                  <Link
+                    to="/contacts"
+                    className={`btn${tier.popular || isActive ? ' btn-filled' : ''}`}
+                    style={{ width: '100%' }}
+                  >
+                    {isActive ? 'Условия обслуживания' : 'Получить карту'}
+                  </Link>
+                </div>
+              );
+            })}
           </div>
 
           <div className="divider-h"></div>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { GrainGradient } from '@paper-design/shaders-react';
 
 export default function Login() {
   const { login } = useAuth();
@@ -27,10 +28,37 @@ export default function Login() {
   };
 
   return (
-    <div className="auth-page">
-      <div className="auth-card">
-        <h1>Вход в кабинет</h1>
+    <div className="auth-fullscreen">
+      <div className="auth-shader">
+        <GrainGradient
+          style={{ width: '100%', height: '100%' }}
+          colorBack="hsl(0,0%,0%)"
+          softness={0.55}
+          intensity={0.65}
+          noise={0}
+          shape="corners"
+          offsetX={0}
+          offsetY={0}
+          scale={1}
+          rotation={0}
+          speed={1.6}
+          colors={['hsl(45,96%,52%)', 'hsl(38,88%,42%)', 'hsl(30,60%,18%)']}
+        />
+      </div>
+
+      <div className="auth-glass">
+        <div className="auth-top">
+          <Link to="/" className="auth-logo">
+            <img src="/logo.svg" alt="AURIX" />
+          </Link>
+          <Link to="/" className="auth-back">
+            <i className="ph ph-arrow-left" /> Назад
+          </Link>
+        </div>
+
+        <h1 className="auth-title">Вход в кабинет</h1>
         <p className="auth-sub">Введите email и пароль для входа.</p>
+
         <form onSubmit={onSubmit} className="auth-form">
           <label>
             <span>Email</span>
@@ -45,6 +73,7 @@ export default function Login() {
             {submitting ? 'Входим…' : 'Войти'}
           </button>
         </form>
+
         <div className="auth-foot">
           Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
         </div>

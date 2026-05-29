@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
@@ -9,6 +9,8 @@ import Car from './pages/Car.jsx';
 import LongTerm from './pages/LongTerm.jsx';
 import Club from './pages/Club.jsx';
 import Terms from './pages/Terms.jsx';
+import Privacy from './pages/Privacy.jsx';
+import Blog from './pages/Blog.jsx';
 import Contacts from './pages/Contacts.jsx';
 import Account from './pages/Account.jsx';
 import RentOut from './pages/RentOut.jsx';
@@ -22,8 +24,16 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 export default function App() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
+  const isAuth = pathname === '/login' || pathname === '/register';
+  const [transClass, setTransClass] = useState('');
+  const timerRef = useRef(null);
 
   useEffect(() => {
+    clearTimeout(timerRef.current);
+    setTransClass('pt-in');
+    timerRef.current = setTimeout(() => setTransClass('pt-out'), 50);
+    timerRef.current = setTimeout(() => setTransClass(''), 450);
+
     window.scrollTo(0, 0);
     const els = document.querySelectorAll('.reveal');
     if (!els.length) return;
@@ -41,9 +51,10 @@ export default function App() {
 
   return (
     <AuthProvider>
+      {transClass && <div className={`page-transition ${transClass}`} />}
       <Preloader />
-      <Header />
-      <div className={isHome ? '' : 'page-wrap'}>
+      {!isAuth && <Header />}
+      <div className={isAuth ? '' : isHome ? '' : 'page-wrap'}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/catalog" element={<Catalog />} />
@@ -51,6 +62,8 @@ export default function App() {
         <Route path="/long-term" element={<LongTerm />} />
         <Route path="/club" element={<Club />} />
         <Route path="/terms" element={<Terms />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/blog" element={<Blog />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
         <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
@@ -60,7 +73,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
       </Routes>
       </div>
-      <Footer />
+      {!isAuth && <Footer />}
     </AuthProvider>
   );
 }

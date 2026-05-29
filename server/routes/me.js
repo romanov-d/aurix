@@ -9,6 +9,42 @@ router.get('/', (req, res) => {
   res.json({ user: req.user });
 });
 
+router.patch('/', async (req, res, next) => {
+  try {
+    const { name, phone, avatar_url } = req.body;
+    const fields = [];
+    const values = [];
+    let idx = 1;
+
+    if (name !== undefined) {
+      fields.push(`name = $${idx++}`);
+      values.push(name);
+    }
+    if (phone !== undefined) {
+      fields.push(`phone = $${idx++}`);
+      values.push(phone);
+    }
+    if (avatar_url !== undefined) {
+      fields.push(`avatar_url = $${idx++}`);
+      values.push(avatar_url);
+    }
+
+    if (fields.length === 0) {
+      return res.status(400).json({ error: 'Нет полей для обновления' });
+    }
+
+    values.push(req.user.id);
+    const { rows } = await q(
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, created_at`,
+      values
+    );
+
+    res.json({ user: rows[0] });
+  } catch (e) {
+    next(e);
+  }
+});
+
 router.get('/bookings', async (req, res, next) => {
   try {
     const items = await many(
@@ -102,6 +138,18 @@ router.post('/cars', async (req, res, next) => {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'Bad input', detail: e.errors });
     }
+    next(e);
+  }
+});
+
+router.get('/points', async (req, res, next) => {
+  try {
+    const items = await many(
+      `SELECT * FROM user_points WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.user.id]
+    );
+    res.json(items);
+  } catch (e) {
     next(e);
   }
 });
