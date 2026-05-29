@@ -152,12 +152,11 @@ export default function Home() {
       <section className="reviews reveal">
         <div className="rv-wrap">
           <div className="trust-heading">
-            <p className="trust-eyebrow">Отзывы клиентов</p>
             <h2 className="trust-h">
               Нам доверяют
               <span className="rph-wrap">
-                <span className="rph">
-                  <img src="https://randomuser.me/api/portraits/men/32.jpg" alt="" />
+                <span className="rph rph-car">
+                  <img src="/cars/bmw_m4.png" alt="BMW M4" />
                 </span>
               </span>
               тысячи
@@ -165,14 +164,14 @@ export default function Home() {
             <h2 className="trust-h">
               довольных
               <span className="rph-wrap">
-                <span className="rph">
-                  <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="" />
+                <span className="rph rph-car">
+                  <img src="/cars/ferrari_f8.png" alt="Ferrari F8" />
                 </span>
               </span>
               клиентов
               <span className="rph-wrap">
-                <span className="rph">
-                  <img src="https://randomuser.me/api/portraits/men/68.jpg" alt="" />
+                <span className="rph rph-car">
+                  <img src="/cars/lexus_lx_white.png" alt="Lexus LX" />
                 </span>
               </span>
             </h2>
