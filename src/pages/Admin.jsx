@@ -273,15 +273,13 @@ export default function Admin() {
 
   return (
     <>
-      <div className="page-head">
-        <div className="container">
-          <div className="breadcrumbs"><Link to="/">Главная</Link><span className="sep">/</span><span>Панель управления</span></div>
-          <h1>Администрирование</h1>
-        </div>
-      </div>
-
-      <div className="container account">
+      <div className="container account" style={{ marginTop: '40px' }}>
         <aside className="acc-side">
+          <div style={{ marginBottom: '18px', padding: '0 14px' }}>
+            <Link to="/" className="btn btn-sm btn-ghost" style={{ width: '100%', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+              <i className="ph ph-arrow-left" style={{ marginRight: '6px' }} /> Вернуться на сайт
+            </Link>
+          </div>
           <nav className="acc-nav">
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования</a>
             <a href="#cars" onClick={(e) => { e.preventDefault(); setActiveTab('cars'); }} className={activeTab === 'cars' ? 'active' : ''}><i className="ph-fill ph-car" /> Автомобили</a>

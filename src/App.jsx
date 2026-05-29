@@ -49,11 +49,13 @@ export default function App() {
     return () => io.disconnect();
   }, [pathname]);
 
+  const noHeader = isAuth || pathname === '/admin' || pathname === '/account';
+
   return (
     <AuthProvider>
       {transClass && <div className={`page-transition ${transClass}`} />}
       <Preloader />
-      {!isAuth && <Header />}
+      {!noHeader && <Header />}
       <div className={isAuth ? '' : isHome ? '' : 'page-wrap'}>
       <Routes>
         <Route path="/" element={<Home />} />

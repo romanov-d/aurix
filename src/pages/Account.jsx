@@ -81,16 +81,13 @@ export default function Account() {
 
   return (
     <>
-      <div className="page-head">
-        <div className="container">
-          <div className="breadcrumbs"><Link to="/">Главная</Link><span className="sep">/</span><span>Личный кабинет</span></div>
-          <h1>Добро пожаловать, <em>{firstName}</em></h1>
-          <p style={{ color: '#bdbdbd', marginTop: 14, fontSize: 14, letterSpacing: '.04em' }}>{user?.email}</p>
-        </div>
-      </div>
-
-      <div className="container account">
+      <div className="container account" style={{ marginTop: '40px' }}>
         <aside className="acc-side">
+          <div style={{ marginBottom: '18px', padding: '0 14px' }}>
+            <Link to="/" className="btn btn-sm btn-ghost" style={{ width: '100%', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
+              <i className="ph ph-arrow-left" style={{ marginRight: '6px' }} /> Вернуться на сайт
+            </Link>
+          </div>
           <div className="acc-user">
             <div className="acc-avatar-wrapper">
               <img className="acc-avatar" src={avatar} alt={user?.name || ''} />

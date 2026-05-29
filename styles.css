@@ -1575,3 +1575,7 @@ html{scroll-behavior:smooth}
     gap: 24px;
   }
 }
+
+.account, .account * {
+  font-family: 'Inter', sans-serif !important;
+}
