@@ -1576,7 +1576,7 @@ html{scroll-behavior:smooth}
   }
 }
 
-.account, .account * {
+.account, .account *:not([class^="ph"]) {
   font-family: 'Inter', sans-serif !important;
 }
 
