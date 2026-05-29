@@ -50,6 +50,7 @@ export default function App() {
   }, [pathname]);
 
   const noHeader = isAuth || pathname === '/admin' || pathname === '/account';
+  const noFooter = isAuth || pathname === '/admin' || pathname === '/account';
 
   return (
     <AuthProvider>
@@ -75,7 +76,7 @@ export default function App() {
         <Route path="/register" element={<Register />} />
       </Routes>
       </div>
-      {!isAuth && <Footer />}
+      {!noFooter && <Footer />}
     </AuthProvider>
   );
 }

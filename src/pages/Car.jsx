@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
 import CarCard from '../components/CarCard.jsx';
-import { useCars } from '../api/useCars.js';
+import { getCar, listCars } from '../api/cars.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
 import { useFavorites } from '../api/useFavorites.js';
@@ -11,9 +11,14 @@ export default function Car() {
   const { id } = useParams();
   const nav = useNavigate();
   const { user } = useAuth();
-  const { items: FLEET, loading } = useCars({ limit: 100 });
   const { favorites, toggleFavorite } = useFavorites();
   
+  // Car data state — direct API fetch instead of loading all cars
+  const [car, setCar] = useState(null);
+  const [similar, setSimilar] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
   // Date state — separate date + time for proper styling
   const pad = (n) => String(n).padStart(2, '0');
   const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -43,16 +48,39 @@ export default function Car() {
   const [reviewing, setReviewing] = useState(false);
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
+  // Load car data directly by ID
   useEffect(() => {
     if (!id) return;
-    api(`/cars/${id}/reviews`).then(setReviews).catch(console.error);
+    setLoading(true);
+    setNotFound(false);
+    setActivePhotoIdx(0);
+
+    Promise.all([
+      getCar(id),
+      listCars({ limit: 4 }),
+      api(`/cars/${id}/reviews`)
+    ])
+      .then(([carData, allCars, reviewsData]) => {
+        setCar(carData);
+        setSimilar(allCars.items.filter(c => c.id !== id).slice(0, 4));
+        setReviews(reviewsData);
+      })
+      .catch((e) => {
+        console.error(e);
+        setNotFound(true);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
-  if (loading && FLEET.length === 0) return <div className="container" style={{ padding: '120px 0', color: '#9a9a9a' }}>Загрузка…</div>;
+  if (loading) return <div className="container" style={{ padding: '120px 0', color: '#9a9a9a' }}>Загрузка…</div>;
   
-  const car = FLEET.find(c => c.id === id) || FLEET[0];
-  if (!car) return null;
-  const similar = FLEET.filter(c => c.id !== car.id).slice(0, 4);
+  if (notFound || !car) return (
+    <div className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
+      <h2 style={{ color: '#fff', marginBottom: 16 }}>Автомобиль не найден</h2>
+      <p className="muted" style={{ marginBottom: 24 }}>Возможно, он был удалён или ссылка некорректна.</p>
+      <Link to="/catalog" className="btn">Перейти в каталог</Link>
+    </div>
+  );
   const isFav = favorites.has(car.id);
   
   // Calc days
@@ -321,7 +349,7 @@ export default function Car() {
           <div className="spec-grid">
             <div className="s"><div className="lbl">Двигатель</div><div className="v">{car.engine} · {car.fuel?.toLowerCase()}</div></div>
             <div className="s"><div className="lbl">Мощность</div><div className="v">{car.power_hp || car.power} л.с.</div></div>
-            <div className="s"><div className="lbl">Коробка</div><div className="v">{car.drive} · 9</div></div>
+            <div className="s"><div className="lbl">Коробка</div><div className="v">{car.drive}</div></div>
             <div className="s"><div className="lbl">Цвет</div><div className="v">{car.color || '—'}</div></div>
           </div>
         </aside>

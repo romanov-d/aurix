@@ -6,12 +6,13 @@ import { api } from '../api/client.js';
 export default function Admin() {
   const { user } = useAuth();
   const nav = useNavigate();
-  const [activeTab, setActiveTab] = useState('bookings');
+  const [activeTab, setActiveTab] = useState('dashboard');
   
   const [bookings, setBookings] = useState([]);
   const [cars, setCars] = useState([]);
   const [users, setUsers] = useState([]);
   const [faqs, setFaqs] = useState([]);
+  const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,13 +24,15 @@ export default function Admin() {
       api('/admin/bookings'),
       api('/admin/cars'),
       api('/admin/users'),
-      api('/faq')
+      api('/faq'),
+      api('/admin/dashboard')
     ])
-      .then(([b, c, u, f]) => {
+      .then(([b, c, u, f, d]) => {
         setBookings(b);
         setCars(c);
         setUsers(u);
         setFaqs(f);
+        setDashboard(d);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -273,7 +276,12 @@ export default function Admin() {
 
   return (
     <>
-      <div className="container account" style={{ marginTop: '40px' }}>
+      <div className="acc-page-header">
+        <div className="container">
+          <h1><i className="ph-fill ph-shield-check" style={{ marginRight: 12, color: 'var(--gold)' }} />Панель управления</h1>
+        </div>
+      </div>
+      <div className="container account" style={{ marginTop: '24px' }}>
         <aside className="acc-side">
           <div style={{ marginBottom: '18px', padding: '0 14px' }}>
             <Link to="/" className="btn btn-sm btn-ghost" style={{ width: '100%', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
@@ -281,6 +289,7 @@ export default function Admin() {
             </Link>
           </div>
           <nav className="acc-nav">
+            <a href="#dashboard" onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }} className={activeTab === 'dashboard' ? 'active' : ''}><i className="ph-fill ph-chart-line-up" /> Дашборд</a>
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования</a>
             <a href="#cars" onClick={(e) => { e.preventDefault(); setActiveTab('cars'); }} className={activeTab === 'cars' ? 'active' : ''}><i className="ph-fill ph-car" /> Автомобили</a>
             <a href="#users" onClick={(e) => { e.preventDefault(); setActiveTab('users'); }} className={activeTab === 'users' ? 'active' : ''}><i className="ph-fill ph-users" /> Пользователи</a>
@@ -289,6 +298,215 @@ export default function Admin() {
         </aside>
 
         <main className="acc-content">
+          {activeTab === 'dashboard' && dashboard && (() => {
+            const d = dashboard;
+            const fmtMoney = (v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)} млн` : v >= 1000 ? `${Math.round(v / 1000)} тыс` : String(v);
+            const maxRevenue = Math.max(...(d.revenue_by_month || []).map(m => Number(m.revenue)), 1);
+
+            // Calendar helpers: build 14-day grid
+            const today = new Date();
+            const calDays = Array.from({ length: 14 }, (_, i) => {
+              const dt = new Date(today); dt.setDate(dt.getDate() + i);
+              return dt;
+            });
+            // Group calendar bookings by car
+            const calCars = {};
+            (d.calendar || []).forEach(b => {
+              if (!calCars[b.car_id]) calCars[b.car_id] = { name: b.car_name, brand: b.brand, bookings: [] };
+              calCars[b.car_id].bookings.push(b);
+            });
+            const calCarIds = Object.keys(calCars);
+
+            const isBooked = (carId, day) => {
+              const dayStart = new Date(day); dayStart.setHours(0,0,0,0);
+              const dayEnd = new Date(day); dayEnd.setHours(23,59,59,999);
+              return calCars[carId]?.bookings.find(b => {
+                const from = new Date(b.from_dt);
+                const to = new Date(b.to_dt);
+                return from <= dayEnd && to >= dayStart;
+              });
+            };
+
+            const fmtShort = (dt) => dt.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+            const fmtWeekday = (dt) => dt.toLocaleDateString('ru-RU', { weekday: 'short' });
+            const isToday = (dt) => dt.toDateString() === today.toDateString();
+            const isWeekend = (dt) => dt.getDay() === 0 || dt.getDay() === 6;
+
+            return (
+              <>
+                {/* KPI Cards */}
+                <div className="dash-kpi-grid">
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(212,175,55,0.12)', color: 'var(--gold)' }}><i className="ph-fill ph-currency-circle-dollar" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{fmtMoney(d.revenue)} ₽</div>
+                      <div className="dash-kpi-label">Общая выручка</div>
+                    </div>
+                  </div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(52,211,153,0.12)', color: '#34d399' }}><i className="ph-fill ph-calendar-blank" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{fmtMoney(d.month_revenue)} ₽</div>
+                      <div className="dash-kpi-label">Выручка за месяц</div>
+                    </div>
+                  </div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(96,165,250,0.12)', color: '#60a5fa' }}><i className="ph-fill ph-clipboard-text" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{d.bookings_total}</div>
+                      <div className="dash-kpi-label">Всего бронирований</div>
+                    </div>
+                  </div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24' }}><i className="ph-fill ph-users-three" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{d.clients}</div>
+                      <div className="dash-kpi-label">Клиентов</div>
+                    </div>
+                  </div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(168,85,247,0.12)', color: '#a855f7' }}><i className="ph-fill ph-car-profile" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{d.cars_published} <span style={{ fontSize: 13, color: '#666' }}>/ {d.cars_total}</span></div>
+                      <div className="dash-kpi-label">Авто в парке</div>
+                    </div>
+                  </div>
+                  <div className="dash-kpi">
+                    <div className="dash-kpi-icon" style={{ background: 'rgba(251,113,133,0.12)', color: '#fb7185' }}><i className="ph-fill ph-hourglass-medium" /></div>
+                    <div className="dash-kpi-data">
+                      <div className="dash-kpi-value">{d.bookings_pending}</div>
+                      <div className="dash-kpi-label">Ожидают подтверждения</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Revenue Chart + Top Cars — side by side */}
+                <div className="dash-row">
+                  {/* Revenue Chart */}
+                  <div className="acc-block dash-chart-block">
+                    <div className="acc-block-head"><h3>Выручка по месяцам</h3></div>
+                    <div style={{ padding: '24px' }}>
+                      {d.revenue_by_month.length === 0 ? (
+                        <p style={{ color: '#666', fontSize: 14 }}>Нет данных за последние 6 месяцев</p>
+                      ) : (
+                        <svg viewBox={`0 0 ${d.revenue_by_month.length * 80} 200`} style={{ width: '100%', height: 200 }}>
+                          {d.revenue_by_month.map((m, i) => {
+                            const barH = (Number(m.revenue) / maxRevenue) * 150;
+                            const x = i * 80 + 10;
+                            return (
+                              <g key={m.month}>
+                                <defs>
+                                  <linearGradient id={`bar-grad-${i}`} x1="0" y1="0" x2="0" y2="1">
+                                    <stop offset="0%" stopColor="var(--gold)" />
+                                    <stop offset="100%" stopColor="rgba(212,175,55,0.3)" />
+                                  </linearGradient>
+                                </defs>
+                                <rect x={x} y={180 - barH} width={60} height={barH} rx={6} fill={`url(#bar-grad-${i})`} />
+                                <text x={x + 30} y={172 - barH} textAnchor="middle" fill="#fff" fontSize="11" fontFamily="Inter, sans-serif">
+                                  {fmtMoney(Number(m.revenue))} ₽
+                                </text>
+                                <text x={x + 30} y={196} textAnchor="middle" fill="#888" fontSize="11" fontFamily="Inter, sans-serif">
+                                  {m.month_name?.slice(0, 3) || m.month}
+                                </text>
+                              </g>
+                            );
+                          })}
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Top Cars */}
+                  <div className="acc-block dash-top-block">
+                    <div className="acc-block-head"><h3>Топ-5 авто по выручке</h3></div>
+                    <div style={{ padding: '16px 0' }}>
+                      {d.top_cars.filter(c => Number(c.revenue) > 0).length === 0 ? (
+                        <p style={{ color: '#666', fontSize: 14, padding: '0 24px' }}>Нет завершённых аренд</p>
+                      ) : (
+                        d.top_cars.filter(c => Number(c.revenue) > 0).map((car, i) => (
+                          <div key={car.id} className="dash-top-row">
+                            <span className="dash-top-pos">{i + 1}</span>
+                            <img src={car.image_url} alt="" className="dash-top-img" />
+                            <div className="dash-top-info">
+                              <div className="dash-top-name">{car.name}</div>
+                              <div className="dash-top-meta">{Number(car.rentals)} аренд</div>
+                            </div>
+                            <div className="dash-top-revenue">{Number(car.revenue).toLocaleString('ru-RU')} ₽</div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Booking Calendar */}
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>Календарь бронирований <span style={{ fontSize: 13, color: '#666', fontWeight: 400 }}>· 14 дней</span></h3>
+                  </div>
+                  <div className="dash-calendar-wrap">
+                    {calCarIds.length === 0 ? (
+                      <p style={{ color: '#666', fontSize: 14, padding: '24px' }}>Нет активных бронирований на ближайшие 14 дней</p>
+                    ) : (
+                      <table className="dash-calendar">
+                        <thead>
+                          <tr>
+                            <th className="dash-cal-car-th">Авто</th>
+                            {calDays.map((dt, i) => (
+                              <th key={i} className={`dash-cal-day-th${isToday(dt) ? ' today' : ''}${isWeekend(dt) ? ' weekend' : ''}`}>
+                                <div>{fmtWeekday(dt)}</div>
+                                <div>{dt.getDate()}</div>
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {calCarIds.map(carId => (
+                            <tr key={carId}>
+                              <td className="dash-cal-car-td">
+                                <div className="dash-cal-car-name">{calCars[carId].name}</div>
+                              </td>
+                              {calDays.map((dt, i) => {
+                                const booking = isBooked(carId, dt);
+                                return (
+                                  <td key={i} className={`dash-cal-cell${booking ? ' booked' : ''}${isToday(dt) ? ' today' : ''}${isWeekend(dt) ? ' weekend' : ''}`}
+                                    title={booking ? `${booking.user_name} · ${booking.status}` : 'Свободно'}
+                                  >
+                                    {booking && <div className={`dash-cal-dot ${booking.status}`} />}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Stats Row */}
+                <div className="dash-stats-row">
+                  <div className="dash-stat-mini">
+                    <span className="dash-stat-mini-label">Средний чек</span>
+                    <span className="dash-stat-mini-value">{d.avg_booking.toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                  <div className="dash-stat-mini">
+                    <span className="dash-stat-mini-label">Завершено</span>
+                    <span className="dash-stat-mini-value">{d.bookings_completed}</span>
+                  </div>
+                  <div className="dash-stat-mini">
+                    <span className="dash-stat-mini-label">Активных</span>
+                    <span className="dash-stat-mini-value" style={{ color: '#34d399' }}>{d.bookings_active}</span>
+                  </div>
+                  <div className="dash-stat-mini">
+                    <span className="dash-stat-mini-label">Отменено</span>
+                    <span className="dash-stat-mini-value" style={{ color: '#fb7185' }}>{d.bookings_cancelled}</span>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
           {activeTab === 'bookings' && (
             <div className="acc-block">
               <div className="acc-block-head">

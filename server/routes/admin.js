@@ -6,7 +6,82 @@ import { requireRole } from '../middleware/auth.js';
 const router = Router();
 router.use(requireRole('admin'));
 
-// Bookings
+// Dashboard analytics
+router.get('/dashboard', async (req, res, next) => {
+  try {
+    // KPI metrics
+    const [revenue, monthRevenue, bookingStats, clientCount, carCount, topCars, revenueByMonth, calendar] = await Promise.all([
+      // Total revenue (completed bookings)
+      one(`SELECT COALESCE(SUM(total), 0) AS total FROM bookings WHERE status = 'completed'`),
+      // Revenue this month
+      one(`SELECT COALESCE(SUM(total), 0) AS total FROM bookings WHERE status = 'completed' AND from_dt >= date_trunc('month', CURRENT_DATE)`),
+      // Booking counts by status
+      one(`SELECT
+        COUNT(*) AS total,
+        COUNT(*) FILTER (WHERE status = 'active') AS active,
+        COUNT(*) FILTER (WHERE status = 'pending') AS pending,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+        COUNT(*) FILTER (WHERE status = 'cancelled') AS cancelled,
+        COALESCE(AVG(total) FILTER (WHERE status = 'completed'), 0) AS avg_total
+      FROM bookings`),
+      // Number of clients (non-admin users)
+      one(`SELECT COUNT(*) AS total FROM users WHERE role = 'user'`),
+      // Number of cars
+      one(`SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE status = 'published') AS published FROM cars`),
+      // Top 5 cars by revenue
+      many(`SELECT c.id, c.name, c.brand, c.image_url,
+        COALESCE(SUM(b.total), 0) AS revenue,
+        COUNT(b.id) AS rentals
+      FROM cars c
+      LEFT JOIN bookings b ON b.car_id = c.id AND b.status = 'completed'
+      GROUP BY c.id, c.name, c.brand, c.image_url
+      ORDER BY revenue DESC
+      LIMIT 5`),
+      // Revenue by month (last 6 months)
+      many(`SELECT
+        to_char(date_trunc('month', from_dt), 'YYYY-MM') AS month,
+        to_char(date_trunc('month', from_dt), 'TMMonth') AS month_name,
+        COALESCE(SUM(total), 0) AS revenue,
+        COUNT(*) AS count
+      FROM bookings
+      WHERE status = 'completed'
+        AND from_dt >= date_trunc('month', CURRENT_DATE) - INTERVAL '5 months'
+      GROUP BY date_trunc('month', from_dt)
+      ORDER BY month`),
+      // Calendar: all active/pending bookings from today onward (next 14 days)
+      many(`SELECT b.id, b.car_id, c.name AS car_name, c.brand, b.from_dt, b.to_dt, b.status,
+        u.name AS user_name
+      FROM bookings b
+      JOIN cars c ON b.car_id = c.id
+      JOIN users u ON b.user_id = u.id
+      WHERE b.status IN ('pending', 'active')
+        AND b.to_dt >= CURRENT_DATE
+        AND b.from_dt <= CURRENT_DATE + INTERVAL '14 days'
+      ORDER BY b.from_dt`)
+    ]);
+
+    res.json({
+      revenue: Number(revenue?.total || 0),
+      month_revenue: Number(monthRevenue?.total || 0),
+      bookings_total: Number(bookingStats?.total || 0),
+      bookings_active: Number(bookingStats?.active || 0),
+      bookings_pending: Number(bookingStats?.pending || 0),
+      bookings_completed: Number(bookingStats?.completed || 0),
+      bookings_cancelled: Number(bookingStats?.cancelled || 0),
+      avg_booking: Math.round(Number(bookingStats?.avg_total || 0)),
+      clients: Number(clientCount?.total || 0),
+      cars_total: Number(carCount?.total || 0),
+      cars_published: Number(carCount?.published || 0),
+      top_cars: topCars,
+      revenue_by_month: revenueByMonth,
+      calendar: calendar
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+
 router.get('/bookings', async (req, res, next) => {
   try {
     const items = await many(

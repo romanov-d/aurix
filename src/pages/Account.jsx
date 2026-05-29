@@ -81,8 +81,18 @@ export default function Account() {
 
   return (
     <>
-      <div className="container account" style={{ marginTop: '40px' }}>
+      <div className="acc-page-header">
+        <div className="container">
+          <h1><i className="ph-fill ph-user-circle" style={{ marginRight: 12, color: 'var(--gold)' }} />Личный кабинет</h1>
+        </div>
+      </div>
+      <div className="container account" style={{ marginTop: '24px' }}>
         <aside className="acc-side">
+          <div style={{ marginBottom: '10px', padding: '0 14px' }}>
+            <Link to="/catalog" className="btn btn-filled" style={{ width: '100%', justifyContent: 'center', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
+              <i className="ph-fill ph-plus" style={{ marginRight: '8px', fontSize: 16 }} /> Забронировать авто
+            </Link>
+          </div>
           <div style={{ marginBottom: '18px', padding: '0 14px' }}>
             <Link to="/" className="btn btn-sm btn-ghost" style={{ width: '100%', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
               <i className="ph ph-arrow-left" style={{ marginRight: '6px' }} /> Вернуться на сайт
