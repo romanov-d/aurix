@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
+import DateRangePicker from '../components/DateRangePicker.jsx';
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
 const BODIES = ['Все', 'Купе', 'Купе/Кабриолет', 'Кабриолет', 'Внедорожник', 'Седан'];
@@ -125,43 +126,21 @@ export default function Catalog() {
 
           {/* Фильтр по датам — реальная проверка доступности */}
           <div className="filter-group">
-            <h5 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              Даты аренды
-              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 400, color: datesActive ? 'var(--gold)' : '#888', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  checked={datesActive}
-                  onChange={e => setDatesActive(e.target.checked)}
-                  style={{ accentColor: 'var(--gold)' }}
-                />
-                проверить
-              </label>
-            </h5>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <div>
-                <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>Получение</label>
-                <input
-                  type="date"
-                  value={fromDate}
-                  min={toDateStr(tomorrow)}
-                  onChange={e => { setFromDate(e.target.value); setDatesActive(true); }}
-                  style={{ width: '100%', background: '#111', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 10px', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>Возврат</label>
-                <input
-                  type="date"
-                  value={toDate}
-                  min={fromDate}
-                  onChange={e => { setToDate(e.target.value); setDatesActive(true); }}
-                  style={{ width: '100%', background: '#111', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 10px', borderRadius: 8, fontSize: 13 }}
-                />
-              </div>
-            </div>
+            <h5>Даты аренды</h5>
+            <DateRangePicker
+              from={datesActive ? fromDate : null}
+              to={datesActive ? toDate : null}
+              minDate={toDateStr(tomorrow)}
+              variant="sidebar"
+              onChange={({ from, to }) => {
+                if (from) { setFromDate(from); setDatesActive(true); }
+                if (to) { setToDate(to); }
+                if (!from && !to) { setDatesActive(false); }
+              }}
+            />
             {datesActive && days && (
               <div style={{ marginTop: 8, fontSize: 12, color: 'var(--gold)' }}>
-                {days} {days === 1 ? 'сутки' : 'суток'} — показаны только свободные авто
+                {days} {days === 1 ? 'сутки' : 'суток'} — только свободные авто
               </div>
             )}
           </div>

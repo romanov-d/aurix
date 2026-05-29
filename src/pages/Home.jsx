@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SearchProvider } from '../components/SearchWidget.jsx';
 import { useCars } from '../api/useCars.js';
+import DateRangePicker from '../components/DateRangePicker.jsx';
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
 
@@ -9,12 +10,6 @@ const pad = (n) => String(n).padStart(2, '0');
 const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
-
-function fmtDate(s) {
-  if (!s) return '';
-  const d = new Date(s + 'T00:00:00');
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-}
 
 function brandLogo(name) {
   if (/^mercedes/i.test(name)) return '/mercedes.svg';
@@ -55,30 +50,13 @@ export default function Home() {
                 <i className="ph-fill ph-map-pin" />
                 <span>Москва</span>
               </div>
-              <div className="fs-seg fs-seg-date">
-                <div className="fs-seg-stack">
-                  <span className="fs-seg-lbl">Получение</span>
-                  <span className="fs-seg-val">{fmtDate(fromDate)}</span>
-                </div>
-                <input
-                  type="date"
-                  value={fromDate}
-                  min={toDateStr(tomorrow)}
-                  onChange={e => setFromDate(e.target.value)}
-                  className="fs-date-input"
-                />
-              </div>
-              <div className="fs-seg fs-seg-date">
-                <div className="fs-seg-stack">
-                  <span className="fs-seg-lbl">Возврат</span>
-                  <span className="fs-seg-val">{fmtDate(toDate)}</span>
-                </div>
-                <input
-                  type="date"
-                  value={toDate}
-                  min={fromDate}
-                  onChange={e => setToDate(e.target.value)}
-                  className="fs-date-input"
+              <div className="fs-seg fs-seg-dates" style={{ flex: 1, padding: 0, position: 'relative' }}>
+                <DateRangePicker
+                  from={fromDate}
+                  to={toDate}
+                  minDate={toDateStr(tomorrow)}
+                  variant="hero"
+                  onChange={({ from, to }) => { setFromDate(from || toDateStr(tomorrow)); setToDate(to || toDateStr(dayAfter4)); }}
                 />
               </div>
               <div className="fs-seg fs-seg-brand">

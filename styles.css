@@ -67,6 +67,9 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .fs-seg-pick{cursor:pointer}
 .fs-seg-pick .fs-caret{font-size:12px;color:var(--gold)}
 .fs-seg-date{cursor:pointer;align-items:center;gap:16px;position:relative}
+.fs-seg-dates{flex:1;padding:0;position:relative;display:flex;align-items:stretch}
+.fs-seg-dates .drp-root{flex:1;display:flex;align-items:stretch}
+.fs-seg-dates .drp-hero-trigger{flex:1}
 .fs-seg-brand{cursor:pointer;align-items:center;gap:16px;position:relative}
 .fs-seg-stack{display:flex;flex-direction:column;line-height:1.2}
 .fs-seg-lbl{font-size:11px;color:#9a9a9a;margin-bottom:5px}
@@ -1269,3 +1272,73 @@ html{scroll-behavior:smooth}
 
 /* avatar in header account button */
 .account-btn-ava{width:22px;height:22px;border-radius:50% !important;object-fit:cover;display:block}
+
+/* ==== DATE RANGE PICKER ==== */
+.drp-root{position:relative}
+
+/* Default trigger */
+.drp-trigger{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:#fff;cursor:pointer;font-family:inherit;font-size:14px;padding:0;width:100%}
+.drp-trigger i{color:var(--gold);font-size:16px;flex-shrink:0}
+.drp-trigger-sidebar{width:100%;background:#111;border:1px solid #1f1f1f;padding:10px 14px;border-radius:8px;transition:.15s}
+.drp-trigger-sidebar:hover{border-color:#333}
+.drp-open .drp-trigger-sidebar{border-color:var(--gold)}
+.drp-clear-btn{margin-left:auto;color:#666;display:flex;align-items:center;padding:2px;border-radius:4px;background:none;border:none;cursor:pointer;font-size:13px}
+.drp-clear-btn:hover{color:#fff}
+
+/* Hero trigger (two-segment style) */
+.drp-hero-trigger{display:flex;align-items:center;gap:0;cursor:pointer;width:100%;padding:0 24px;height:100%;position:relative}
+.drp-hero-seg{display:flex;flex-direction:column;flex:1;gap:4px}
+.drp-hero-seg-from{padding-right:12px}
+.drp-hero-seg-to{padding-left:12px}
+.drp-hero-lbl{font-size:11px;color:#9a9a9a;text-transform:uppercase;letter-spacing:.08em}
+.drp-hero-val{font-size:14px;color:#fff;font-weight:500}
+.drp-hero-divider{color:#333;font-size:18px;flex-shrink:0}
+.drp-hero-clear{margin-left:12px;color:#555;background:none;border:none;cursor:pointer;font-size:13px;display:flex;align-items:center;padding:4px;border-radius:4px;transition:.15s}
+.drp-hero-clear:hover{color:#fff}
+
+/* Popup */
+.drp-popup{
+  position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);
+  background:#0d0d0d;border:1px solid rgba(255,255,255,.1);border-radius:16px;
+  padding:20px;z-index:300;width:320px;
+  box-shadow:0 24px 64px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.04);
+  animation:drpIn .15s cubic-bezier(.2,.8,.2,1);
+}
+.drp-popup-hero{left:0;transform:none}
+@keyframes drpIn{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes drpInHero{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+.drp-popup-hero{animation:drpInHero .15s cubic-bezier(.2,.8,.2,1)}
+
+/* Header */
+.drp-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.drp-month-label{font-size:14px;font-weight:600;color:#fff;letter-spacing:-.01em}
+.drp-nav{background:transparent;border:0;color:#555;cursor:pointer;padding:6px;border-radius:7px;display:flex;align-items:center;transition:.12s}
+.drp-nav:hover{background:rgba(255,255,255,.07);color:#fff}
+
+/* Grid */
+.drp-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.drp-day-name{text-align:center;font-size:10px;color:#444;text-transform:uppercase;padding:4px 0 10px;letter-spacing:.06em}
+.drp-day{text-align:center;cursor:pointer;position:relative;height:36px;display:flex;align-items:center;justify-content:center}
+.drp-day span{width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:13px;color:#ccc;transition:.1s;position:relative;z-index:1}
+.drp-day:not(.drp-out):not(.drp-disabled):hover span{background:rgba(255,255,255,.08);color:#fff}
+.drp-out span{color:#272727}
+.drp-out{cursor:default}
+.drp-disabled span{color:#222;cursor:not-allowed}
+.drp-today span{color:var(--gold)}
+/* Range highlight strip */
+.drp-range{background:rgba(193,154,107,.1)}
+.drp-range span{color:#dbb98a}
+/* Start cell: right half highlighted */
+.drp-start{background:linear-gradient(to right,transparent 50%,rgba(193,154,107,.1) 50%)}
+.drp-start span{background:var(--gold) !important;color:#0a0a0a !important;font-weight:700}
+/* End cell: left half highlighted */
+.drp-end{background:linear-gradient(to left,transparent 50%,rgba(193,154,107,.1) 50%)}
+.drp-end span{background:var(--gold) !important;color:#0a0a0a !important;font-weight:700}
+/* When start = end (single day) */
+.drp-start.drp-end{background:transparent}
+
+/* Footer hint */
+.drp-footer{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.06)}
+.drp-hint{font-size:12px;color:#666;display:flex;align-items:center;gap:6px}
+.drp-hint i{font-size:13px}
+.drp-hint-ok{color:#9a7e57}

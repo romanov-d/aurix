@@ -5,6 +5,7 @@ import { useCars } from '../api/useCars.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
 import { useFavorites } from '../api/useFavorites.js';
+import DateRangePicker from '../components/DateRangePicker.jsx';
 
 export default function Car() {
   const { id } = useParams();
@@ -231,15 +232,20 @@ export default function Car() {
             <div className="row"><span>Перекат</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.overmileage_rate || '—'} ₽/км</b></div>
           </div>
 
+          <div className="field" style={{ marginBottom: 12 }}>
+            <label>Даты аренды</label>
+            <DateRangePicker
+              from={fromDate}
+              to={toDate}
+              minDate={toDateStr(tomorrow)}
+              variant="sidebar"
+              onChange={({ from, to }) => {
+                if (from) setFromDate(from);
+                if (to) setToDate(to);
+              }}
+            />
+          </div>
           <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: 12 }}>
-            <div className="field">
-              <label>Получение — дата</label>
-              <input type="date" value={fromDate} min={toDateStr(tomorrow)} onChange={e => setFromDate(e.target.value)} />
-            </div>
-            <div className="field">
-              <label>Возврат — дата</label>
-              <input type="date" value={toDate} min={fromDate} onChange={e => setToDate(e.target.value)} />
-            </div>
             <div className="field">
               <label>Время получения</label>
               <select value={fromTime} onChange={e => setFromTime(e.target.value)}>
