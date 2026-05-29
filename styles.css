@@ -83,10 +83,10 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .fs-brands{position:relative;z-index:3;margin:0 auto;padding:0 28px 24px;width:calc(100% - 48px);max-width:1440px;box-sizing:border-box}
 .fs-brands-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
 .fs-brands-head h3{margin:0;font-size:18px;font-weight:600;color:#fff;font-family:inherit}
-.fs-brands-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.fs-brands-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
 .fs-brand{background:#0a0a0a;padding:14px;display:flex;align-items:center;justify-content:center;gap:12px;transition:.2s;border-radius:12px !important}
 .fs-brand:hover{background:#161616;transform:translateY(-2px)}
-.fs-brand img{width:26px;height:26px;object-fit:contain;flex-shrink:0}
+.fs-brand img{width:26px;height:26px;object-fit:contain;flex-shrink:0;filter:drop-shadow(0 0 2px rgba(255,255,255,0.4))}
 .fs-brand span{font-size:14px;color:#fff;font-weight:500}
 @media (max-width:1100px){.fs-brands-grid{grid-template-columns:repeat(3,1fr)}}
 @media (max-width:560px){.fs-brands-grid{grid-template-columns:repeat(2,1fr)}}
