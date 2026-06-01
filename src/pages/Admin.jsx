@@ -17,6 +17,22 @@ export default function Admin() {
   const [client, setClient] = useState(null);      // { user, bookings, points }
   const [clientLoading, setClientLoading] = useState(false);
 
+  const viewDoc = (url) => {
+    if (!url) return;
+    try {
+      if (url.startsWith('data:')) {
+        const [meta, b64] = url.split(',');
+        const mime = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/jpeg';
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch { window.open(url, '_blank'); }
+  };
+
   const openClient = async (id) => {
     setClientLoading(true);
     setClient({ user: { id }, bookings: [], points: [] });
@@ -960,10 +976,10 @@ export default function Admin() {
                 <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Документы</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
                   {client.user.passport_url
-                    ? <a href={client.user.passport_url} target="_blank" rel="noreferrer" className="btn btn-sm">Паспорт ↗</a>
+                    ? <button type="button" className="btn btn-sm" onClick={() => viewDoc(client.user.passport_url)}>Паспорт ↗</button>
                     : <span className="tag cancel">Паспорт не загружен</span>}
                   {client.user.license_url
-                    ? <a href={client.user.license_url} target="_blank" rel="noreferrer" className="btn btn-sm">Права ↗</a>
+                    ? <button type="button" className="btn btn-sm" onClick={() => viewDoc(client.user.license_url)}>Права ↗</button>
                     : <span className="tag cancel">Права не загружены</span>}
                 </div>
 

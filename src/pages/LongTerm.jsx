@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 
 export default function LongTerm() {
   return (
-    <>
+    <div className="lt-page">
       <div className="page-head">
         <div className="container">
           <div className="breadcrumbs">
@@ -85,6 +85,6 @@ export default function LongTerm() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

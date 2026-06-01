@@ -42,6 +42,22 @@ export default function Account() {
     reader.readAsDataURL(file);
   };
 
+  const viewDoc = (url) => {
+    if (!url) return;
+    try {
+      if (url.startsWith('data:')) {
+        const [meta, b64] = url.split(',');
+        const mime = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/jpeg';
+        const bin = atob(b64);
+        const arr = new Uint8Array(bin.length);
+        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+        window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch { window.open(url, '_blank'); }
+  };
+
   const saveProfile = async (e) => {
     e.preventDefault();
     setSavingProfile(true); setProfileMsg('');
@@ -397,9 +413,9 @@ export default function Account() {
                             </small>
                           </div>
                           {url && (
-                            <a href={url} target="_blank" rel="noopener noreferrer" className="dl" title="Посмотреть" style={{ marginRight: 6 }}>
+                            <button type="button" onClick={() => viewDoc(url)} className="dl" title="Посмотреть" style={{ marginRight: 6, background: 'none', border: 0, cursor: 'pointer' }}>
                               <i className="ph-fill ph-eye" />
-                            </a>
+                            </button>
                           )}
                           <label className="dl" style={{ cursor: busy ? 'default' : 'pointer' }} title="Загрузить">
                             <i className={busy ? 'ph ph-spinner-gap spin' : 'ph-fill ph-upload-simple'} />

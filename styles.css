@@ -1848,7 +1848,15 @@ html{scroll-behavior:smooth}
 
 /* car detail page — Inter everywhere (Phosphor icons excluded), no chip borders */
 .car-page :not([class*="ph-"]){font-family:'Inter',sans-serif}
+.car-page .price-block .row b,
+.car-page .price-block .row span{font-family:'Inter',sans-serif}
 .car-badge{border:0}
+
+/* subscription (long-term) page — Inter, no italics, no gold eyebrow bar */
+.lt-page :not([class*="ph-"]){font-family:'Inter',sans-serif}
+.lt-page .page-head h1{font-family:'Inter',sans-serif !important}
+.lt-page em{font-style:normal}
+.lt-page .row-eyebrow .bar{display:none}
 
 /* admin dashboard — no card outlines */
 .dash-kpi,.dash-stat-mini{border:0}
