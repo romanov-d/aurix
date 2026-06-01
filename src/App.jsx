@@ -57,7 +57,7 @@ export default function App() {
       {transClass && <div className={`page-transition ${transClass}`} />}
       <Preloader />
       {!noHeader && <Header />}
-      <div className={isAuth ? '' : isHome ? '' : 'page-wrap'}>
+      <div className={noHeader ? '' : isHome ? '' : 'page-wrap'}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/catalog" element={<Catalog />} />

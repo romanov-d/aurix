@@ -11,23 +11,23 @@ router.get('/', (req, res) => {
 
 router.patch('/', async (req, res, next) => {
   try {
-    const { name, phone, avatar_url } = req.body;
+    const { name, phone, email, avatar_url, passport_url, license_url } = req.body;
     const fields = [];
     const values = [];
     let idx = 1;
 
-    if (name !== undefined) {
-      fields.push(`name = $${idx++}`);
-      values.push(name);
+    if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
+    if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(phone); }
+    if (email !== undefined) {
+      const clean = String(email).trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+        return res.status(400).json({ error: 'Некорректный email' });
+      }
+      fields.push(`email = $${idx++}`); values.push(clean);
     }
-    if (phone !== undefined) {
-      fields.push(`phone = $${idx++}`);
-      values.push(phone);
-    }
-    if (avatar_url !== undefined) {
-      fields.push(`avatar_url = $${idx++}`);
-      values.push(avatar_url);
-    }
+    if (avatar_url !== undefined) { fields.push(`avatar_url = $${idx++}`); values.push(avatar_url); }
+    if (passport_url !== undefined) { fields.push(`passport_url = $${idx++}`); values.push(passport_url); }
+    if (license_url !== undefined) { fields.push(`license_url = $${idx++}`); values.push(license_url); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'Нет полей для обновления' });
@@ -35,12 +35,15 @@ router.patch('/', async (req, res, next) => {
 
     values.push(req.user.id);
     const { rows } = await q(
-      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, created_at`,
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, is_verified, passport_url, license_url, created_at`,
       values
     );
 
     res.json({ user: rows[0] });
   } catch (e) {
+    if (e && e.code === '23505') {
+      return res.status(400).json({ error: 'Этот email уже используется' });
+    }
     next(e);
   }
 });

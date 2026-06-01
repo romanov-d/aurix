@@ -14,6 +14,47 @@ export default function Account() {
   const [pointsHistory, setPointsHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [docUploading, setDocUploading] = useState('');
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '' });
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileMsg, setProfileMsg] = useState('');
+
+  useEffect(() => {
+    if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '' });
+  }, [user]);
+
+  const handleDocChange = (field, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой. Максимум — 2 МБ.'); return; }
+    setDocUploading(field);
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        await api('/me', { method: 'PATCH', body: { [field]: reader.result } });
+        await refresh();
+      } catch (err) {
+        alert(err.message || 'Ошибка загрузки документа');
+      } finally {
+        setDocUploading('');
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const saveProfile = async (e) => {
+    e.preventDefault();
+    setSavingProfile(true); setProfileMsg('');
+    try {
+      await api('/me', { method: 'PATCH', body: { name: profileForm.name, phone: profileForm.phone, email: profileForm.email } });
+      await refresh();
+      setProfileMsg('Изменения сохранены');
+    } catch (err) {
+      setProfileMsg(err.message || 'Ошибка сохранения');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
 
   // Load all cars to display in favorites
   const { items: allCars } = useCars({ limit: 100 });
@@ -36,7 +77,7 @@ export default function Account() {
 
   const firstName = user?.name?.split(' ')[0] || 'Гость';
   const memberSince = user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear();
-  const tierLabel = user?.role === 'admin' ? 'Admin' : user?.role === 'partner' ? 'Партнёр' : `Member · с ${memberSince}`;
+  const tierLabel = user?.role === 'admin' ? 'Администратор' : user?.role === 'partner' ? 'Партнёр' : `Участник · с ${memberSince}`;
   const avatar = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'A')}&background=random&color=fff&size=128`;
 
   const handleAvatarChange = async (e) => {
@@ -128,7 +169,7 @@ export default function Account() {
             <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
           <div className="acc-logout">
-            <a href="#logout" onClick={onLogout} className="acc-nav" style={{ display: 'flex', color: 'var(--muted)', fontSize: 13, padding: '8px 14px' }}><i className="ph-fill ph-sign-out" style={{ marginRight: 10, color: 'var(--muted)' }} /> Выйти</a>
+            <a href="#logout" onClick={onLogout} style={{ display: 'flex', alignItems: 'center', color: 'var(--muted)', fontSize: 13, padding: '8px 14px' }}><i className="ph-fill ph-sign-out" style={{ marginRight: 10, color: 'var(--muted)' }} /> Выйти</a>
           </div>
         </aside>
 
@@ -226,6 +267,17 @@ export default function Account() {
                 </div>
               )}
 
+              {activeTab === 'history' && pastBookings.length === 0 && (
+                <div className="acc-block">
+                  <div className="acc-block-head">
+                    <h3>История аренды</h3>
+                  </div>
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: '#888' }}>
+                    У вас пока нет завершённых аренд
+                  </div>
+                </div>
+              )}
+
               {activeTab === 'favorites' && (
                 <div className="acc-block">
                   <div className="acc-block-head">
@@ -260,7 +312,7 @@ export default function Account() {
                       </div>
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-percent" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Приветственный бонус</div>
@@ -271,7 +323,7 @@ export default function Account() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-star" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Кэшбэк с аренды</div>
@@ -282,7 +334,7 @@ export default function Account() {
                           </div>
                         </div>
 
-                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', border: '1px solid #222', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
+                        <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-coins" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
                             <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Оплата баллами</div>
@@ -327,20 +379,39 @@ export default function Account() {
                 <div className="acc-block">
                   <div className="acc-block-head">
                     <h3>Документы</h3>
-                    <a href="#">Загрузить →</a>
                   </div>
                   <div className="doc-list">
-                    <div className="doc-item">
-                      <div className="ico"><i className="ph-fill ph-identification-card" /></div>
-                      <div className="meta"><b>Паспорт</b><small>Требуется загрузить</small></div>
-                      <a href="#" className="dl"><i className="ph-fill ph-upload-simple" /></a>
-                    </div>
-                    <div className="doc-item">
-                      <div className="ico"><i className="ph-fill ph-car" /></div>
-                      <div className="meta"><b>Водительское удостоверение</b><small>Требуется загрузить</small></div>
-                      <a href="#" className="dl"><i className="ph-fill ph-upload-simple" /></a>
-                    </div>
+                    {[
+                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт' },
+                      { field: 'license_url', icon: 'ph-car', label: 'Водительское удостоверение' },
+                    ].map(d => {
+                      const url = user?.[d.field];
+                      const busy = docUploading === d.field;
+                      return (
+                        <div className="doc-item" key={d.field}>
+                          <div className="ico"><i className={`ph-fill ${d.icon}`} /></div>
+                          <div className="meta">
+                            <b>{d.label}</b>
+                            <small style={{ color: url ? '#22c55e' : 'var(--muted)' }}>
+                              {busy ? 'Загрузка…' : url ? '✓ Загружено' : 'Требуется загрузить'}
+                            </small>
+                          </div>
+                          {url && (
+                            <a href={url} target="_blank" rel="noopener noreferrer" className="dl" title="Посмотреть" style={{ marginRight: 6 }}>
+                              <i className="ph-fill ph-eye" />
+                            </a>
+                          )}
+                          <label className="dl" style={{ cursor: busy ? 'default' : 'pointer' }} title="Загрузить">
+                            <i className={busy ? 'ph ph-spinner-gap spin' : 'ph-fill ph-upload-simple'} />
+                            <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} disabled={busy} onChange={(e) => handleDocChange(d.field, e)} />
+                          </label>
+                        </div>
+                      );
+                    })}
                   </div>
+                  <p style={{ padding: '4px 24px 20px', color: 'var(--muted)', fontSize: 12, lineHeight: 1.6 }}>
+                    Документы видны только администратору для верификации. Максимальный размер файла — 2 МБ.
+                  </p>
                 </div>
               )}
 
@@ -349,18 +420,33 @@ export default function Account() {
                   <div className="acc-block-head">
                     <h3>Профиль</h3>
                   </div>
-                  <div className="profile-card">
-                    <div className="profile-row"><span className="lbl">ФИО</span><span className="v">{user?.name}</span></div>
-                    <div className="profile-row"><span className="lbl">Телефон</span><span className="v">{user?.phone || '—'}</span></div>
-                    <div className="profile-row"><span className="lbl">Email</span><span className="v">{user?.email}</span></div>
-                    <div className="profile-row"><span className="lbl">Уровень клуба</span><span className="v gold">{tierLabel}</span></div>
+                  <form className="profile-card" onSubmit={saveProfile} style={{ padding: 24 }}>
+                    <div className="field" style={{ marginBottom: 16 }}>
+                      <label>Имя</label>
+                      <input value={profileForm.name} onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))} />
+                    </div>
+                    <div className="form-row">
+                      <div className="field">
+                        <label>Телефон</label>
+                        <input type="tel" placeholder="+7 999 123 45 67" value={profileForm.phone} onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
+                      </div>
+                      <div className="field">
+                        <label>Email</label>
+                        <input type="email" value={profileForm.email} onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))} />
+                      </div>
+                    </div>
+                    <div className="profile-row" style={{ marginTop: 8 }}><span className="lbl">Уровень клуба</span><span className="v gold">{tierLabel}</span></div>
                     <div className="profile-row">
                       <span className="lbl">Верификация СБ</span>
                       <span className="v" style={{ color: user?.is_verified ? '#22c55e' : '#888' }}>
                         {user?.is_verified ? '✓ Пройдена' : 'Не пройдена'}
                       </span>
                     </div>
-                  </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginTop: 22 }}>
+                      <button className="btn btn-filled" type="submit" disabled={savingProfile}>{savingProfile ? 'Сохранение…' : 'Сохранить'}</button>
+                      {profileMsg && <span style={{ fontSize: 13, color: /сохран/i.test(profileMsg) ? '#22c55e' : '#e74c3c' }}>{profileMsg}</span>}
+                    </div>
+                  </form>
                 </div>
               )}
             </>

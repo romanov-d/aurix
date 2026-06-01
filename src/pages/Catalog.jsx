@@ -59,6 +59,7 @@ export default function Catalog() {
   const [maxPrice,   setMaxPrice]   = useState(200000);
   const [sort,       setSort]       = useState('Рекомендуемые');
   const [brandsOpen, setBrandsOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   function toggleBrand(brand) {
     setSelectedBrands(prev => {
@@ -111,7 +112,15 @@ export default function Catalog() {
       </div>
 
       <div className="container catalog">
-        <aside className="filters">
+        <button
+          className="filters-toggle"
+          onClick={() => setFiltersOpen(v => !v)}
+          aria-expanded={filtersOpen}
+        >
+          <span><i className="ph ph-sliders-horizontal" /> Фильтры</span>
+          <i className={`ph ph-caret-${filtersOpen ? 'up' : 'down'}`} />
+        </button>
+        <aside className={`filters${filtersOpen ? ' open' : ''}`}>
 
           {/* Поиск по названию */}
           <div className="filter-group">
@@ -215,7 +224,7 @@ export default function Catalog() {
               <b>{loading ? '…' : filtered.length}</b> {availLabel.split(' ').slice(1).join(' ')}
             </div>
             <div className="sort">
-              <span className="muted" style={{ fontSize: 12, letterSpacing: '.18em', textTransform: 'uppercase' }}>Сортировка</span>
+              <span className="muted" style={{ fontSize: 12, letterSpacing: 'normal' }}>Сортировка</span>
               <select value={sort} onChange={e => setSort(e.target.value)}>
                 <option>Рекомендуемые</option>
                 <option>По цене ↑</option>

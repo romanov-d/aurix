@@ -14,6 +14,22 @@ export default function Admin() {
   const [faqs, setFaqs] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [client, setClient] = useState(null);      // { user, bookings, points }
+  const [clientLoading, setClientLoading] = useState(false);
+
+  const openClient = async (id) => {
+    setClientLoading(true);
+    setClient({ user: { id }, bookings: [], points: [] });
+    try {
+      const data = await api(`/admin/users/${id}`);
+      setClient(data);
+    } catch (e) {
+      alert(e.message || 'Не удалось загрузить профиль клиента');
+      setClient(null);
+    } finally {
+      setClientLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!user || user.role !== 'admin') {
@@ -531,7 +547,11 @@ export default function Admin() {
                         <span style={{ fontSize: 13, color: '#888' }}>{b.car.name}</span>
                       </td>
                       <td>
-                        {b.user.name}<br/>
+                        <button
+                          onClick={() => openClient(b.user.id)}
+                          style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', fontWeight: 600, font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}
+                          title="Открыть профиль клиента"
+                        >{b.user.name}</button><br/>
                         <span style={{ fontSize: 13, color: '#888' }}>{b.user.email}</span>
                       </td>
                       <td style={{ fontSize: 13 }}>
@@ -917,6 +937,53 @@ export default function Admin() {
                 <button type="submit" className="btn btn-filled" disabled={faqSaving}>{faqSaving ? 'Сохранение...' : 'Сохранить'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {client && (
+        <div className="modal-overlay" onClick={() => setClient(null)}>
+          <div className="modal-card" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setClient(null)}><i className="ph ph-x" /></button>
+            <h3 style={{ margin: '0 0 6px' }}>{client.user.name || 'Клиент'}</h3>
+            {clientLoading ? (
+              <p style={{ color: '#888' }}>Загрузка профиля…</p>
+            ) : (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, margin: '18px 0' }}>
+                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Email</div><div>{client.user.email}</div></div>
+                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Телефон</div><div>{client.user.phone || '—'}</div></div>
+                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Баланс</div><div style={{ color: 'var(--gold)' }}>{(client.user.points || 0).toLocaleString()} баллов</div></div>
+                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Верификация</div><div style={{ color: client.user.is_verified ? '#22c55e' : '#888' }}>{client.user.is_verified ? '✓ Пройдена' : 'Не пройдена'}</div></div>
+                </div>
+
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Документы</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+                  {client.user.passport_url
+                    ? <a href={client.user.passport_url} target="_blank" rel="noreferrer" className="btn btn-sm">Паспорт ↗</a>
+                    : <span className="tag cancel">Паспорт не загружен</span>}
+                  {client.user.license_url
+                    ? <a href={client.user.license_url} target="_blank" rel="noreferrer" className="btn btn-sm">Права ↗</a>
+                    : <span className="tag cancel">Права не загружены</span>}
+                </div>
+
+                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
+                {client.bookings.length ? (
+                  <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
+                    <tbody>
+                      {client.bookings.map(bk => (
+                        <tr key={bk.id}>
+                          <td>{bk.car.name}</td>
+                          <td>{formatDate(bk.from_dt)} — {formatDate(bk.to_dt)}</td>
+                          <td>{bk.total.toLocaleString()} ₽</td>
+                          <td><span className={`tag ${bk.status === 'completed' ? 'done' : bk.status === 'cancelled' ? 'cancel' : bk.status === 'active' ? 'ok' : ''}`}>{bk.status}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
+              </>
+            )}
           </div>
         </div>
       )}

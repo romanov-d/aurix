@@ -113,17 +113,66 @@ button,input,select,textarea{font-family:inherit;color:inherit}
   .fs-title{font-size:54px}
   .fs-cats-grid{grid-template-columns:repeat(3,1fr)}
 }
-@media (max-width:900px){
-  .first-screen{height:auto;min-height:100vh}
-  .fs-hero-grid{grid-template-columns:1fr;padding-top:100px;gap:24px}
-  .fs-hero-right{justify-self:start;max-width:none}
-  .fs-search-bar{flex-wrap:wrap;gap:8px;padding:14px}
-  .fs-seg,.fs-chip{border-right:0 !important;border-bottom:1px solid var(--bg-3);width:100%;padding:10px 12px}
-  .fs-cta{width:100%}
-  .fs-title{font-size:42px}
+
+/* ===== HERO — tablet & mobile (matches burger breakpoint) ===== */
+@media (max-width:1100px){
+  /* don't force full-viewport height — let the blocks stack naturally */
+  .first-screen{min-height:auto;height:auto}
+  /* un-stick the hero text: flow it in document so the search bar can't cover it */
+  .fs-hero{flex:none;min-height:auto;overflow:visible}
+  .fs-hero-grid{position:static;transform:none;left:auto;
+    width:auto;max-width:none;margin:0;
+    padding:104px 24px 24px;
+    grid-template-columns:1fr;gap:14px;align-items:start}
+  .fs-hero-left,.fs-hero-right{align-self:start;justify-self:start;max-width:none;padding-bottom:0}
+  .fs-hero-right p{font-size:14px}
+  .fs-title{font-size:48px}
+  /* uniform side gutters for the stacked blocks (kills horizontal overflow) */
+  .fs-search,.fs-cats,.fs-brands{width:auto;max-width:none;margin-left:0;margin-right:0;padding-left:24px;padding-right:24px}
+  .fs-search{margin-top:8px;margin-bottom:8px}
 }
+
+/* ===== SEARCH BAR — stack below tablet ===== */
+@media (max-width:900px){
+  .fs-search-bar{flex-wrap:wrap;gap:6px;padding:12px;min-height:0}
+  .fs-seg,.fs-chip{border-right:0 !important;border-bottom:1px solid var(--bg-3);width:100%;padding:12px 10px;min-width:0}
+  .fs-seg:last-of-type{border-bottom:0}
+  .fs-seg-dates{width:100%;min-width:0}
+  .fs-seg-dates .drp-root,.fs-seg-dates .drp-hero-trigger,.fs-seg-dates .drp-hero-seg{min-width:0}
+  /* breathing room from the cell borders and the middle divider */
+  .fs-seg-dates{padding:14px 12px}
+  .drp-hero-trigger{padding:2px 6px}
+  .drp-hero-seg-from{padding-right:20px}
+  .drp-hero-seg-to{padding-left:20px}
+  .drp-hero-divider{font-size:16px}
+  .fs-cta{width:100%;margin-left:0;margin-top:2px;min-height:52px}
+  .fs-title{font-size:40px}
+  .fs-cats-grid{grid-template-columns:repeat(3,1fr);gap:10px}
+  .fs-cat{padding:22px 12px;gap:12px}
+  .fs-cat i{font-size:38px}
+  /* keep the date popup inside the viewport */
+  .drp-popup-hero{left:0;max-width:calc(100vw - 48px)}
+}
+
+/* ===== PHONE ===== */
 @media (max-width:560px){
+  .fs-hero-grid{padding:96px 18px 22px}
+  .fs-search,.fs-cats,.fs-brands{padding-left:18px;padding-right:18px}
+  .fs-title{font-size:34px}
+  .fs-hero-right p{font-size:13px}
   .fs-cats-grid{grid-template-columns:repeat(2,1fr)}
+  /* odd one out spans the full row (e.g. 5th "Седан" tile) */
+  .fs-cats-grid .fs-cat:last-child:nth-child(odd){grid-column:1 / -1}
+  .fs-cat{padding:18px 10px;gap:10px}
+  .fs-cat i{font-size:32px}
+  .fs-cat span{font-size:13px}
+  .fs-brand{padding:12px}
+  .fs-brand span{font-size:13px}
+}
+
+@media (max-width:380px){
+  .fs-title{font-size:29px}
+  .fs-cats-grid{gap:8px}
 }
 
 /* ==== SPECIAL OFFERS BLOCK ==== */
@@ -261,7 +310,17 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 
 @media (max-width:900px){
   .hot-grid{grid-template-columns:1fr;gap:16px;margin-bottom:32px}
-  .sub-banner{flex-direction:column;align-items:flex-start;gap:18px;padding:28px 24px}
+  /* vertical card: text on top, big car bleeding off the bottom-left edge */
+  .sub-banner{grid-template-columns:1fr;height:auto;margin:32px 0}
+  .sub-banner-left{padding:28px 22px;gap:14px}
+  .sub-banner-right{height:200px;background:transparent;overflow:hidden;position:relative;display:block}
+  /* car is centred in a 1024² PNG with big transparent top/bottom margins —
+     pull it up (crop the empty top) + left so the big car fills & bleeds the edges */
+  .sub-banner-car{
+    display:block;width:172%;height:auto;
+    max-width:none;max-height:none;
+    margin:-44% 0 0 -52%;transform:none;
+  }
   .sub-banner-cta{width:100%;text-align:center;justify-content:center;display:flex}
   .hot-head h2{font-size:24px}
 }
@@ -782,7 +841,7 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 .burger span{display:block;width:18px;height:1.5px;background:var(--gold);transition:.2s}
 .burger:hover{border-color:var(--gold)}
 
-.mobile-menu{position:fixed;inset:0;background:var(--bg-1);z-index:100;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow-y:auto}
+.mobile-menu{position:fixed;inset:0;background:var(--bg-1);z-index:1000;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow-y:auto}
 .mobile-menu.open{transform:translateX(0)}
 .mm-head{display:flex;justify-content:space-between;align-items:center;padding:18px 24px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg-1);z-index:2}
 .mm-close{width:42px;height:42px;background:transparent;border:1px solid var(--line);color:var(--gold);font-size:28px;line-height:1;cursor:pointer;display:grid;place-items:center;font-family:'Cinzel',serif}
@@ -1112,7 +1171,7 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 /* блоки внутри карточек тоже без обводок, отделяем фоном */
 .price-block{background:var(--inset)}
 .spec-grid .s{background:var(--inset)}
-.doc-item .ico{box-shadow:inset 0 0 0 1px rgba(212,175,55,.28)} /* оставить золотую обводку для иконки */
+.doc-item .ico{background:var(--bg-3) !important;box-shadow:none !important;border:0 !important}
 .benefit{border:0;border-right:1px solid rgba(255,255,255,.04)}
 .benefit:last-child{border-right:0}
 .benefits{border-top:0;border-bottom:0;background:var(--bg-2)}
@@ -1648,4 +1707,156 @@ html{scroll-behavior:smooth}
 }
 @media(max-width:480px){
   .dash-stats-row{grid-template-columns:1fr}
+}
+
+/* ============================================================
+   MOBILE / TABLET POLISH
+   tighter side gutters · bigger car-card specs ·
+   "Смотреть все" under the cars · responsive reviews block
+   (appended last so it wins over the base wrapper rules)
+   ============================================================ */
+@media (max-width:800px){
+  /* — tighter, consistent side gutters across all wide blocks — */
+  .header{width:calc(100% - 20px);padding:0 14px}
+  .sp-wrap,.rv-wrap,.br-wrap,.hot-wrap,.pt-wrap,.why-wrap,.faq-wrap,.ft-wrap{
+    width:auto;max-width:none;margin-left:0;margin-right:0;
+    padding-left:16px;padding-right:16px}
+  .fs-search,.fs-cats,.fs-brands,.fs-hero-grid{padding-left:16px;padding-right:16px}
+  /* push hero text + search further down, clear of the floating header */
+  .fs-hero-grid{padding-top:148px;padding-bottom:22px}
+
+  /* — "Наш автопарк": keep CTA top-right, compact, single line — */
+  .sp-head{margin-bottom:18px;gap:12px;align-items:center}
+  .sp-head h2{font-size:26px}
+  .sp-all{flex-shrink:0;white-space:nowrap;padding:10px 16px;font-size:13px}
+
+  /* — bigger, more readable car-card specs — */
+  .card-body{padding:18px 18px 22px}
+  .card-name{font-size:18px}
+  .card-meta{font-size:12px;margin-top:7px}
+  .card-specs{gap:18px;margin-top:16px;padding-top:16px}
+  .spec{font-size:15px}
+  .spec-lbl{line-height:1.25}
+  .spec-lbl small{font-size:11px}
+  .card-price{margin-top:16px;padding-top:16px;gap:12px}
+  .card-price .from{font-size:12px;flex-shrink:0}
+  .card-price .val{font-size:23px}
+
+  /* — reviews: keep heading large, just add side padding; can wrap to 2 lines — */
+  .trust-heading{padding:40px 16px 24px}
+  .trust-h{font-size:32px;line-height:1.3}
+  .rph-wrap{margin:0 8px}
+  .rph-car,.rph-car:hover{width:84px;height:44px;border-radius:8px}
+  .rv2-inner{padding:32px 0 0}
+
+  /* — delivery + map: follow the 16px gutter grid, stacked rounded cards — */
+  .dl-grid{grid-template-columns:1fr;gap:16px;width:auto;padding:0 16px;box-sizing:border-box}
+  .dl-left{padding:28px 20px}
+  .dl-right{min-height:320px;border-radius:14px;overflow:hidden}
+
+  /* — footer: every column stacks vertically — */
+  .ft-cols{grid-template-columns:1fr;gap:26px;text-align:left}
+  .ft-bot{flex-direction:column;align-items:flex-start;gap:18px}
+}
+
+/* mobile reviews — swipeable scroll-snap carousel (replaces the WebGL gallery) */
+.rv-mob{
+  display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;padding:8px 16px 20px;margin-top:10px;scrollbar-width:none;
+}
+.rv-mob::-webkit-scrollbar{display:none}
+.rv-mob-card{
+  flex:0 0 84%;scroll-snap-align:center;box-sizing:border-box;
+  background:#161616;border:0;border-radius:16px;
+  padding:24px 22px;display:flex;flex-direction:column;min-height:300px;
+}
+.rv-mob-stars{color:#c19a6b;font-size:18px;letter-spacing:3px;margin-bottom:16px}
+.rv-mob-text{color:#d0d0d0;font-size:14px;line-height:1.6;flex:1;margin:0}
+.rv-mob-foot{
+  display:flex;align-items:center;gap:12px;margin-top:20px;
+  padding-top:18px;border-top:1px solid rgba(255,255,255,.07);
+}
+.rv-mob-ava{
+  width:44px;height:44px;border-radius:50%;background:#2a2a2a;object-fit:cover;
+  flex-shrink:0;display:block;
+}
+.rv-mob-who b{display:block;color:#fff;font-size:14px;font-weight:600}
+.rv-mob-who small{color:#777;font-size:12px}
+
+@media (max-width:560px){
+  .sp-head h2{font-size:23px}
+  .card-specs{gap:14px}
+  .spec{font-size:14px}
+  .trust-h{font-size:28px}
+  .rph-car,.rph-car:hover{width:74px;height:38px}
+  .rv-mob-card{flex-basis:88%}
+}
+
+/* mobile menu — all text in Inter (was Cinzel on the nav links) */
+.mobile-menu,
+.mobile-menu .mm-nav a,
+.mobile-menu .mm-section-title,
+.mobile-menu .mm-sub{font-family:'Inter',sans-serif}
+
+/* bigger account (ЛК) icon + avatar in the header button */
+.account-btn i{font-size:21px}
+.account-btn-ava{width:26px;height:26px}
+
+/* car card "Итого за N сут." — bigger, normal tracking + Inter (was Cinzel + wide caps) */
+.r-total .lbl{letter-spacing:normal;text-transform:none;font-family:'Inter',sans-serif;font-size:13px;color:#cfcfcf}
+.r-total .val{font-family:'Inter',sans-serif;font-size:21px}
+.r-total .val small{font-family:'Inter',sans-serif;font-size:12px}
+
+/* catalog: breathing room before the footer */
+.catalog{padding-bottom:64px}
+
+/* catalog: collapsible filters + stacked head on tablet/mobile */
+.filters-toggle{display:none}
+@media (max-width:1100px){
+  .filters-toggle{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+    background:var(--bg-1);border:1px solid var(--line);color:#fff;padding:14px 16px;
+    border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;margin-bottom:16px;
+  }
+  .filters-toggle i{color:var(--gold)}
+  /* smooth expand/collapse */
+  .filters{
+    display:block;overflow:hidden;max-height:0;opacity:0;
+    padding-top:0;padding-bottom:0;border-width:0;
+    transition:max-height .4s cubic-bezier(.4,0,.2,1),opacity .3s ease,padding .35s ease;
+  }
+  .filters.open{max-height:1600px;opacity:1;padding-top:18px;padding-bottom:18px;border-width:1px}
+}
+@media (max-width:800px){
+  .catalog-head{flex-direction:column;align-items:flex-start;gap:12px}
+  .catalog-head .sort{width:100%;display:flex;align-items:center;justify-content:space-between}
+  .catalog{padding-bottom:48px}
+}
+
+/* mobile menu: black background, almost no divider lines, bigger ЛК icon */
+.mobile-menu,
+.mm-head{background:#000}
+.mm-nav{border-bottom:0;padding-bottom:6px;margin-bottom:6px}
+.mm-nav a{border-bottom:0}
+.mm-section{border-bottom:0;padding-bottom:6px}
+.mm-sub{border-left:0;padding-left:0}
+.mm-foot .btn i{font-size:22px}
+
+/* contacts: darker card bg (match home blocks #161616), bigger field labels */
+.contact-box{background:var(--bg-2) !important}
+.field label{font-size:14px;letter-spacing:.06em}
+
+/* car detail page — Inter everywhere (Phosphor icons excluded), no chip borders */
+.car-page :not([class*="ph-"]){font-family:'Inter',sans-serif}
+.car-badge{border:0}
+
+/* admin dashboard — no card outlines */
+.dash-kpi,.dash-stat-mini{border:0}
+
+/* contacts mobile: keep cards & form inside the viewport */
+@media (max-width:800px){
+  .contacts-top-row > *{min-width:0}
+  .contact-box{padding:20px}
+  .contact-box .v{font-size:18px;overflow-wrap:break-word;word-break:break-word}
+  .contact-box .v small{word-break:break-word}
 }

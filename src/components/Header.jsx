@@ -103,14 +103,6 @@ export default function Header() {
             ))}
           </nav>
           <div className="mm-section">
-            <div className="mm-section-title">Услуги</div>
-            {SERVICES.map(([href, text], i) => (
-              href.startsWith('/')
-                ? <Link key={i} to={href} className="mm-sub" onClick={() => setOpen(false)}>{text}</Link>
-                : <a key={i} href={href} className="mm-sub" onClick={() => setOpen(false)}>{text}</a>
-            ))}
-          </div>
-          <div className="mm-section">
             <div className="mm-section-title">Связь</div>
             <a href="tel:+79991234567" className="mm-sub mm-icon"><i className="ph-fill ph-phone" /> +7 999 123 45 67</a>
             <a href="https://wa.me/79991234567" className="mm-sub mm-icon"><i className="ph-fill ph-whatsapp-logo" /> WhatsApp</a>
@@ -120,9 +112,6 @@ export default function Header() {
           <div className="mm-foot">
             <Link to="/account" className="btn" style={{ width: '100%', marginBottom: 10 }} onClick={() => setOpen(false)}><i className="ph-fill ph-user-circle" /> &nbsp;Личный кабинет</Link>
             <Link to="/catalog" className="btn btn-filled" style={{ width: '100%' }} onClick={() => setOpen(false)}>Забронировать авто</Link>
-            <div className="mm-lang">
-              <span className="active">RU</span><span>EN</span><span>AR</span>
-            </div>
           </div>
         </div>
       </div>

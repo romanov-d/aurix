@@ -3,17 +3,21 @@ import { Link } from 'react-router-dom';
 export default function LongTerm() {
   return (
     <>
-      <section className="lt-hero">
+      <div className="page-head">
         <div className="container">
-          <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Долгосрочная аренда</span></div>
-          <h1 className="mt-16">Премиальный авто <em>без покупки</em> и кредитов</h1>
-          <p>Аренда от 1 месяца с фиксированным платежом. Полное обслуживание, страховка, замена резины и подменный автомобиль — всё включено.</p>
-          <div style={{ display: 'flex', gap: 18 }}>
+          <div className="breadcrumbs">
+            <Link to="/">Главная</Link><span className="sep">/</span><span>Долгосрочная аренда</span>
+          </div>
+          <h1>Премиальный авто <em>без покупки</em> и кредитов</h1>
+          <p style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
+            Аренда от 1 месяца с фиксированным платежом. Полное обслуживание, страховка, замена резины и подменный автомобиль — всё включено.
+          </p>
+          <div style={{ display: 'flex', gap: 18, marginTop: 28 }}>
             <Link to="/catalog" className="btn btn-filled">Подобрать автомобиль</Link>
             <Link to="/contacts" className="btn">Получить расчёт</Link>
           </div>
         </div>
-      </section>
+      </div>
 
       <section>
         <div className="container">

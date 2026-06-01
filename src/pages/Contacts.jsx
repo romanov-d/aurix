@@ -90,7 +90,7 @@ export default function Contacts() {
                   </div>
                 )}
 
-                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="form-row">
                   <div className="field">
                     <label>Имя</label>
                     <input 

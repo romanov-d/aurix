@@ -43,7 +43,7 @@ export default function Register() {
           scale={1}
           rotation={0}
           speed={1.6}
-          colors={['hsl(45,96%,52%)', 'hsl(38,88%,42%)', 'hsl(30,60%,18%)']}
+          colors={['hsl(46,65%,55%)', 'hsl(42,60%,40%)', 'hsl(32,45%,15%)']}
         />
       </div>
 

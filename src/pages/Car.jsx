@@ -55,21 +55,19 @@ export default function Car() {
     setNotFound(false);
     setActivePhotoIdx(0);
 
-    Promise.all([
-      getCar(id),
-      listCars({ limit: 4 }),
-      api(`/cars/${id}/reviews`)
-    ])
-      .then(([carData, allCars, reviewsData]) => {
-        setCar(carData);
-        setSimilar(allCars.items.filter(c => c.id !== id).slice(0, 4));
-        setReviews(reviewsData);
-      })
-      .catch((e) => {
-        console.error(e);
-        setNotFound(true);
-      })
+    // Car itself is the only critical request — show it even if reviews/similar fail
+    getCar(id)
+      .then((carData) => setCar(carData))
+      .catch((e) => { console.error(e); setNotFound(true); })
       .finally(() => setLoading(false));
+
+    listCars({ limit: 4 })
+      .then((allCars) => setSimilar(allCars.items.filter(c => c.id !== id).slice(0, 4)))
+      .catch(() => setSimilar([]));
+
+    api(`/cars/${id}/reviews`)
+      .then((reviewsData) => setReviews(Array.isArray(reviewsData) ? reviewsData : []))
+      .catch(() => setReviews([]));
   }, [id]);
 
   if (loading) return <div className="container" style={{ padding: '120px 0', color: '#9a9a9a' }}>Загрузка…</div>;
@@ -149,7 +147,7 @@ export default function Car() {
   };
 
   return (
-    <>
+    <div className="car-page">
       <div className="page-head">
         <div className="container">
           <div className="breadcrumbs">
@@ -366,6 +364,6 @@ export default function Car() {
           </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }

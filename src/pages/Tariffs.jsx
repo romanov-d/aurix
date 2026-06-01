@@ -58,13 +58,13 @@ export default function Tariffs() {
         <div className="container">
 
           {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: 2, marginBottom: 32, background: 'var(--line)', border: '1px solid var(--line)', width: 'fit-content' }}>
+          <div style={{ display: 'flex', gap: 2, marginBottom: 32, background: 'var(--bg-2)', borderRadius: 12, overflow: 'hidden', width: 'fit-content' }}>
             <button
               onClick={() => setLegal(false)}
               style={{
                 padding: '12px 28px',
                 fontSize: 13,
-                letterSpacing: '.08em',
+                letterSpacing: 'normal', lineHeight: 1.25,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 border: 'none',
@@ -81,7 +81,7 @@ export default function Tariffs() {
               style={{
                 padding: '12px 28px',
                 fontSize: 13,
-                letterSpacing: '.08em',
+                letterSpacing: 'normal', lineHeight: 1.25,
                 fontFamily: 'inherit',
                 cursor: 'pointer',
                 border: 'none',
@@ -105,10 +105,10 @@ export default function Tariffs() {
             </div>
           ) : (
             /* Pricing table */
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 860 }}>
+            <div style={{ overflowX: 'auto', borderRadius: 14 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 860, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                 <thead>
-                  <tr style={{ background: '#181818', borderBottom: '1px solid var(--gold)' }}>
+                  <tr style={{ background: '#181818' }}>
                     <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11, minWidth: 200 }}>Автомобиль</th>
                     <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>1–5 дней</th>
                     <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>6–12 дней</th>
@@ -135,14 +135,14 @@ export default function Tariffs() {
                       <td style={{ padding: '14px 16px', color: '#fff', fontWeight: 500 }}>
                         <Link to={`/car/${car.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{car.name}</Link>
                       </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: 'var(--serif)', fontSize: 14 }}>{price(car.price_per_day, legal)}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: 'var(--serif)', fontSize: 14 }}>{price(car.price_6_12, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_per_day, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_6_12, legal)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#bdbdbd', fontStyle: 'italic', fontSize: 12 }}>договорная</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: 'var(--serif)', fontSize: 14 }}>{price(car.price_30, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_30, legal)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{fmt(car.deposit)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{car.mileage_limit} км</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{car.overmileage_rate} ₽/км</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: 'var(--serif)', fontSize: 14 }}>{price(car.photo_rate, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.photo_rate, legal)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -159,28 +159,22 @@ export default function Tariffs() {
           <div className="divider-h"></div>
 
           {/* Notes */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
-            <div style={{ background: '#101010', padding: '28px 32px' }}>
-              <div className="row-eyebrow" style={{ marginBottom: 12 }}>
-                <span className="bar"></span><span className="eyebrow">Аренда для фотосессий</span>
-              </div>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
+            <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
+              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Аренда для фотосессий</h3>
+              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
                 Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО. Уточняйте наличие и условия у менеджера.
               </p>
             </div>
-            <div style={{ background: '#101010', padding: '28px 32px' }}>
-              <div className="row-eyebrow" style={{ marginBottom: 12 }}>
-                <span className="bar"></span><span className="eyebrow">Подарочные сертификаты</span>
-              </div>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8 }}>
+            <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
+              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Подарочные сертификаты</h3>
+              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
                 Подарочный сертификат на аренду любого автомобиля из парка. Стоимость сертификата равна стоимости одних суток аренды выбранного автомобиля. Срок действия — 1 год с даты оформления.
               </p>
             </div>
-            <div style={{ background: '#101010', padding: '28px 32px' }}>
-              <div className="row-eyebrow" style={{ marginBottom: 12 }}>
-                <span className="bar"></span><span className="eyebrow">Доставка и получение</span>
-              </div>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8 }}>
+            <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
+              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Доставка и получение</h3>
+              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
                 Доставка и забор автомобиля осуществляются за дополнительную плату в любое удобное место. Работаем 7 дней в неделю, 24 часа в сутки. Свяжитесь с нами для уточнения стоимости.
               </p>
             </div>

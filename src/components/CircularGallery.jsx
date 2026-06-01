@@ -28,11 +28,6 @@ function createReviewTexture(gl, review) {
   ctx.lineTo(0, r); ctx.quadraticCurveTo(0, 0, r, 0);
   ctx.closePath(); ctx.fill();
 
-  // subtle border
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
   // stars
   ctx.fillStyle = '#c19a6b';
   ctx.font = 'bold 30px Arial';
@@ -81,6 +76,24 @@ function createReviewTexture(gl, review) {
 
   const tex = new Texture(gl, { generateMipmaps: false });
   tex.image = cv;
+
+  // overlay the real avatar photo once it loads (initial stays as fallback)
+  if (review.avatar) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(66, H - 60, 30, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(img, 36, H - 90, 60, 60);
+      ctx.restore();
+      tex.image = cv;
+      tex.needsUpdate = true;
+    };
+    img.src = review.avatar;
+  }
+
   return { texture: tex, width: W, height: H };
 }
 
@@ -179,9 +192,10 @@ class Media {
   onResize({ screen, viewport } = {}) {
     if (screen)   this.screen   = screen;
     if (viewport) this.viewport = viewport;
-    // Cards: 72% of viewport height, 4:3-ish width (3 visible at once)
+    // Cards are square to match the 520×520 review texture — prevents the text
+    // from being cropped at narrow desktop widths (was: independent w/h → portrait crop)
     this.plane.scale.y = this.viewport.height * 0.72;
-    this.plane.scale.x = this.viewport.width  * 0.30;
+    this.plane.scale.x = this.plane.scale.y;
     this.program.uniforms.uPlaneSizes.value = [this.plane.scale.x, this.plane.scale.y];
     this.padding   = this.viewport.width * 0.04;
     this.width      = this.plane.scale.x + this.padding;

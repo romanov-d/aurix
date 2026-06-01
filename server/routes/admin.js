@@ -270,7 +270,7 @@ router.delete('/cars/:id/photos/:photoId', async (req, res, next) => {
 // Users
 router.get('/users', async (req, res, next) => {
   try {
-    const items = await many(`SELECT id, email, name, phone, role, is_verified, created_at FROM users ORDER BY created_at DESC`);
+    const items = await many(`SELECT id, email, name, phone, role, is_verified, passport_url, license_url, created_at FROM users ORDER BY created_at DESC`);
     res.json(items);
   } catch (e) {
     next(e);
@@ -286,6 +286,32 @@ router.patch('/users/:id', async (req, res, next) => {
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Full client profile — for the bookings → client view in admin
+router.get('/users/:id', async (req, res, next) => {
+  try {
+    const user = await one(
+      `SELECT id, email, name, phone, role, is_verified, points, passport_url, license_url, created_at
+       FROM users WHERE id = $1`,
+      [req.params.id]
+    );
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    const bookings = await many(
+      `SELECT b.id, b.status, b.from_dt, b.to_dt, b.total, b.created_at,
+        json_build_object('id', c.id, 'name', c.name) as car
+       FROM bookings b JOIN cars c ON b.car_id = c.id
+       WHERE b.user_id = $1 ORDER BY b.created_at DESC`,
+      [req.params.id]
+    );
+    const points = await many(
+      `SELECT id, amount, reason, created_at FROM user_points WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ user, bookings, points });
   } catch (e) {
     next(e);
   }

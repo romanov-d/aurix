@@ -7,13 +7,14 @@ import CarCard from '../components/CarCard.jsx';
 import CircularGallery from '../components/CircularGallery.jsx';
 import { api } from '../api/client.js';
 
+const AV = (id) => `https://images.unsplash.com/${id}?w=160&h=160&fit=crop&crop=faces&q=80`;
 const REVIEWS = [
-  { name: 'Дмитрий Волков',  when: 'месяц назад',     rating: 5, text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
-  { name: 'Артём Орлов',     when: '3 недели назад',   rating: 5, text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
-  { name: 'Иван Соколов',    when: '3 недели назад',   rating: 5, text: 'Огромный выбор машин в AURIX поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
-  { name: 'Анна Петрова',    when: 'месяц назад',      rating: 5, text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
-  { name: 'Сергей Кузнецов', when: '2 недели назад',   rating: 5, text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
-  { name: 'Михаил Иванов',   when: 'неделю назад',     rating: 5, text: 'Арендовал Porsche Panamera — незабываемо. AURIX — это другой уровень аренды авто в Москве.' },
+  { name: 'Дмитрий Волков',  when: 'месяц назад',     rating: 5, avatar: AV('photo-1507003211169-0a1dd7228f2d'), text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
+  { name: 'Артём Орлов',     when: '3 недели назад',   rating: 5, avatar: AV('photo-1500648767791-00dcc994a43e'), text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
+  { name: 'Иван Соколов',    when: '3 недели назад',   rating: 5, avatar: AV('photo-1472099645785-5658abf4ff4e'), text: 'Огромный выбор машин в AURIX поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
+  { name: 'Анна Петрова',    when: 'месяц назад',      rating: 5, avatar: AV('photo-1494790108377-be9c29b29330'), text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
+  { name: 'Сергей Кузнецов', when: '2 недели назад',   rating: 5, avatar: AV('photo-1506794778202-cad84cf45f1d'), text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
+  { name: 'Михаил Иванов',   when: 'неделю назад',     rating: 5, avatar: AV('photo-1519085360753-af0119f7cbe7'), text: 'Арендовал Porsche Panamera — незабываемо. AURIX — это другой уровень аренды авто в Москве.' },
 ];
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
@@ -42,6 +43,15 @@ export default function Home() {
   const [toDate, setToDate]   = useState(toDateStr(dayAfter4));
   const [brand, setBrand]     = useState('');
   const [visibleCount, setVisibleCount] = useState(6);
+  const [isMobileRv, setIsMobileRv] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(max-width:800px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width:800px)');
+    const onChange = () => setIsMobileRv(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
   const { items: allCars } = useCars({ limit: 100 });
   const specials = allCars.slice(0, visibleCount);
   const hot = allCars.slice(0, 6);
@@ -174,9 +184,27 @@ export default function Home() {
             </h2>
             <h2 className="trust-h trust-h-muted">тысячи клиентов</h2>
           </div>
-          <div className="rv2-gallery">
-            <CircularGallery reviews={REVIEWS} bend={2} scrollSpeed={2} scrollEase={0.04} />
-          </div>
+          {isMobileRv ? (
+            <div className="rv-mob">
+              {REVIEWS.map((r, i) => (
+                <div className="rv-mob-card" key={i}>
+                  <div className="rv-mob-stars">★★★★★</div>
+                  <p className="rv-mob-text">{r.text}</p>
+                  <div className="rv-mob-foot">
+                    <img className="rv-mob-ava" src={r.avatar} alt={r.name} loading="lazy" />
+                    <div className="rv-mob-who">
+                      <b>{r.name}</b>
+                      <small>{r.when}</small>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rv2-gallery">
+              <CircularGallery reviews={REVIEWS} bend={2} scrollSpeed={2} scrollEase={0.04} />
+            </div>
+          )}
         </div>
       </section>
 
@@ -298,13 +326,22 @@ export default function Home() {
   );
 }
 
+const FAQ_FALLBACK = [
+  { question: 'Можно ли арендовать авто в аэропорту даже поздно ночью?', answer: 'Конечно. AURIX осуществляет круглосуточную доставку, включая аэропорты Москвы. Просто сообщите номер рейса и время прибытия — автомобиль будет ждать вас, без задержек и ожиданий.' },
+  { question: 'Может ли управлять автомобилем кто-то ещё, например, друг или член семьи?', answer: 'Да, при оформлении договора можно указать дополнительного водителя. У него должны быть права с необходимым стажем и подходящий возраст.' },
+  { question: 'Какие документы нужны для аренды авто в Москве?', answer: 'Паспорт, водительское удостоверение со стажем от 3 лет и банковская карта на имя арендатора. Для некоторых классов авто требуется дополнительный документ.' },
+  { question: 'Можно ли арендовать без банковской карты?', answer: 'В большинстве случаев нужна именная банковская карта для авторизации залога. Возможна оплата наличными после подтверждения личности.' },
+  { question: 'Что входит в договор аренды?', answer: 'Договор включает полную страховку КАСКО и ОСАГО, базовый километраж, техподдержку 24/7 и круглосуточную помощь на дороге.' },
+  { question: 'Как работают платные дороги и проезды?', answer: 'Все платные участки автоматически фиксируются и оплачиваются через ваш договор. Подробный отчёт приходит на email после возврата авто.' },
+];
+
 function Faq() {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(FAQ_FALLBACK);
   const [open, setOpen] = useState(0);
 
   useEffect(() => {
     api('/faq')
-      .then((data) => setItems(data))
+      .then((data) => { if (Array.isArray(data) && data.length) setItems(data); })
       .catch((err) => console.error('Ошибка загрузки FAQ:', err));
   }, []);
 
