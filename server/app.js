@@ -11,7 +11,7 @@ import contactRouter from './routes/contact.js';
 import faqRouter from './routes/faq.js';
 
 export const app = express();
-app.use(express.json({ limit: '1mb' }));
+app.use(express.json({ limit: '5mb' })); // allows base64 avatar + document uploads (до ~2 МБ файлы)
 app.use(cookieParser());
 app.use(cors({
   credentials: true,
