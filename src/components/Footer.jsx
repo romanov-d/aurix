@@ -69,9 +69,6 @@ export default function Footer() {
             <h5>Города</h5>
             <ul>
               <li><a href="#">Москва</a></li>
-              <li><a href="#">Санкт-Петербург</a></li>
-              <li><a href="#">Сочи</a></li>
-              <li><a href="#">Дубай</a></li>
             </ul>
           </div>
           <div className="ft-col">

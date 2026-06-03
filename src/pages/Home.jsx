@@ -9,12 +9,12 @@ import { api } from '../api/client.js';
 
 const AV = (id) => `https://images.unsplash.com/${id}?w=160&h=160&fit=crop&crop=faces&q=80`;
 const REVIEWS = [
-  { name: 'Дмитрий Волков',  when: 'месяц назад',     rating: 5, avatar: AV('photo-1507003211169-0a1dd7228f2d'), text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
-  { name: 'Артём Орлов',     when: '3 недели назад',   rating: 5, avatar: AV('photo-1500648767791-00dcc994a43e'), text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
-  { name: 'Иван Соколов',    when: '3 недели назад',   rating: 5, avatar: AV('photo-1472099645785-5658abf4ff4e'), text: 'Огромный выбор машин в AURIX поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
-  { name: 'Анна Петрова',    when: 'месяц назад',      rating: 5, avatar: AV('photo-1494790108377-be9c29b29330'), text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
-  { name: 'Сергей Кузнецов', when: '2 недели назад',   rating: 5, avatar: AV('photo-1506794778202-cad84cf45f1d'), text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
-  { name: 'Михаил Иванов',   when: 'неделю назад',     rating: 5, avatar: AV('photo-1519085360753-af0119f7cbe7'), text: 'Арендовал Porsche Panamera — незабываемо. AURIX — это другой уровень аренды авто в Москве.' },
+  { name: 'Анатолий Яров',      when: 'месяц назад',   rating: 5, avatar: AV('photo-1500648767791-00dcc994a43e'), text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
+  { name: 'Святослав Гордеев',  when: '3 недели назад', rating: 5, avatar: AV('photo-1519085360753-af0119f7cbe7'), text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
+  { name: 'Аркадий Лозинский',  when: '3 недели назад', rating: 5, avatar: AV('photo-1506794778202-cad84cf45f1d'), text: 'Огромный выбор машин в AURIX поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
+  { name: 'Ярослава Кравец',    when: 'месяц назад',   rating: 5, avatar: AV('photo-1438761681033-6461ffad8d80'), text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
+  { name: 'Глеб Северин',       when: '2 недели назад', rating: 5, avatar: AV('photo-1472099645785-5658abf4ff4e'), text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
+  { name: 'Ростислав Невзоров', when: 'неделю назад',  rating: 5, avatar: AV('photo-1488161628813-04466f872be2'), text: 'Арендовал Porsche Panamera — незабываемо. AURIX — это другой уровень аренды авто в Москве.' },
 ];
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
@@ -35,6 +35,25 @@ function brandLogo(name) {
   if (/^porsche/i.test(name)) return '/porsche.svg';
   const slug = name.split(/[\s-]/)[0].toLowerCase();
   return `https://cdn.simpleicons.org/${slug}`;
+}
+
+// Car body-type icons — single style, all facing left, distinct cabins
+function CarIcon({ kind }) {
+  const cabin = {
+    suv:      <rect x="15" y="6" width="30" height="10" rx="2" />,
+    sedan:    <polygon points="16,16 21,9 41,9 46,16" />,
+    coupe:    <polygon points="18,16 24,10 35,10 46,16" />,
+    cabrio:   <polygon points="16,16 21,11 26,16" />,
+    roadster: <polygon points="21,16 27,12 38,12 44,16" />,
+  }[kind];
+  return (
+    <svg className="fs-cat-svg" viewBox="0 0 64 30" fill="currentColor" aria-hidden="true">
+      {cabin}
+      <rect x="4" y="15" width="56" height="8" rx="3" />
+      <circle cx="18" cy="24" r="4.3" />
+      <circle cx="46" cy="24" r="4.3" />
+    </svg>
+  );
 }
 
 export default function Home() {
@@ -111,14 +130,14 @@ export default function Home() {
           <div className="fs-cats">
             <div className="fs-cats-grid">
               {[
-                ['ph-jeep', 'Внедорожник', 'Внедорожник'],
-                ['ph-car-profile', 'Купе', 'Купе'],
-                ['ph-car-profile', 'Кабриолет', 'Кабриолет'],
-                ['ph-car-profile', 'Купе/Кабриолет', 'Купе/Кабриолет'],
-                ['ph-car', 'Седан', 'Седан'],
-              ].map(([ico, name, body]) => (
+                ['suv', 'Внедорожник', 'Внедорожник'],
+                ['coupe', 'Купе', 'Купе'],
+                ['cabrio', 'Кабриолет', 'Кабриолет'],
+                ['roadster', 'Купе/Кабриолет', 'Купе/Кабриолет'],
+                ['sedan', 'Седан', 'Седан'],
+              ].map(([kind, name, body]) => (
                 <Link key={name} to={`/catalog?body=${encodeURIComponent(body)}`} className="fs-cat">
-                  <i className={`ph ${ico}`} />
+                  <CarIcon kind={kind} />
                   <span>{name}</span>
                 </Link>
               ))}

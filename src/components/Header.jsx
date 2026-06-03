@@ -5,7 +5,10 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 
 const LINKS = [
   ['/catalog', 'Автопарк'],
+  ['/long-term', 'Подписка'],
   ['/tariffs', 'Тарифы'],
+  ['/club', 'Клуб'],
+  ['/blog', 'Блог'],
   ['/contacts', 'Контакты'],
 ];
 

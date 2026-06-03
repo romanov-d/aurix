@@ -69,9 +69,6 @@ export function SearchForm() {
             <LocationIcon />
             <select value={s.city} onChange={e => s.setCity(e.target.value)}>
               <option>Москва</option>
-              <option>Санкт-Петербург</option>
-              <option>Сочи</option>
-              <option>Дубай</option>
             </select>
           </div>
         </div>
@@ -83,9 +80,6 @@ export function SearchForm() {
               <LocationIcon />
               <select value={s.returnCity} onChange={e => s.setReturnCity(e.target.value)}>
                 <option>Москва</option>
-                <option>Санкт-Петербург</option>
-                <option>Сочи</option>
-                <option>Дубай</option>
               </select>
             </div>
           </div>
