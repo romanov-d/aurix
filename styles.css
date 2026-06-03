@@ -1833,11 +1833,11 @@ html{scroll-behavior:smooth}
   .catalog{padding-bottom:48px}
 }
 
-/* car body-type icons in the category tiles */
-.fs-cat-svg{width:58px;height:auto;color:#cfcfcf;transition:.2s;display:block}
-.fs-cat:hover .fs-cat-svg{color:var(--gold)}
-@media (max-width:900px){ .fs-cat-svg{width:48px} }
-@media (max-width:560px){ .fs-cat-svg{width:42px} }
+/* car body-type icons in the category tiles (3D renders) */
+.fs-cat-img{width:100%;max-width:150px;height:auto;display:block;object-fit:contain;transition:transform .25s}
+.fs-cat:hover .fs-cat-img{transform:translateY(-2px) scale(1.04)}
+@media (max-width:900px){ .fs-cat-img{max-width:120px} }
+@media (max-width:560px){ .fs-cat-img{max-width:104px} }
 
 /* mobile menu: black background, almost no divider lines, bigger ЛК icon */
 .mobile-menu,

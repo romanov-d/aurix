@@ -37,23 +37,10 @@ function brandLogo(name) {
   return `https://cdn.simpleicons.org/${slug}`;
 }
 
-// Car body-type icons — single style, all facing left, distinct cabins
+// Car body-type icons — 3D renders, all facing left
 function CarIcon({ kind }) {
-  const cabin = {
-    suv:      <rect x="15" y="6" width="30" height="10" rx="2" />,
-    sedan:    <polygon points="16,16 21,9 41,9 46,16" />,
-    coupe:    <polygon points="18,16 24,10 35,10 46,16" />,
-    cabrio:   <polygon points="16,16 21,11 26,16" />,
-    roadster: <polygon points="21,16 27,12 38,12 44,16" />,
-  }[kind];
-  return (
-    <svg className="fs-cat-svg" viewBox="0 0 64 30" fill="currentColor" aria-hidden="true">
-      {cabin}
-      <rect x="4" y="15" width="56" height="8" rx="3" />
-      <circle cx="18" cy="24" r="4.3" />
-      <circle cx="46" cy="24" r="4.3" />
-    </svg>
-  );
+  const file = { suv: 'suv', coupe: 'coupe', cabrio: 'cabrio', roadster: 'coupe-cabrio', sedan: 'sedan' }[kind];
+  return <img className="fs-cat-img" src={`/cars/icons/${file}.png`} alt="" loading="lazy" />;
 }
 
 export default function Home() {
