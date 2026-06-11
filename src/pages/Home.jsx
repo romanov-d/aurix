@@ -147,6 +147,8 @@ export default function Home() {
                 ['sedan', 'Седаны', 'Седан', 10000],
               ].map(([kind, name, body, price]) => (
                 <Link key={name} to={`/catalog?body=${encodeURIComponent(body)}`} className="fs-cat">
+                  <CarIcon kind={kind} />
+                  <div className="fs-cat-shade" />
                   <div className="fs-cat-top">
                     <div>
                       <div className="fs-cat-name">{name}</div>
@@ -154,7 +156,6 @@ export default function Home() {
                     </div>
                     <i className="ph ph-arrow-right" />
                   </div>
-                  <CarIcon kind={kind} />
                 </Link>
               ))}
             </div>

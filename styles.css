@@ -52,7 +52,7 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .btn-sm{padding:11px 20px;font-size:11px}
 
 /* ==== FIRST SCREEN (hero + search + categories in 100vh) ==== */
-.first-screen{height:auto;min-height:100vh;display:flex;flex-direction:column;position:relative;padding:0 !important;background:radial-gradient(90% 45% at 50% -20%,rgba(198,162,78,.55) 0%,transparent 90%),linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.45) 100%),url('/hero.jpg') center/cover no-repeat;background-color:#000}
+.first-screen{height:auto;min-height:100vh;display:flex;flex-direction:column;position:relative;padding:0 !important;background:radial-gradient(90% 45% at 50% -20%,rgba(198,162,78,.55) 0%,transparent 90%),linear-gradient(180deg,rgba(0,0,0,.3) 0%,rgba(0,0,0,.45) 100%),url('/hero.png') center/cover no-repeat;background-color:#000}
 .fs-hero{flex:1;position:relative;min-height:0;overflow:hidden}
 .fs-bg{display:none}
 .fs-hero-grid{position:absolute;left:50%;transform:translateX(-50%);top:0;bottom:0;z-index:2;width:calc(100% - 48px);max-width:1440px;padding:120px 28px 32px;box-sizing:border-box;display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:48px}
@@ -1946,3 +1946,34 @@ html{scroll-behavior:smooth}
 .fs-perk > i{margin-left:auto;margin-right:auto}
 .fs-perks{border-color:rgba(255,255,255,.05)}
 @media (max-width:800px){ .fs-perk{border-color:rgba(255,255,255,.05) !important} }
+
+/* ===== ЛОГОТИП AURIX MOTORS (значок + ворд-марк) ===== */
+.logo-mark-img{height:42px;width:auto;display:block;flex-shrink:0}
+.logo-wm{display:flex;flex-direction:column;justify-content:center;line-height:1}
+.logo-wm-1{font-size:22px;font-weight:800;letter-spacing:.26em;color:var(--gold);text-transform:uppercase}
+.logo-wm-2{font-size:9px;font-weight:600;letter-spacing:.48em;color:var(--gold);text-transform:uppercase;margin-top:6px;opacity:.85}
+
+.ft-logo-lockup{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.ft-logo-mark{height:50px;width:auto;display:block;flex-shrink:0}
+.ft-logo-text{display:flex;flex-direction:column;line-height:1}
+.ft-logo-aurix{font-size:24px;font-weight:800;letter-spacing:.26em;color:var(--gold);text-transform:uppercase}
+.ft-logo-motors{font-size:11px;font-weight:600;letter-spacing:.42em;color:var(--gold);text-transform:uppercase;margin-top:6px}
+.ft-logo-sub{font-size:9px;font-weight:500;letter-spacing:.3em;color:#9a9a9a;text-transform:uppercase;margin-top:7px}
+
+@media (max-width:800px){
+  .logo-mark-img{height:36px}
+  .logo-wm-1{font-size:19px;letter-spacing:.22em}
+  .logo-wm-2{font-size:8px;letter-spacing:.42em}
+}
+
+/* ===== категории: фото на всю карточку, текст поверх, верх затемнён ===== */
+.fs-cat{position:relative;display:block;padding:0;aspect-ratio:1/1;overflow:hidden;align-items:initial;text-align:left}
+.fs-cat .fs-cat-img{position:absolute;inset:0;width:100%;height:100%;max-width:none;margin:0;object-fit:cover;object-position:center;transition:transform .35s}
+.fs-cat:hover .fs-cat-img{transform:scale(1.05)}
+.fs-cat-shade{position:absolute;top:0;left:0;right:0;height:55%;z-index:1;pointer-events:none;background:linear-gradient(180deg,rgba(0,0,0,.92) 0%,rgba(0,0,0,.5) 55%,transparent 100%)}
+.fs-cat-top{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:20px}
+.fs-cat-name{color:#fff;font-size:16px;font-weight:600}
+.fs-cat-price{color:#e2e2e2;font-size:12px;margin-top:5px}
+.fs-cat .ph-arrow-right{color:var(--gold);font-size:18px;flex-shrink:0;transition:transform .2s}
+.fs-cat:hover .ph-arrow-right{transform:translateX(3px)}
+@media (max-width:560px){ .fs-cat-name{font-size:15px} }
