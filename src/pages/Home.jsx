@@ -69,7 +69,7 @@ export default function Home() {
             <div className="fs-bg" />
             <div className="fs-hero-grid">
               <div className="fs-hero-left">
-                <h1 className="fs-title">Арендуй умно.<br />Води лучше.</h1>
+                <h1 className="fs-title">Арендуй умно.<br /><span className="fs-title-gold">Води лучше.</span></h1>
               </div>
               <div className="fs-hero-right">
                 <p>Круглосуточная подача по Москве. AURIX делает аренду премиум-авто простой и быстрой.</p>
@@ -114,18 +114,49 @@ export default function Home() {
             </div>
           </div>
 
+          <div className="fs-perks-wrap">
+            <div className="fs-perks">
+              {[
+                ['ph-shield-check', 'Полная страховка', 'Каско и ОСАГО включены в стоимость'],
+                ['ph-clock', 'Подача 24/7', 'Доставим авто в удобное для вас время'],
+                ['ph-sparkle', 'Без оклейки', 'Все авто без брендирования и наклеек'],
+                ['ph-bell', 'Консьерж-сервис', 'Персональный менеджер на весь период аренды'],
+                ['ph-airplane-tilt', 'Аэропорты и отели', 'Подача в любую точку Москвы и МО'],
+                ['ph-diamond', 'Клуб привилегий', 'Доступ к закрытым мероприятиям и бонусам'],
+              ].map(([ico, title, desc]) => (
+                <div className="fs-perk" key={title}>
+                  <i className={`ph ${ico}`} />
+                  <div className="fs-perk-title">{title}</div>
+                  <div className="fs-perk-desc">{desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="cats-section reveal">
           <div className="fs-cats">
+            <div className="fs-cats-head">
+              <h2>Категории автопарка</h2>
+              <Link to="/catalog" className="fs-cats-all">Смотреть весь автопарк →</Link>
+            </div>
             <div className="fs-cats-grid">
               {[
-                ['suv', 'Внедорожник', 'Внедорожник'],
-                ['coupe', 'Купе', 'Купе'],
-                ['cabrio', 'Кабриолет', 'Кабриолет'],
-                ['roadster', 'Купе/Кабриолет', 'Купе/Кабриолет'],
-                ['sedan', 'Седан', 'Седан'],
-              ].map(([kind, name, body]) => (
+                ['suv', 'Внедорожники', 'Внедорожник', 15000],
+                ['coupe', 'Купе', 'Купе', 12000],
+                ['cabrio', 'Кабриолеты', 'Кабриолет', 16000],
+                ['roadster', 'Купе/Кабриолеты', 'Купе/Кабриолет', 14000],
+                ['sedan', 'Седаны', 'Седан', 10000],
+              ].map(([kind, name, body, price]) => (
                 <Link key={name} to={`/catalog?body=${encodeURIComponent(body)}`} className="fs-cat">
+                  <div className="fs-cat-top">
+                    <div>
+                      <div className="fs-cat-name">{name}</div>
+                      <div className="fs-cat-price">от {price.toLocaleString('ru-RU')} ₽/сутки</div>
+                    </div>
+                    <i className="ph ph-arrow-right" />
+                  </div>
                   <CarIcon kind={kind} />
-                  <span>{name}</span>
                 </Link>
               ))}
             </div>
@@ -152,6 +183,22 @@ export default function Home() {
         </section>
 
       </SearchProvider>
+
+      <section className="exp reveal">
+        <div className="exp-wrap">
+          <div className="exp-head">
+            <span className="exp-eyebrow">AURIX MOTORS</span>
+            <h2 className="exp-title">Мы создаём опыт,<br />который запоминается</h2>
+            <p className="exp-lead">AURIX — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</p>
+          </div>
+          <div className="exp-photos">
+            {/* TODO: заменить на реальные фото (офис / руль / авто) */}
+            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
+            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
+            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
+          </div>
+        </div>
+      </section>
 
       <section className="specials reveal">
         <div className="sp-wrap">
