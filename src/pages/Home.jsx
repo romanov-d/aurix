@@ -70,9 +70,7 @@ export default function Home() {
             <div className="fs-hero-grid">
               <div className="fs-hero-left">
                 <h1 className="fs-title">Арендуй умно.<br /><span className="fs-title-gold">Води лучше.</span></h1>
-              </div>
-              <div className="fs-hero-right">
-                <p>Круглосуточная подача по Москве. AURIX делает аренду премиум-авто простой и быстрой.</p>
+                <p className="fs-hero-lead">Круглосуточная подача по Москве. AURIX делает аренду премиум-авто простой и быстрой.</p>
               </div>
             </div>
           </div>
