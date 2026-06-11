@@ -123,7 +123,7 @@ export default function Home() {
                 ['ph-diamond', 'Клуб привилегий', 'Доступ к закрытым мероприятиям и бонусам'],
               ].map(([ico, title, desc]) => (
                 <div className="fs-perk" key={title}>
-                  <i className={`ph ${ico}`} />
+                  <i className={`ph-duotone ${ico}`} />
                   <div className="fs-perk-title">{title}</div>
                   <div className="fs-perk-desc">{desc}</div>
                 </div>
@@ -186,7 +186,6 @@ export default function Home() {
       <section className="exp reveal">
         <div className="exp-wrap">
           <div className="exp-head">
-            <span className="exp-eyebrow">AURIX MOTORS</span>
             <h2 className="exp-title">Мы создаём опыт,<br />который запоминается</h2>
             <p className="exp-lead">AURIX — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</p>
           </div>

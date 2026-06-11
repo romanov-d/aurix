@@ -24,7 +24,7 @@ export default function Preloader() {
   return (
     <div className={`preloader${progress >= 100 ? ' done' : ''}`}>
       <div className="pl-inner">
-        <img src="/logo.svg" alt="AURIX" className="pl-logo" />
+        <img src="/logo3.png" alt="AURIX MOTORS" className="pl-logo" />
         <div className="pl-track-wrap">
           <div className="pl-percent" style={{ left: `${progress}%` }}>{Math.round(progress)}%</div>
           <div className="pl-track">
