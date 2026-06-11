@@ -54,14 +54,7 @@ export default function Footer() {
       <div className="ft-wrap">
         <div className="ft-cols">
           <div className="ft-col ft-col-brand">
-            <div className="ft-logo-lockup">
-              <img src="/letter.svg" alt="" className="ft-logo-mark" />
-              <div className="ft-logo-text">
-                <span className="ft-logo-aurix">AURIX</span>
-                <span className="ft-logo-motors">MOTORS</span>
-                <span className="ft-logo-sub">Luxury Car Rental</span>
-              </div>
-            </div>
+            <img src="/logo3.png" alt="AURIX MOTORS" className="ft-logo-img" />
             <p>AURIX — где аренда меняет всё.</p>
           </div>
           <div className="ft-col">

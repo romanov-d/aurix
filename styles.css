@@ -1977,3 +1977,8 @@ html{scroll-behavior:smooth}
 .fs-cat .ph-arrow-right{color:var(--gold);font-size:18px;flex-shrink:0;transition:transform .2s}
 .fs-cat:hover .ph-arrow-right{transform:translateX(3px)}
 @media (max-width:560px){ .fs-cat-name{font-size:15px} }
+
+/* реальный логотип AURIX MOTORS (файл) */
+.logo-img{height:56px;width:auto;display:block}
+.ft-logo-img{height:120px;width:auto;display:block;margin-bottom:14px}
+@media (max-width:800px){ .logo-img{height:46px} .ft-logo-img{height:96px} }
