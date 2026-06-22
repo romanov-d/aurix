@@ -440,7 +440,7 @@ export default function Admin() {
     }
   };
 
-  if (loading) return <div className="container" style={{ padding: '120px 0', color: '#888' }}>Загрузка панели управления...</div>;
+  if (loading) return <AdminSkeleton />;
 
   const formatDate = (iso) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
@@ -1452,5 +1452,53 @@ function AddBookingModal({ cars, users, onClose, onCreated }) {
         </form>
       </div>
     </div>
+  );
+}
+
+// ── Скелетон загрузки админ-панели ──
+function AdminSkeleton() {
+  const ln = (s) => <div className="sk sk-line" style={s} />;
+  return (
+    <>
+      <div className="acc-page-header">
+        <div className="container">{ln({ width: 300, height: 30 })}</div>
+      </div>
+      <div className="container account" style={{ marginTop: 24 }}>
+        <aside className="acc-side">
+          <div style={{ padding: '0 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {ln({ width: '100%', height: 38, borderRadius: 999 })}
+            {Array.from({ length: 7 }).map((_, i) => (
+              <div key={i} className="sk sk-line" style={{ width: '100%', height: 34, borderRadius: 8 }} />
+            ))}
+          </div>
+        </aside>
+        <main className="acc-content">
+          <div className="dash-kpi-grid">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="dash-kpi">
+                <div className="sk" style={{ width: 46, height: 46, borderRadius: 12, flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <div className="sk sk-line" style={{ width: '60%', height: 18 }} />
+                  <div className="sk sk-line" style={{ width: '80%', height: 11, marginTop: 8 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="acc-block" style={{ marginTop: 20 }}>
+            <div className="acc-block-head">{ln({ width: 210, height: 18 })}</div>
+            <div style={{ padding: '4px 0' }}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '14px 16px', borderTop: '1px solid var(--line)' }}>
+                  <div className="sk sk-line" style={{ width: '22%', height: 14 }} />
+                  <div className="sk sk-line" style={{ width: '26%', height: 14 }} />
+                  <div className="sk sk-line" style={{ width: '16%', height: 14 }} />
+                  <div className="sk sk-line" style={{ width: 96, height: 26, marginLeft: 'auto', borderRadius: 999 }} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    </>
   );
 }

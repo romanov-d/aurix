@@ -7,6 +7,61 @@ import { api } from '../api/client.js';
 import { useFavorites } from '../api/useFavorites.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 
+// Скелетон страницы машины (повторяет реальную раскладку detail)
+function CarDetailSkeleton() {
+  const line = (style) => <div className="sk sk-line" style={style} />;
+  return (
+    <div className="car-page">
+      <div className="page-head">
+        <div className="container">
+          <div className="breadcrumbs">{line({ width: 180, height: 12, display: 'inline-block' })}</div>
+          {line({ width: 'min(440px,72%)', height: 36, marginTop: 14 })}
+          <div className="car-badges" style={{ display: 'flex', gap: 8, marginTop: 14, flexWrap: 'wrap' }}>
+            {[64, 96, 70, 80, 58].map((w, i) => <div key={i} className="sk sk-line" style={{ width: w, height: 28, borderRadius: 999 }} />)}
+          </div>
+        </div>
+      </div>
+
+      <div className="container detail">
+        <div className="gallery">
+          <div className="main-img sk" />
+          <div className="thumbs">
+            {Array.from({ length: 5 }).map((_, i) => <div key={i} className="t sk" style={{ aspectRatio: '4/3' }} />)}
+          </div>
+          <div className="divider-h" />
+          {line({ width: 150, height: 22 })}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+            {['100%', '97%', '93%', '88%', '60%'].map((w, i) => <div key={i} className="sk sk-line" style={{ width: w, height: 12 }} />)}
+          </div>
+        </div>
+
+        <aside className="detail-side">
+          {line({ width: '70%', height: 28 })}
+          {line({ width: '45%', height: 14, marginTop: 12 })}
+          <div className="price-block" style={{ marginTop: 20 }}>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0' }}>
+                <div className="sk sk-line" style={{ width: '42%', height: 11 }} />
+                <div className="sk sk-line" style={{ width: 64, height: 11 }} />
+              </div>
+            ))}
+          </div>
+          {line({ width: '100%', height: 44, marginTop: 8 })}
+          {line({ width: '100%', height: 52, marginTop: 14, borderRadius: 8 })}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 22 }}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i}>
+                <div className="sk sk-line" style={{ width: '55%', height: 10 }} />
+                <div className="sk sk-line" style={{ width: '82%', height: 14, marginTop: 7 }} />
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
 export default function Car() {
   const { id } = useParams();
   const nav = useNavigate();
@@ -70,7 +125,7 @@ export default function Car() {
       .catch(() => setReviews([]));
   }, [id]);
 
-  if (loading) return <div className="container" style={{ padding: '120px 0', color: '#9a9a9a' }}>Загрузка…</div>;
+  if (loading) return <CarDetailSkeleton />;
   
   if (notFound || !car) return (
     <div className="container" style={{ padding: '120px 0', textAlign: 'center' }}>
@@ -343,9 +398,10 @@ export default function Car() {
           </div>
 
           {user && !user.is_verified && user.role !== 'admin' && (
-            <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, fontSize: 13, color: '#fda4af', lineHeight: 1.6 }}>
+            <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: 'none', borderRadius: 8, fontSize: 13, color: '#fda4af', lineHeight: 1.6 }}>
               <i className="ph-fill ph-warning-circle" style={{ marginRight: 6 }} />
-              Бронирование доступно после верификации. <Link to="/account" style={{ color: 'var(--gold)', textDecoration: 'underline' }}>Загрузить документы →</Link>
+              Бронирование доступно после верификации.{' '}
+              <Link to="/account#documents" style={{ color: 'var(--gold)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Загрузить документы&nbsp;→</Link>
             </div>
           )}
 

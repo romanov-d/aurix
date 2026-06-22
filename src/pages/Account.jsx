@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+
+const ACCOUNT_TABS = ['overview', 'bookings', 'history', 'favorites', 'bonuses', 'documents', 'profile'];
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
 import CarCard from '../components/CarCard.jsx';
@@ -8,7 +10,14 @@ import { useCars } from '../api/useCars.js';
 export default function Account() {
   const { user, logout, refresh } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Открыть нужную вкладку по хешу URL (напр. /account#documents)
+  useEffect(() => {
+    const tab = location.hash.replace('#', '');
+    if (ACCOUNT_TABS.includes(tab)) setActiveTab(tab);
+  }, [location.hash]);
   const [bookings, setBookings] = useState([]);
   const [favoriteIds, setFavoriteIds] = useState([]);
   const [pointsHistory, setPointsHistory] = useState([]);
@@ -204,8 +213,28 @@ export default function Account() {
         </aside>
 
         <main className="acc-content">
+          {user && !user.is_verified && (
+            (user.passport_url || user.license_url || user.passport_page_url || user.registration_url) ? (
+              <div className="acc-verify-banner pending">
+                <i className="ph-fill ph-clock-countdown" />
+                <div>
+                  <b>Документы на проверке</b>
+                  <span>Уже поданы на проверку — ожидайте подтверждения службой безопасности.</span>
+                </div>
+              </div>
+            ) : (
+              <div className="acc-verify-banner todo">
+                <i className="ph-fill ph-warning-circle" />
+                <div>
+                  <b>Нужно подать документы</b>
+                  <span>Без верификации бронирование недоступно. Загрузите документы для проверки.</span>
+                </div>
+                <button className="btn btn-sm" onClick={() => setActiveTab('documents')}>Загрузить</button>
+              </div>
+            )
+          )}
           {loading ? (
-            <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>Загрузка данных...</div>
+            <AccountContentSkeleton />
           ) : (
             <>
               {(activeTab === 'overview' || activeTab === 'bookings') && (
@@ -506,6 +535,34 @@ export default function Account() {
             </>
           )}
         </main>
+      </div>
+    </>
+  );
+}
+
+// ── Скелетон загрузки личного кабинета (контент; сайдбар уже с данными user) ──
+function AccountContentSkeleton() {
+  return (
+    <>
+      <div className="acc-stats">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="acc-stat">
+            <div className="sk sk-line" style={{ width: '55%', height: 12 }} />
+            <div className="sk sk-line" style={{ width: '42%', height: 26, marginTop: 14 }} />
+          </div>
+        ))}
+      </div>
+      <div className="acc-block">
+        <div className="acc-block-head"><div className="sk sk-line" style={{ width: 230, height: 18 }} /></div>
+        <div style={{ padding: 20, display: 'flex', gap: 18, alignItems: 'center' }}>
+          <div className="sk" style={{ width: 130, height: 86, borderRadius: 8, flexShrink: 0 }} />
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 11 }}>
+            <div className="sk sk-line" style={{ width: '46%', height: 16 }} />
+            <div className="sk sk-line" style={{ width: '30%', height: 12 }} />
+            <div className="sk sk-line" style={{ width: '70%', height: 12 }} />
+            <div className="sk sk-line" style={{ width: '55%', height: 12 }} />
+          </div>
+        </div>
       </div>
     </>
   );
