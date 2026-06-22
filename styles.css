@@ -555,9 +555,9 @@ section{padding:96px 0}
 .acc-verify-banner b{display:block;color:var(--head);font-size:14px;margin-bottom:2px}
 .acc-verify-banner span{color:#bdbdbd;font-size:13px;line-height:1.5}
 .acc-verify-banner .btn{margin-left:auto;flex-shrink:0}
-.acc-verify-banner.todo{background:rgba(212,175,55,.09);border:1px solid rgba(212,175,55,.28)}
+.acc-verify-banner.todo{background:rgba(212,175,55,.09);border:none}
 .acc-verify-banner.todo > i{color:var(--gold)}
-.acc-verify-banner.pending{background:rgba(96,165,250,.09);border:1px solid rgba(96,165,250,.28)}
+.acc-verify-banner.pending{background:rgba(96,165,250,.09);border:none}
 .acc-verify-banner.pending > i{color:#60a5fa}
 
 /* ==== SKELETON загрузки карточек ==== */
@@ -1303,7 +1303,7 @@ footer{background:var(--bg-1);border-top:0}
 /* ==== PRELOADER ==== */
 .preloader{position:fixed;inset:0;z-index:9999;background:#000;display:flex;align-items:center;justify-content:center;transition:opacity .4s ease;overflow:hidden}
 .preloader.done{opacity:0;pointer-events:none}
-.pl-bg{position:absolute;inset:0;background:url(/cars/ferrari_f8_hero.png) center 78%/min(820px,140%) no-repeat;opacity:.1;filter:grayscale(.3) brightness(.7);animation:pl-bg-zoom 5s ease-out both}
+.pl-bg{position:absolute;inset:0;background:url(/cars/ferrari_f8_hero.webp) center 78%/min(820px,140%) no-repeat;opacity:.1;filter:grayscale(.3) brightness(.7);animation:pl-bg-zoom 5s ease-out both}
 .pl-vignette{position:absolute;inset:0;background:radial-gradient(ellipse 70% 60% at 50% 42%,transparent 0%,rgba(0,0,0,.65) 70%,#000 100%)}
 @keyframes pl-bg-zoom{from{transform:scale(1.12)}to{transform:scale(1)}}
 .pl-inner{position:relative;z-index:2;display:flex;flex-direction:column;align-items:stretch;gap:22px;width:300px}

@@ -18,7 +18,7 @@ export const FLEET = [
     overmileage_rate: 200,
     photo_rate: 10000,
     badge: null,
-    img: '/cars/lexus_lx_black.png',
+    img: '/cars/lexus_lx_black.webp',
   },
   {
     id: 'lexus-lx500d-white',
@@ -39,7 +39,7 @@ export const FLEET = [
     overmileage_rate: 200,
     photo_rate: 10000,
     badge: null,
-    img: '/cars/lexus_lx_white.png',
+    img: '/cars/lexus_lx_white.webp',
   },
   {
     id: 'lexus-lx500d-grey',
@@ -60,7 +60,7 @@ export const FLEET = [
     overmileage_rate: 200,
     photo_rate: 10000,
     badge: null,
-    img: '/cars/lexus_lx_grey.png',
+    img: '/cars/lexus_lx_grey.webp',
   },
   {
     id: 'mercedes-sl43-black',
@@ -81,7 +81,7 @@ export const FLEET = [
     overmileage_rate: 250,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/mercedes_sl43_black.png',
+    img: '/cars/mercedes_sl43_black.webp',
   },
   {
     id: 'mercedes-sl43-grey',
@@ -102,7 +102,7 @@ export const FLEET = [
     overmileage_rate: 250,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/mercedes_sl43_grey.png',
+    img: '/cars/mercedes_sl43_grey.webp',
   },
   {
     id: 'lamborghini-huracan',
@@ -123,7 +123,7 @@ export const FLEET = [
     overmileage_rate: 650,
     photo_rate: 20000,
     badge: null,
-    img: '/cars/lambo_huracan.png',
+    img: '/cars/lambo_huracan.webp',
   },
   {
     id: 'lamborghini-urus',
@@ -144,7 +144,7 @@ export const FLEET = [
     overmileage_rate: 650,
     photo_rate: 20000,
     badge: 'Хит',
-    img: '/cars/lambo_urus.png',
+    img: '/cars/lambo_urus.webp',
   },
   {
     id: 'mercedes-g63',
@@ -165,7 +165,7 @@ export const FLEET = [
     overmileage_rate: 300,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/mercedes_g63.png',
+    img: '/cars/mercedes_g63.webp',
   },
   {
     id: 'ferrari-roma',
@@ -186,7 +186,7 @@ export const FLEET = [
     overmileage_rate: 1000,
     photo_rate: 30000,
     badge: 'VIP',
-    img: '/cars/ferrari_roma.png',
+    img: '/cars/ferrari_roma.webp',
   },
   {
     id: 'bmw-m4',
@@ -207,7 +207,7 @@ export const FLEET = [
     overmileage_rate: 250,
     photo_rate: 10000,
     badge: null,
-    img: '/cars/bmw_m4.png',
+    img: '/cars/bmw_m4.webp',
   },
   {
     id: 'ferrari-f8-spider',
@@ -228,7 +228,7 @@ export const FLEET = [
     overmileage_rate: 650,
     photo_rate: 25000,
     badge: null,
-    img: '/cars/ferrari_f8.png',
+    img: '/cars/ferrari_f8.webp',
   },
   {
     id: 'rolls-royce-wraith',
@@ -249,7 +249,7 @@ export const FLEET = [
     overmileage_rate: 650,
     photo_rate: 25000,
     badge: null,
-    img: '/cars/rolls_royce.png',
+    img: '/cars/rolls_royce.webp',
   },
   {
     id: 'porsche-911-carrera-gts',
@@ -270,7 +270,7 @@ export const FLEET = [
     overmileage_rate: 250,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/porsche_gts.png',
+    img: '/cars/porsche_gts.webp',
   },
   {
     id: 'porsche-911-turbo-s',
@@ -291,7 +291,7 @@ export const FLEET = [
     overmileage_rate: 350,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/porsche_turbo.png',
+    img: '/cars/porsche_turbo.webp',
   },
   {
     id: 'bmw-m5-g90',
@@ -312,7 +312,7 @@ export const FLEET = [
     overmileage_rate: 350,
     photo_rate: 15000,
     badge: 'Новинка',
-    img: '/cars/bmw_m5.png',
+    img: '/cars/bmw_m5.webp',
   },
   {
     id: 'porsche-panamera',
@@ -333,7 +333,7 @@ export const FLEET = [
     overmileage_rate: 250,
     photo_rate: 15000,
     badge: null,
-    img: '/cars/porsche_panamera.png',
+    img: '/cars/porsche_panamera.webp',
   },
 ];
 

@@ -19,8 +19,17 @@
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
-<!-- SaleBot онлайн-чат -->
-<script src="https://salebot.pro/js/chatbot.js?v=1" charset="utf-8"></script>
-<script>ChatBotPro.init({ guid: '21ec42b990aa10366a5b3b81480e78' });</script>
+<!-- SaleBot онлайн-чат — грузим ПОСЛЕ загрузки страницы, чтобы не висел на прелоадере -->
+<script>
+  window.addEventListener('load', function () {
+    setTimeout(function () {
+      var s = document.createElement('script');
+      s.src = 'https://salebot.pro/js/chatbot.js?v=1';
+      s.charset = 'utf-8';
+      s.onload = function () { if (window.ChatBotPro) ChatBotPro.init({ guid: '21ec42b990aa10366a5b3b81480e78' }); };
+      document.body.appendChild(s);
+    }, 2000);
+  });
+</script>
 </body>
 </html>

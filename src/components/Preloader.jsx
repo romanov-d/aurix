@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 
 // Машины, которые «проявляются» по мере загрузки
 const PL_CARS = [
-  { src: '/cars/mercedes_g63.png', name: 'G63 AMG' },
-  { src: '/cars/lambo_huracan.png', name: 'Huracán' },
-  { src: '/cars/ferrari_roma.png', name: 'Ferrari Roma' },
-  { src: '/cars/porsche_turbo.png', name: '911 Turbo S' },
-  { src: '/cars/bmw_m5.png', name: 'BMW M5' },
+  { src: '/cars/mercedes_g63.webp', name: 'G63 AMG' },
+  { src: '/cars/lambo_huracan.webp', name: 'Huracán' },
+  { src: '/cars/ferrari_roma.webp', name: 'Ferrari Roma' },
+  { src: '/cars/porsche_turbo.webp', name: '911 Turbo S' },
+  { src: '/cars/bmw_m5.webp', name: 'BMW M5' },
 ];
 
 export default function Preloader() {
@@ -15,7 +15,7 @@ export default function Preloader() {
 
   useEffect(() => {
     const start = performance.now();
-    const duration = 4500;
+    const duration = 2200;
     let raf;
     const tick = (now) => {
       const t = Math.min(1, (now - start) / duration);

@@ -228,7 +228,7 @@ export default function Home() {
               Что говорят
               <span className="rph-wrap">
                 <span className="rph-car">
-                  <img src="/cars/ferrari_f8_hero.png" alt="" />
+                  <img src="/cars/ferrari_f8_hero.webp" alt="" />
                 </span>
               </span>
               о нас
@@ -273,7 +273,7 @@ export default function Home() {
             <Link to="/long-term" className="sub-banner-cta">Подобрать подписку</Link>
           </div>
           <div className="sub-banner-right">
-            <img src="/cars/lexus_lx_hero.png" alt="Lexus LX" className="sub-banner-car" />
+            <img src="/cars/lexus_lx_hero.webp" alt="Lexus LX" className="sub-banner-car" />
           </div>
         </div>
       </div>

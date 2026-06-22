@@ -364,10 +364,10 @@ export default function Account() {
                       <h3><i className="ph-fill ph-gift" style={{ marginRight: 10, color: 'var(--gold)' }} />Бонусная программа</h3>
                     </div>
                     <div style={{ padding: '20px 24px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(200,166,96,0.08)', border: '1px solid rgba(200,166,96,0.25)', borderRadius: 12, padding: '18px 24px', marginBottom: 28 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: 'rgba(200,166,96,0.08)', border: 'none', borderRadius: 12, padding: '18px 24px', marginBottom: 28 }}>
                         <i className="ph-fill ph-coins" style={{ fontSize: 36, color: 'var(--gold)' }} />
                         <div>
-                          <div style={{ fontSize: 13, color: '#888', letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 4 }}>Ваш баланс</div>
+                          <div style={{ fontSize: 13, color: '#888', letterSpacing: '.04em', marginBottom: 4 }}>Ваш баланс</div>
                           <div style={{ fontSize: 28, fontWeight: 700, color: '#fff' }}>{(user.points || 0).toLocaleString()} <span style={{ fontSize: 16, color: '#888' }}>баллов</span></div>
                           <div style={{ fontSize: 13, color: '#bdbdbd', marginTop: 2 }}>= {(user.points || 0).toLocaleString()} ₽</div>
                         </div>

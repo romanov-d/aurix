@@ -69,6 +69,8 @@ export default function CarCard({ car, days }) {
         <img
           src={allPhotos[idx] || mainImg}
           alt={car.name}
+          loading="lazy"
+          decoding="async"
           style={{ transition: 'opacity .2s' }}
         />
       </div>
