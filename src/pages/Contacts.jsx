@@ -147,7 +147,7 @@ export default function Contacts() {
               height="450" 
               frameBorder="0" 
               style={{ border: 0, borderRadius: '14px', filter: 'invert(90%) hue-rotate(180deg) sepia(10%) contrast(90%)' }}
-              title="Шоурум AURIX на карте"
+              title="Шоурум AURIX MOTORS на карте"
             ></iframe>
           </div>
         </div>

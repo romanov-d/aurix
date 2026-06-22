@@ -21,7 +21,9 @@ export async function loadUser(req, _res, next) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const u = await one(
-      'SELECT id, email, phone, name, avatar_url, role, points, is_verified, passport_url, license_url, created_at FROM users WHERE id = $1',
+      `SELECT id, email, phone, name, avatar_url, role, points, is_verified,
+              passport_url, license_url, passport_page_url, registration_url, dob, created_at
+       FROM users WHERE id = $1`,
       [payload.uid]
     );
     if (u) req.user = u;

@@ -5,13 +5,14 @@ import crypto from 'crypto';
 import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
 import { sendVerificationEmail } from '../email.js';
+import { pushToSalebot } from '../salebot.js';
 
 const router = Router();
 
 const registerSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2).max(80),
-  phone: z.string().min(5).max(30).optional(),
+  phone: z.string().min(5, 'Укажите телефон').max(30),
   password: z.string().min(6).max(120),
 });
 
@@ -25,6 +26,12 @@ function publicUser(u) {
     id: u.id, email: u.email, name: u.name, phone: u.phone,
     avatar_url: u.avatar_url, role: u.role,
     is_verified: u.is_verified ?? false,
+    points: u.points ?? 0,
+    dob: u.dob ?? null,
+    passport_url: u.passport_url ?? null,
+    license_url: u.license_url ?? null,
+    passport_page_url: u.passport_page_url ?? null,
+    registration_url: u.registration_url ?? null,
     created_at: u.created_at,
   };
 }
@@ -51,6 +58,11 @@ router.post('/register', async (req, res, next) => {
 
     // Отправляем письмо (не блокируем регистрацию если не получается)
     sendVerificationEmail(user.email, verifyToken).catch(console.error);
+
+    // Подкрепляем данные нового клиента в SaleBot для рассылок
+    pushToSalebot('register', {
+      user_id: user.id, name: user.name, email: user.email, phone: user.phone,
+    }).catch(() => {});
 
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS).json({

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { q, one } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
+import { pushToSalebot } from '../salebot.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -24,6 +25,14 @@ function getDayPrice(car, days) {
 
 router.post('/', async (req, res, next) => {
   try {
+    // Бронь только для верифицированных (документы проверены). Админ — без ограничений.
+    if (!req.user.is_verified && req.user.role !== 'admin') {
+      return res.status(403).json({
+        code: 'NOT_VERIFIED',
+        error: 'Чтобы бронировать, сначала пройдите верификацию с документами в личном кабинете.',
+      });
+    }
+
     const body = bookSchema.parse(req.body);
 
     // Verify car exists and is published
@@ -70,6 +79,20 @@ router.post('/', async (req, res, next) => {
       ]
     );
 
+    // Подкрепляем данные брони в SaleBot для рассылок (не блокируем ответ)
+    pushToSalebot('booking', {
+      booking_id: rows[0].id,
+      user_id: req.user.id,
+      name: req.user.name,
+      email: req.user.email,
+      phone: req.user.phone,
+      car_id: body.car_id,
+      car_name: car.name,
+      from_dt: body.from_dt,
+      to_dt: body.to_dt,
+      total,
+    }).catch(() => {});
+
     res.status(201).json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -79,8 +102,10 @@ router.post('/', async (req, res, next) => {
   }
 });
 
+// Клиент может только ОТМЕНИТЬ свою бронь (или продлить дату). При отмене
+// запись не удаляется — остаётся «след» (status=cancelled, cancelled_by).
 const patchSchema = z.object({
-  status: z.enum(['cancelled', 'active', 'completed']).optional(),
+  status: z.enum(['cancelled']).optional(),
   to_dt: z.string().datetime().optional()
 });
 
@@ -88,54 +113,43 @@ router.patch('/:id', async (req, res, next) => {
   try {
     const booking = await one(`SELECT * FROM bookings WHERE id = $1`, [req.params.id]);
     if (!booking) return res.status(404).json({ error: 'Бронирование не найдено' });
-    
-    // Only user or admin can modify
-    if (booking.user_id !== req.user.id && req.user.role !== 'admin') {
+
+    const isOwner = booking.user_id === req.user.id;
+    const isAdmin = req.user.role === 'admin';
+    if (!isOwner && !isAdmin) {
       return res.status(403).json({ error: 'Нет доступа' });
     }
 
     const updates = patchSchema.parse(req.body);
     let setClauses = [];
     let params = [];
-    
-    if (updates.status) {
-      params.push(updates.status);
-      setClauses.push(`status = $${params.length}`);
+
+    if (updates.status === 'cancelled') {
+      if (!isAdmin && !['pending', 'active'].includes(booking.status)) {
+        return res.status(400).json({ error: 'Эту бронь уже нельзя отменить' });
+      }
+      params.push('cancelled'); setClauses.push(`status = $${params.length}`);
+      params.push('cancelled'); setClauses.push(`stage = $${params.length}`);
+      params.push(new Date().toISOString()); setClauses.push(`cancelled_at = $${params.length}`);
+      params.push(isAdmin ? 'admin' : 'user'); setClauses.push(`cancelled_by = $${params.length}`);
     }
-    
+
     if (updates.to_dt) {
       params.push(updates.to_dt);
       setClauses.push(`to_dt = $${params.length}`);
-      
-      // recalculate total? Simple implementation: keep original total for now
-      // Or we can recalculate it here. For now, leave total as is.
     }
-    
+
     if (setClauses.length === 0) {
       return res.json(booking);
     }
-    
+
     params.push(booking.id);
     const { rows } = await q(
       `UPDATE bookings SET ${setClauses.join(', ')} WHERE id = $${params.length} RETURNING *`,
       params
     );
-    
-    const updated = rows[0];
 
-    // Award cashback points if status transitions to completed
-    if (updates.status === 'completed' && booking.status !== 'completed') {
-      const cashback = Math.round(updated.total * 0.05);
-      if (cashback > 0) {
-        await q(`UPDATE users SET points = points + $1 WHERE id = $2`, [cashback, updated.user_id]);
-        await q(
-          `INSERT INTO user_points (user_id, amount, reason) VALUES ($1, $2, $3)`,
-          [updated.user_id, cashback, `Кэшбэк 5% за завершение аренды #${updated.id}`]
-        );
-      }
-    }
-    
-    res.json(updated);
+    res.json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'Bad input', detail: e.errors });

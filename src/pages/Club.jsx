@@ -97,7 +97,7 @@ export default function Club() {
           <div className="breadcrumbs">
             <Link to="/">Главная</Link><span className="sep">/</span><span>Клубная карта</span>
           </div>
-          <h1>Клубная карта <em>AURIX</em></h1>
+          <h1>Клубная карта <em>AURIX MOTORS</em></h1>
         </div>
       </div>
 
@@ -131,7 +131,7 @@ export default function Club() {
             <div>
               <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Привилегии</span></div>
               <h2 className="serif" style={{ fontSize: 38, letterSpacing: '.04em', marginTop: 14 }}>
-                Закрытый клуб <em className="gold" style={{ fontStyle: 'italic' }}>AURIX</em>
+                Закрытый клуб <em className="gold" style={{ fontStyle: 'italic' }}>AURIX MOTORS</em>
               </h2>
               <p className="muted" style={{ marginTop: 18, fontSize: 14, lineHeight: 1.85, color: '#bdbdbd' }}>
                 Клубная карта — это не просто скидка, а статус. Разместите депозит и получите персональную скидку от 5 до 40% на любую аренду. Карта действует без ограничений по числу поездок.

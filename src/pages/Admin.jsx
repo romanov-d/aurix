@@ -3,6 +3,25 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
 
+// ── Русские названия статусов ──
+const BOOKING_STATUS_RU = { pending: 'Ожидает', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
+const CAR_STATUS_RU = { published: 'Опубликована', hidden: 'Скрыта', pending: 'На модерации', rejected: 'Отклонена' };
+const ROLE_RU = { user: 'Клиент', partner: 'Партнёр', admin: 'Админ' };
+
+// ── Этапы воронки бронирования (по порядку) ──
+const STAGES = [
+  { key: 'new', label: 'Новая заявка', icon: 'ph-tray' },
+  { key: 'docs', label: 'Проверка документов', icon: 'ph-identification-card' },
+  { key: 'prepay', label: 'Оплата бронирования', icon: 'ph-link' },
+  { key: 'manager', label: 'Назначен менеджер', icon: 'ph-user-circle' },
+  { key: 'issued', label: 'Выдан / в аренде', icon: 'ph-car' },
+  { key: 'completed', label: 'Завершена', icon: 'ph-check-circle' },
+  { key: 'cancelled', label: 'Отменена', icon: 'ph-x-circle' },
+];
+const STAGE_RU = Object.fromEntries(STAGES.map(s => [s.key, s.label]));
+const stageRu = (s) => STAGE_RU[s] || BOOKING_STATUS_RU[s] || s;
+const statusTagClass = (st) => st === 'completed' ? 'done' : st === 'cancelled' ? 'cancel' : st === 'active' ? 'ok' : '';
+
 export default function Admin() {
   const { user } = useAuth();
   const nav = useNavigate();
@@ -16,6 +35,16 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);      // { user, bookings, points }
   const [clientLoading, setClientLoading] = useState(false);
+
+  // Поиск по пользователям (телефон / почта / ФИО)
+  const [userSearch, setUserSearch] = useState('');
+  // Настройки (кэшбэк %)
+  const [settings, setSettings] = useState({ cashback_percent: '5' });
+  // Карточка брони (изменить)
+  const [bookingCard, setBookingCard] = useState(null);
+  // Модалки ручного добавления
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [showAddBooking, setShowAddBooking] = useState(false);
 
   const viewDoc = (url) => {
     if (!url) return;
@@ -57,14 +86,16 @@ export default function Admin() {
       api('/admin/cars'),
       api('/admin/users'),
       api('/faq'),
-      api('/admin/dashboard')
+      api('/admin/dashboard'),
+      api('/admin/settings').catch(() => ({ cashback_percent: '5' }))
     ])
-      .then(([b, c, u, f, d]) => {
+      .then(([b, c, u, f, d, s]) => {
         setBookings(b);
         setCars(c);
         setUsers(u);
         setFaqs(f);
         setDashboard(d);
+        if (s) setSettings({ cashback_percent: s.cashback_percent ?? '5' });
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -126,14 +157,121 @@ export default function Admin() {
     setShowFaqModal(true);
   };
 
-  const updateBookingStatus = async (id, status) => {
-    try {
-      const updated = await api(`/admin/bookings/${id}`, { method: 'PATCH', body: { status } });
-      setBookings(bookings.map(b => b.id === id ? { ...b, status: updated.status } : b));
-    } catch (e) {
-      alert(e.message);
-    }
+  const patchBooking = async (id, body) => {
+    const updated = await api(`/admin/bookings/${id}`, { method: 'PATCH', body });
+    setBookings(bs => bs.map(b => b.id === id ? { ...b, ...updated } : b));
+    setBookingCard(c => c && c.id === id ? { ...c, ...updated } : c);
+    return updated;
   };
+
+  const updateBookingStatus = async (id, status) => {
+    try { await patchBooking(id, { status }); }
+    catch (e) { alert(e.message); }
+  };
+
+  const setBookingStage = async (id, stage) => {
+    try { await patchBooking(id, { stage }); }
+    catch (e) { alert(e.message); }
+  };
+
+  // Карточка брони (изменить сумму / даты / менеджера / примечания)
+  const openBookingCard = (b) => setBookingCard({
+    id: b.id, total: b.total, manager: b.manager || '', notes: b.notes || '',
+    pickup_city: b.pickup_city || '', stage: b.stage || 'new', status: b.status,
+    car: b.car, user: b.user,
+    from_dt: b.from_dt?.slice(0, 16), to_dt: b.to_dt?.slice(0, 16),
+  });
+  const [bookingSaving, setBookingSaving] = useState(false);
+  const saveBookingCard = async (e) => {
+    e.preventDefault();
+    setBookingSaving(true);
+    try {
+      await patchBooking(bookingCard.id, {
+        total: parseInt(bookingCard.total) || 0,
+        manager: bookingCard.manager || null,
+        notes: bookingCard.notes || null,
+        pickup_city: bookingCard.pickup_city || null,
+        stage: bookingCard.stage,
+        from_dt: bookingCard.from_dt ? new Date(bookingCard.from_dt).toISOString() : undefined,
+        to_dt: bookingCard.to_dt ? new Date(bookingCard.to_dt).toISOString() : undefined,
+      });
+      setBookingCard(null);
+    } catch (err) { alert(err.message); }
+    finally { setBookingSaving(false); }
+  };
+
+  // Удаление машины
+  const deleteCar = async (car) => {
+    if (!confirm(`Удалить «${car.name}»? Машина исчезнет с сайта. Действие необратимо.`)) return;
+    try {
+      await api(`/admin/cars/${car.id}`, { method: 'DELETE' });
+      setCars(cs => cs.filter(c => c.id !== car.id));
+    } catch (e) { alert(e.message); }
+  };
+
+  // Порядок машин на сайте (вверх/вниз)
+  const moveCar = async (id, dir) => {
+    const idx = cars.findIndex(c => c.id === id);
+    const swap = idx + dir;
+    if (idx < 0 || swap < 0 || swap >= cars.length) return;
+    const next = [...cars];
+    [next[idx], next[swap]] = [next[swap], next[idx]];
+    setCars(next);
+    try { await api('/admin/cars/reorder', { method: 'POST', body: { ids: next.map(c => c.id) } }); }
+    catch (e) { alert(e.message); }
+  };
+
+  // Загрузка фото файлом (base64)
+  const uploadPhotoFile = async (carId, e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой (макс 2 МБ).'); return; }
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      try {
+        const photo = await api(`/admin/cars/${carId}/photos`, { method: 'POST', body: { url: reader.result } });
+        setCarPhotos(p => ({ ...p, [carId]: [...(p[carId] || []), photo] }));
+      } catch (err) { alert(err.message); }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Единый тариф — сохранить одно поле цены по конкретной машине
+  const saveTariffField = async (carId, field, raw) => {
+    const car = cars.find(c => c.id === carId);
+    const nullable = field === 'price_6_12' || field === 'price_30';
+    const val = raw === '' ? (nullable ? null : 0) : parseInt(raw);
+    if (car && (car[field] ?? null) === (val ?? null)) return; // без изменений
+    try {
+      const updated = await api(`/admin/cars/${carId}`, { method: 'PATCH', body: { [field]: val } });
+      setCars(cs => cs.map(c => c.id === carId ? { ...c, ...updated } : c));
+    } catch (e) { alert(e.message); }
+  };
+
+  // Сохранить настройки (кэшбэк %)
+  const saveSettings = async () => {
+    try {
+      const s = await api('/admin/settings', { method: 'PATCH', body: { cashback_percent: parseFloat(settings.cashback_percent) || 0 } });
+      setSettings({ cashback_percent: s.cashback_percent });
+      alert('Настройки сохранены');
+    } catch (e) { alert(e.message); }
+  };
+
+  // Карточка клиента — редактирование + баллы
+  const saveClientCard = async (patch) => {
+    const updated = await api(`/admin/users/${client.user.id}`, { method: 'PATCH', body: patch });
+    setClient(c => ({ ...c, user: { ...c.user, ...updated } }));
+    setUsers(us => us.map(u => u.id === updated.id ? { ...u, ...updated } : u));
+  };
+  const adjustPoints = async (amount, reason) => {
+    const updated = await api(`/admin/users/${client.user.id}/points`, { method: 'POST', body: { amount, reason } });
+    setClient(c => ({ ...c, user: { ...c.user, points: updated.points } }));
+    setUsers(us => us.map(u => u.id === updated.id ? { ...u, points: updated.points } : u));
+    // обновим историю
+    openClient(client.user.id);
+  };
+
+  const refreshBookings = async () => { try { setBookings(await api('/admin/bookings')); } catch {} };
 
   const [expandedCar, setExpandedCar] = useState(null);
   const [carPhotos, setCarPhotos] = useState({});
@@ -325,7 +463,9 @@ export default function Admin() {
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования</a>
             <a href="#cars" onClick={(e) => { e.preventDefault(); setActiveTab('cars'); }} className={activeTab === 'cars' ? 'active' : ''}><i className="ph-fill ph-car" /> Автомобили</a>
             <a href="#users" onClick={(e) => { e.preventDefault(); setActiveTab('users'); }} className={activeTab === 'users' ? 'active' : ''}><i className="ph-fill ph-users" /> Пользователи</a>
+            <a href="#tariffs" onClick={(e) => { e.preventDefault(); setActiveTab('tariffs'); }} className={activeTab === 'tariffs' ? 'active' : ''}><i className="ph-fill ph-table" /> Тарифы</a>
             <a href="#faq" onClick={(e) => { e.preventDefault(); setActiveTab('faq'); }} className={activeTab === 'faq' ? 'active' : ''}><i className="ph-fill ph-question" /> FAQ</a>
+            <a href="#settings" onClick={(e) => { e.preventDefault(); setActiveTab('settings'); }} className={activeTab === 'settings' ? 'active' : ''}><i className="ph-fill ph-gear" /> Настройки</a>
           </nav>
         </aside>
 
@@ -543,6 +683,7 @@ export default function Admin() {
             <div className="acc-block">
               <div className="acc-block-head">
                 <h3>Все бронирования ({bookings.length})</h3>
+                <button className="btn btn-sm" onClick={() => setShowAddBooking(true)}><i className="ph ph-plus" /> Добавить бронь</button>
               </div>
               <table className="acc-table" style={{ width: '100%' }}>
                 <thead>
@@ -551,7 +692,7 @@ export default function Admin() {
                     <th>Клиент</th>
                     <th>Даты</th>
                     <th>Сумма</th>
-                    <th>Статус</th>
+                    <th>Этап воронки</th>
                     <th>Действия</th>
                   </tr>
                 </thead>
@@ -559,16 +700,20 @@ export default function Admin() {
                   {bookings.map(b => (
                     <tr key={b.id}>
                       <td>
-                        <b>#{b.id}</b><br/>
+                        <b>#{b.id}</b>{b.source === 'manual' && <span className="tag" style={{ marginLeft: 6, fontSize: 10 }}>вручную</span>}<br/>
                         <span style={{ fontSize: 13, color: '#888' }}>{b.car.name}</span>
                       </td>
                       <td>
                         <button
                           onClick={() => openClient(b.user.id)}
                           style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', fontWeight: 600, font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 3 }}
-                          title="Открыть профиль клиента"
-                        >{b.user.name}</button><br/>
-                        <span style={{ fontSize: 13, color: '#888' }}>{b.user.email}</span>
+                          title="Открыть карточку клиента"
+                        >{b.user.name}</button>
+                        {b.user.is_verified
+                          ? <span title="Верифицирован" style={{ color: '#22c55e', marginLeft: 6 }}>✓</span>
+                          : <span title="Не верифицирован" style={{ color: '#fb7185', marginLeft: 6 }}>!</span>}
+                        <br/>
+                        <span style={{ fontSize: 13, color: '#888' }}>{b.user.phone || b.user.email}</span>
                       </td>
                       <td style={{ fontSize: 13 }}>
                         {formatDate(b.from_dt)}<br/>
@@ -576,20 +721,24 @@ export default function Admin() {
                       </td>
                       <td>{b.total.toLocaleString()} ₽</td>
                       <td>
-                         <span className={`tag ${b.status === 'completed' ? 'done' : b.status === 'cancelled' ? 'cancel' : b.status === 'active' ? 'ok' : ''}`}>
-                          {b.status}
-                        </span>
+                        <span className={`tag ${statusTagClass(b.status)}`} style={{ marginBottom: 6, display: 'inline-block' }}>{stageRu(b.stage)}</span>
+                        {b.status !== 'cancelled' && b.status !== 'completed' && (
+                          <select
+                            value={b.stage || 'new'}
+                            onChange={e => setBookingStage(b.id, e.target.value)}
+                            style={{ display: 'block', width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '5px 8px', borderRadius: 7, fontSize: 12, fontFamily: 'inherit' }}
+                          >
+                            {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                          </select>
+                        )}
                       </td>
                       <td>
-                        {b.status === 'pending' && (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn btn-sm" onClick={() => updateBookingStatus(b.id, 'active')}>Выдать</button>
-                            <button className="btn btn-sm btn-ghost" onClick={() => updateBookingStatus(b.id, 'cancelled')}>Отмена</button>
-                          </div>
-                        )}
-                        {b.status === 'active' && (
-                          <button className="btn btn-sm btn-ghost" onClick={() => updateBookingStatus(b.id, 'completed')}>Завершить</button>
-                        )}
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          {b.status === 'pending' && <button className="btn btn-sm" onClick={() => updateBookingStatus(b.id, 'active')}>Выдать</button>}
+                          {b.status === 'active' && <button className="btn btn-sm" onClick={() => updateBookingStatus(b.id, 'completed')}>Завершить</button>}
+                          {(b.status === 'pending' || b.status === 'active') && <button className="btn btn-sm btn-ghost" onClick={() => { if (confirm('Отменить бронь?')) updateBookingStatus(b.id, 'cancelled'); }}>Отменить</button>}
+                          <button className="btn btn-sm btn-ghost" onClick={() => openBookingCard(b)}><i className="ph ph-pencil-simple" /> Изменить</button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -630,11 +779,15 @@ export default function Admin() {
                         <td>{c.price_per_day?.toLocaleString()} ₽</td>
                         <td>
                           <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>
-                            {c.status}
+                            {CAR_STATUS_RU[c.status] || c.status}
                           </span>
                         </td>
                         <td>
-                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <span style={{ display: 'inline-flex', flexDirection: 'column', gap: 2 }}>
+                              <button className="btn btn-sm btn-ghost" title="Выше" style={{ padding: '2px 7px', lineHeight: 1 }} onClick={() => moveCar(c.id, -1)}><i className="ph ph-caret-up" /></button>
+                              <button className="btn btn-sm btn-ghost" title="Ниже" style={{ padding: '2px 7px', lineHeight: 1 }} onClick={() => moveCar(c.id, 1)}><i className="ph ph-caret-down" /></button>
+                            </span>
                             <button className="btn btn-sm" onClick={() => openEditCarModal(c)}>
                               <i className="ph ph-pencil-simple" /> Ред.
                             </button>
@@ -647,6 +800,7 @@ export default function Admin() {
                               <button className="btn btn-sm" onClick={() => updateCarStatus(c.id, 'published')}>Одобрить</button>
                               <button className="btn btn-sm btn-ghost" onClick={() => updateCarStatus(c.id, 'rejected')}>Откл.</button>
                             </>}
+                            <button className="btn btn-sm btn-ghost" title="Удалить машину" style={{ color: '#fb7185' }} onClick={() => deleteCar(c)}><i className="ph ph-trash" /></button>
                           </div>
                         </td>
                       </tr>
@@ -683,15 +837,19 @@ export default function Admin() {
                                   </div>
                                 ))}
                               </div>
-                              <div style={{ display: 'flex', gap: 8 }}>
+                              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                                 <input
                                   value={newPhotoUrl}
                                   onChange={e => setNewPhotoUrl(e.target.value)}
                                   onKeyDown={e => e.key === 'Enter' && addPhoto(c.id)}
-                                  placeholder="https://... URL фотографии"
-                                  style={{ flex: 1, background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
+                                  placeholder="https://... или /cars/... — ссылка на фото"
+                                  style={{ flex: 1, minWidth: 180, background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}
                                 />
-                                <button className="btn btn-sm" onClick={() => addPhoto(c.id)}>Добавить</button>
+                                <button className="btn btn-sm" onClick={() => addPhoto(c.id)}>Добавить по ссылке</button>
+                                <label className="btn btn-sm btn-ghost" style={{ cursor: 'pointer' }}>
+                                  <i className="ph ph-upload-simple" /> Загрузить файл
+                                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => uploadPhotoFile(c.id, e)} />
+                                </label>
                               </div>
                             </div>
                           </td>
@@ -704,10 +862,27 @@ export default function Admin() {
             </div>
           )}
 
-          {activeTab === 'users' && (
+          {activeTab === 'users' && (() => {
+            const term = userSearch.trim().toLowerCase();
+            const shown = term
+              ? users.filter(u => [u.name, u.email, u.phone].some(v => (v || '').toLowerCase().includes(term)))
+              : users;
+            return (
             <div className="acc-block">
-              <div className="acc-block-head">
-                <h3>Пользователи ({users.length})</h3>
+              <div className="acc-block-head" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <h3>Пользователи ({shown.length})</h3>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ position: 'relative' }}>
+                    <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                    <input
+                      value={userSearch}
+                      onChange={e => setUserSearch(e.target.value)}
+                      placeholder="Поиск: телефон / почта / ФИО"
+                      style={{ background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 12px 8px 32px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 240 }}
+                    />
+                  </div>
+                  <button className="btn btn-sm" onClick={() => setShowAddUser(true)}><i className="ph ph-plus" /> Добавить</button>
+                </div>
               </div>
               <table className="acc-table" style={{ width: '100%' }}>
                 <thead>
@@ -715,15 +890,16 @@ export default function Admin() {
                     <th>ID / Имя</th>
                     <th>Email / Тел</th>
                     <th>Роль</th>
+                    <th>Менеджер</th>
                     <th>СБ</th>
-                    <th>Регистрация</th>
+                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {users.map(u => (
+                  {shown.map(u => (
                     <tr key={u.id}>
                       <td>
-                        <b>{u.name}</b><br/>
+                        <button onClick={() => openClient(u.id)} style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', fontWeight: 600, font: 'inherit', textAlign: 'left' }}>{u.name}</button><br/>
                         <span style={{ fontSize: 13, color: '#888' }}>ID: {u.id}</span>
                       </td>
                       <td>
@@ -732,28 +908,89 @@ export default function Admin() {
                       </td>
                       <td>
                         <span className={`tag ${u.role === 'admin' ? 'done' : u.role === 'partner' ? 'ok' : ''}`}>
-                          {u.role}
+                          {ROLE_RU[u.role] || u.role}
                         </span>
                       </td>
+                      <td style={{ fontSize: 13, color: u.manager ? 'var(--head)' : '#555' }}>{u.manager || '—'}</td>
                       <td>
                         {u.is_verified ? (
                           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                            <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 12, letterSpacing: '.04em' }}>✓ СБ</span>
-                            <span style={{ fontSize: 12, color: '#22c55e' }}>Верифицирован</span>
+                            <span style={{ fontSize: 12, color: '#22c55e' }}>✓ Верифицирован</span>
                             <button className="btn btn-sm btn-ghost" style={{ marginTop: 2, fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, false)}>Снять</button>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                            <span style={{ color: '#555', fontSize: 13 }}>—</span>
-                            <button className="btn btn-sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, true)}>Верифицировать</button>
-                          </div>
+                          <button className="btn btn-sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, true)}>Верифицировать</button>
                         )}
                       </td>
-                      <td>{formatDate(u.created_at)}</td>
+                      <td><button className="btn btn-sm btn-ghost" onClick={() => openClient(u.id)}>Карточка</button></td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            );
+          })()}
+
+          {activeTab === 'tariffs' && (
+            <div className="acc-block">
+              <div className="acc-block-head">
+                <h3>Единый тариф ({cars.length} авто)</h3>
+                <span style={{ fontSize: 12, color: '#888' }}>Меняйте цены прямо в таблице — Enter или уход с поля сохраняет</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table className="acc-table" style={{ width: '100%', minWidth: 820, fontSize: 13 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ minWidth: 160 }}>Авто</th>
+                      <th>1–5 дн</th>
+                      <th>6–12 дн</th>
+                      <th>от 30 дн</th>
+                      <th>Залог</th>
+                      <th>Пробег/сут</th>
+                      <th>Перекат ₽/км</th>
+                      <th>Фото ₽/ч</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cars.map(c => (
+                      <tr key={c.id}>
+                        <td><b style={{ fontSize: 13 }}>{c.name}</b></td>
+                        {['price_per_day','price_6_12','price_30','deposit','mileage_limit','overmileage_rate','photo_rate'].map(field => (
+                          <td key={field}>
+                            <input
+                              type="number"
+                              defaultValue={c[field] ?? ''}
+                              onBlur={e => saveTariffField(c.id, field, e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && e.target.blur()}
+                              style={{ width: 92, background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--gold)', padding: '6px 8px', borderRadius: 7, fontSize: 13, fontFamily: 'inherit' }}
+                            />
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'settings' && (
+            <div className="acc-block">
+              <div className="acc-block-head"><h3>Настройки</h3></div>
+              <div style={{ padding: 24, maxWidth: 460 }}>
+                <div className="field" style={{ marginBottom: 18 }}>
+                  <label>Кэшбэк с завершённой аренды, %</label>
+                  <input
+                    type="number" min="0" max="100" step="0.5"
+                    value={settings.cashback_percent}
+                    onChange={e => setSettings({ cashback_percent: e.target.value })}
+                  />
+                  <p style={{ fontSize: 12, color: '#888', marginTop: 8, lineHeight: 1.6 }}>
+                    Начисляется бонусными баллами после завершения бронирования (1 балл = 1 ₽). Списание баллов — вручную в карточке клиента.
+                  </p>
+                </div>
+                <button className="btn btn-filled" onClick={saveSettings}>Сохранить</button>
+              </div>
             </div>
           )}
 
@@ -809,8 +1046,8 @@ export default function Admin() {
             <form onSubmit={handleSaveCar} className="modal-form">
               <div className="modal-grid-2">
                 <div className="field">
-                  <label>ID (латиница без пробелов, уникальный)</label>
-                  <input value={addForm.id} onChange={e => setAddForm({...addForm, id: e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '')})} placeholder="porsche-911-carrera" required disabled={editingCarId !== null} />
+                  <label>ID для поиска (латиница, цифры, дефис){editingCarId && <span style={{ color: 'var(--gold)' }}> · можно менять</span>}</label>
+                  <input value={addForm.id} onChange={e => setAddForm({...addForm, id: e.target.value.toLowerCase().replace(/[^a-z0-9\-]/g, '')})} placeholder="porsche-911-carrera" required />
                 </div>
                 <div className="field">
                   <label>Название автомобиля</label>
@@ -957,42 +1194,74 @@ export default function Admin() {
         </div>
       )}
 
-      {client && (
+      {client && (() => {
+        const u = client.user;
+        const lbl = { fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 };
+        const inp = { width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' };
+        const save = (patch) => saveClientCard(patch).catch(e => alert(e.message));
+        const docs = [
+          ['passport_url', 'Паспорт'],
+          ['passport_page_url', 'Паспорт (1-я стр.)'],
+          ['registration_url', 'Прописка'],
+          ['license_url', 'Вод. удостоверение'],
+        ];
+        return (
         <div className="modal-overlay" onClick={() => setClient(null)}>
-          <div className="modal-card" style={{ maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+          <div className="modal-card" style={{ maxWidth: 680, maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <button className="modal-close" onClick={() => setClient(null)}><i className="ph ph-x" /></button>
-            <h3 style={{ margin: '0 0 6px' }}>{client.user.name || 'Клиент'}</h3>
+            <h3 style={{ margin: '0 0 4px' }}>Карточка клиента · ID {u.id}</h3>
             {clientLoading ? (
               <p style={{ color: '#888' }}>Загрузка профиля…</p>
             ) : (
               <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, margin: '18px 0' }}>
-                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Email</div><div>{client.user.email}</div></div>
-                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Телефон</div><div>{client.user.phone || '—'}</div></div>
-                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Баланс</div><div style={{ color: 'var(--gold)' }}>{(client.user.points || 0).toLocaleString()} баллов</div></div>
-                  <div><div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Верификация</div><div style={{ color: client.user.is_verified ? '#22c55e' : '#888' }}>{client.user.is_verified ? '✓ Пройдена' : 'Не пройдена'}</div></div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, margin: '16px 0' }} key={u.id}>
+                  <div><div style={lbl}>ФИО</div><input style={inp} defaultValue={u.name || ''} onBlur={e => e.target.value !== u.name && save({ name: e.target.value })} /></div>
+                  <div><div style={lbl}>Телефон</div><input style={inp} defaultValue={u.phone || ''} onBlur={e => e.target.value !== (u.phone || '') && save({ phone: e.target.value })} /></div>
+                  <div><div style={lbl}>Email</div><input style={inp} defaultValue={u.email || ''} onBlur={e => e.target.value !== u.email && save({ email: e.target.value })} /></div>
+                  <div><div style={lbl}>Дата рождения</div><input type="date" style={inp} defaultValue={(u.dob || '').slice(0, 10)} onBlur={e => save({ dob: e.target.value })} /></div>
+                  <div><div style={lbl}>Роль</div>
+                    <select style={inp} defaultValue={u.role} onChange={e => save({ role: e.target.value })}>
+                      {Object.entries(ROLE_RU).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                    </select>
+                  </div>
+                  <div><div style={lbl}>Ответственный менеджер</div><input style={inp} defaultValue={u.manager || ''} placeholder="Имя менеджера" onBlur={e => e.target.value !== (u.manager || '') && save({ manager: e.target.value })} /></div>
                 </div>
 
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>Документы</div>
+                <div style={{ marginBottom: 16 }}>
+                  <div style={lbl}>Примечание для админов</div>
+                  <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} defaultValue={u.admin_note || ''} placeholder="Заметки по клиенту (видны только админам)" onBlur={e => e.target.value !== (u.admin_note || '') && save({ admin_note: e.target.value })} />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 10 }}>
+                  <div>
+                    <div style={lbl}>Баланс баллов</div>
+                    <div style={{ color: 'var(--gold)', fontSize: 18, fontWeight: 700 }}>{(u.points || 0).toLocaleString()} ₽</div>
+                  </div>
+                  <button className="btn btn-sm" onClick={() => { const a = parseInt(prompt('Сколько баллов начислить?')); if (a > 0) adjustPoints(a, prompt('Причина начисления:') || 'Начисление администратором').catch(e => alert(e.message)); }}>+ Начислить</button>
+                  <button className="btn btn-sm btn-ghost" onClick={() => { const a = parseInt(prompt('Сколько баллов списать?')); if (a > 0) adjustPoints(-a, prompt('Причина списания:') || 'Списание администратором').catch(e => alert(e.message)); }}>− Списать</button>
+                  <div style={{ marginLeft: 'auto' }}>
+                    <span style={{ color: u.is_verified ? '#22c55e' : '#fb7185', fontSize: 13, marginRight: 8 }}>{u.is_verified ? '✓ Верифицирован' : 'Не верифицирован'}</span>
+                    <button className="btn btn-sm" onClick={() => save({ is_verified: !u.is_verified })}>{u.is_verified ? 'Снять' : 'Верифицировать'}</button>
+                  </div>
+                </div>
+
+                <div style={{ ...lbl, marginBottom: 8 }}>Документы</div>
                 <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
-                  {client.user.passport_url
-                    ? <button type="button" className="btn btn-sm" onClick={() => viewDoc(client.user.passport_url)}>Паспорт ↗</button>
-                    : <span className="tag cancel">Паспорт не загружен</span>}
-                  {client.user.license_url
-                    ? <button type="button" className="btn btn-sm" onClick={() => viewDoc(client.user.license_url)}>Права ↗</button>
-                    : <span className="tag cancel">Права не загружены</span>}
+                  {docs.map(([f, name]) => u[f]
+                    ? <button key={f} type="button" className="btn btn-sm" onClick={() => viewDoc(u[f])}>{name} ↗</button>
+                    : <span key={f} className="tag cancel">{name}: нет</span>)}
                 </div>
 
-                <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
+                <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
                 {client.bookings.length ? (
                   <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
                     <tbody>
                       {client.bookings.map(bk => (
                         <tr key={bk.id}>
-                          <td>{bk.car.name}</td>
+                          <td>{bk.car.name}{bk.with_delivery && <span className="tag" style={{ marginLeft: 6, fontSize: 10 }}>доставка</span>}{bk.notes && <div style={{ fontSize: 11, color: '#888' }}>{bk.notes}</div>}</td>
                           <td>{formatDate(bk.from_dt)} — {formatDate(bk.to_dt)}</td>
                           <td>{bk.total.toLocaleString()} ₽</td>
-                          <td><span className={`tag ${bk.status === 'completed' ? 'done' : bk.status === 'cancelled' ? 'cancel' : bk.status === 'active' ? 'ok' : ''}`}>{bk.status}</span></td>
+                          <td><span className={`tag ${statusTagClass(bk.status)}`}>{stageRu(bk.stage)}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -1002,7 +1271,186 @@ export default function Admin() {
             )}
           </div>
         </div>
+        );
+      })()}
+
+      {bookingCard && (
+        <div className="modal-overlay" onClick={() => setBookingCard(null)}>
+          <div className="modal-card" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setBookingCard(null)}><i className="ph ph-x" /></button>
+            <h3 style={{ margin: '0 0 4px' }}>Бронь #{bookingCard.id}</h3>
+            <p style={{ color: '#888', fontSize: 13, margin: '0 0 16px' }}>{bookingCard.car?.name} · {bookingCard.user?.name}</p>
+            <form onSubmit={saveBookingCard} className="modal-form">
+              <div className="modal-grid-2">
+                <div className="field"><label>Сумма (₽)</label><input type="number" value={bookingCard.total} onChange={e => setBookingCard({ ...bookingCard, total: e.target.value })} required /></div>
+                <div className="field"><label>Этап воронки</label>
+                  <select value={bookingCard.stage} onChange={e => setBookingCard({ ...bookingCard, stage: e.target.value })}>
+                    {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-grid-2">
+                <div className="field"><label>Начало аренды</label><input type="datetime-local" value={bookingCard.from_dt || ''} onChange={e => setBookingCard({ ...bookingCard, from_dt: e.target.value })} /></div>
+                <div className="field"><label>Конец аренды</label><input type="datetime-local" value={bookingCard.to_dt || ''} onChange={e => setBookingCard({ ...bookingCard, to_dt: e.target.value })} /></div>
+              </div>
+              <div className="modal-grid-2">
+                <div className="field"><label>Ответственный менеджер</label><input value={bookingCard.manager} onChange={e => setBookingCard({ ...bookingCard, manager: e.target.value })} placeholder="Имя менеджера" /></div>
+                <div className="field"><label>Адрес подачи</label><input value={bookingCard.pickup_city} onChange={e => setBookingCard({ ...bookingCard, pickup_city: e.target.value })} /></div>
+              </div>
+              <div className="field"><label>Примечание</label><textarea rows={2} value={bookingCard.notes} onChange={e => setBookingCard({ ...bookingCard, notes: e.target.value })} /></div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setBookingCard(null)}>Отмена</button>
+                <button type="submit" className="btn btn-filled" disabled={bookingSaving}>{bookingSaving ? 'Сохранение…' : 'Сохранить'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddUser && (
+        <AddUserModal onClose={() => setShowAddUser(false)} onCreated={(u) => { setUsers(us => [u, ...us]); setShowAddUser(false); }} />
+      )}
+
+      {showAddBooking && (
+        <AddBookingModal cars={cars} users={users} onClose={() => setShowAddBooking(false)} onCreated={() => { refreshBookings(); setShowAddBooking(false); }} />
       )}
     </>
+  );
+}
+
+// ── Ручное добавление клиента ──
+function AddUserModal({ onClose, onCreated }) {
+  const [f, setF] = useState({ name: '', email: '', phone: '', password: '', role: 'user', is_verified: false, manager: '', admin_note: '' });
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try {
+      const created = await api('/admin/users', { method: 'POST', body: { ...f, password: f.password || undefined } });
+      onCreated(created);
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth: 540 }} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><i className="ph ph-x" /></button>
+        <h3>Новый клиент</h3>
+        {err && <div className="auth-error" style={{ marginBottom: 14 }}>{err}</div>}
+        <form onSubmit={submit} className="modal-form">
+          <div className="modal-grid-2">
+            <div className="field"><label>ФИО</label><input value={f.name} onChange={e => setF({ ...f, name: e.target.value })} required /></div>
+            <div className="field"><label>Телефон</label><input value={f.phone} onChange={e => setF({ ...f, phone: e.target.value })} required /></div>
+          </div>
+          <div className="modal-grid-2">
+            <div className="field"><label>Email</label><input type="email" value={f.email} onChange={e => setF({ ...f, email: e.target.value })} required /></div>
+            <div className="field"><label>Пароль (необязательно)</label><input value={f.password} onChange={e => setF({ ...f, password: e.target.value })} placeholder="сгенерируется автоматически" /></div>
+          </div>
+          <div className="modal-grid-2">
+            <div className="field"><label>Роль</label>
+              <select value={f.role} onChange={e => setF({ ...f, role: e.target.value })}>
+                <option value="user">Клиент</option><option value="partner">Партнёр</option><option value="admin">Админ</option>
+              </select>
+            </div>
+            <div className="field"><label>Менеджер</label><input value={f.manager} onChange={e => setF({ ...f, manager: e.target.value })} /></div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#bdbdbd', margin: '4px 0' }}>
+            <input type="checkbox" checked={f.is_verified} onChange={e => setF({ ...f, is_verified: e.target.checked })} style={{ accentColor: 'var(--gold)' }} /> Сразу верифицирован
+          </label>
+          <div className="field"><label>Примечание</label><textarea rows={2} value={f.admin_note} onChange={e => setF({ ...f, admin_note: e.target.value })} /></div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Отмена</button>
+            <button type="submit" className="btn btn-filled" disabled={saving}>{saving ? 'Создание…' : 'Создать'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// ── Ручное добавление брони (клиент позвонил) ──
+function AddBookingModal({ cars, users, onClose, onCreated }) {
+  const [f, setF] = useState({
+    car_id: '', mode: 'existing', user_id: '', client_name: '', client_email: '', client_phone: '',
+    from_dt: '', to_dt: '', total: '', pickup_city: '', with_delivery: false, manager: '', notes: '', stage: 'new',
+  });
+  const [err, setErr] = useState('');
+  const [saving, setSaving] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault(); setErr(''); setSaving(true);
+    try {
+      const body = {
+        car_id: f.car_id,
+        from_dt: new Date(f.from_dt).toISOString(),
+        to_dt: new Date(f.to_dt).toISOString(),
+        total: parseInt(f.total) || 0,
+        pickup_city: f.pickup_city || null, with_delivery: f.with_delivery,
+        manager: f.manager || null, notes: f.notes || null, stage: f.stage,
+      };
+      if (f.mode === 'existing') body.user_id = parseInt(f.user_id);
+      else { body.client_name = f.client_name; body.client_email = f.client_email; body.client_phone = f.client_phone; }
+      await api('/admin/bookings', { method: 'POST', body });
+      onCreated();
+    } catch (e) { setErr(e.message); } finally { setSaving(false); }
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-card" style={{ maxWidth: 560, maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><i className="ph ph-x" /></button>
+        <h3>Новая бронь (вручную)</h3>
+        {err && <div className="auth-error" style={{ marginBottom: 14 }}>{err}</div>}
+        <form onSubmit={submit} className="modal-form">
+          <div className="field"><label>Автомобиль</label>
+            <select value={f.car_id} onChange={e => setF({ ...f, car_id: e.target.value })} required>
+              <option value="">— выберите —</option>
+              {cars.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="field"><label>Клиент</label>
+            <div style={{ display: 'flex', gap: 14, margin: '6px 0' }}>
+              <label style={{ fontSize: 13 }}><input type="radio" checked={f.mode === 'existing'} onChange={() => setF({ ...f, mode: 'existing' })} /> Существующий</label>
+              <label style={{ fontSize: 13 }}><input type="radio" checked={f.mode === 'new'} onChange={() => setF({ ...f, mode: 'new' })} /> Новый</label>
+            </div>
+          </div>
+          {f.mode === 'existing' ? (
+            <div className="field"><label>Из списка</label>
+              <select value={f.user_id} onChange={e => setF({ ...f, user_id: e.target.value })} required>
+                <option value="">— выберите клиента —</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.name} · {u.phone || u.email}</option>)}
+              </select>
+            </div>
+          ) : (
+            <div className="modal-grid-2">
+              <div className="field"><label>ФИО</label><input value={f.client_name} onChange={e => setF({ ...f, client_name: e.target.value })} required /></div>
+              <div className="field"><label>Телефон</label><input value={f.client_phone} onChange={e => setF({ ...f, client_phone: e.target.value })} /></div>
+              <div className="field" style={{ gridColumn: '1 / -1' }}><label>Email</label><input type="email" value={f.client_email} onChange={e => setF({ ...f, client_email: e.target.value })} required /></div>
+            </div>
+          )}
+          <div className="modal-grid-2">
+            <div className="field"><label>Начало</label><input type="datetime-local" value={f.from_dt} onChange={e => setF({ ...f, from_dt: e.target.value })} required /></div>
+            <div className="field"><label>Конец</label><input type="datetime-local" value={f.to_dt} onChange={e => setF({ ...f, to_dt: e.target.value })} required /></div>
+          </div>
+          <div className="modal-grid-2">
+            <div className="field"><label>Сумма (₽)</label><input type="number" value={f.total} onChange={e => setF({ ...f, total: e.target.value })} required /></div>
+            <div className="field"><label>Этап</label>
+              <select value={f.stage} onChange={e => setF({ ...f, stage: e.target.value })}>
+                {STAGES.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
+              </select>
+            </div>
+          </div>
+          <div className="modal-grid-2">
+            <div className="field"><label>Менеджер</label><input value={f.manager} onChange={e => setF({ ...f, manager: e.target.value })} /></div>
+            <div className="field"><label>Адрес подачи</label><input value={f.pickup_city} onChange={e => setF({ ...f, pickup_city: e.target.value })} /></div>
+          </div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#bdbdbd', margin: '4px 0' }}>
+            <input type="checkbox" checked={f.with_delivery} onChange={e => setF({ ...f, with_delivery: e.target.checked })} style={{ accentColor: 'var(--gold)' }} /> Нужна доставка
+          </label>
+          <div className="field"><label>Примечание</label><textarea rows={2} value={f.notes} onChange={e => setF({ ...f, notes: e.target.value })} /></div>
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Отмена</button>
+            <button type="submit" className="btn btn-filled" disabled={saving}>{saving ? 'Создание…' : 'Создать бронь'}</button>
+          </div>
+        </form>
+      </div>
+    </div>
   );
 }

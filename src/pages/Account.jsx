@@ -15,12 +15,12 @@ export default function Account() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [docUploading, setDocUploading] = useState('');
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '' });
+  const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '', dob: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
 
   useEffect(() => {
-    if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '' });
+    if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', dob: (user.dob || '').slice(0, 10) });
   }, [user]);
 
   const handleDocChange = (field, e) => {
@@ -62,7 +62,7 @@ export default function Account() {
     e.preventDefault();
     setSavingProfile(true); setProfileMsg('');
     try {
-      await api('/me', { method: 'PATCH', body: { name: profileForm.name, phone: profileForm.phone, email: profileForm.email } });
+      await api('/me', { method: 'PATCH', body: { name: profileForm.name, phone: profileForm.phone, email: profileForm.email, dob: profileForm.dob || null } });
       await refresh();
       setProfileMsg('Изменения сохранены');
     } catch (err) {
@@ -127,6 +127,20 @@ export default function Account() {
     e.preventDefault();
     await logout();
     nav('/', { replace: true });
+  };
+
+  const [cancelling, setCancelling] = useState(0);
+  const cancelBooking = async (id) => {
+    if (!confirm('Отменить бронирование? Отменённая бронь останется в истории.')) return;
+    setCancelling(id);
+    try {
+      const updated = await api(`/bookings/${id}`, { method: 'PATCH', body: { status: 'cancelled' } });
+      setBookings(bs => bs.map(b => b.id === id ? { ...b, ...updated } : b));
+    } catch (err) {
+      alert(err.message || 'Не удалось отменить бронь');
+    } finally {
+      setCancelling(0);
+    }
   };
 
   const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'pending');
@@ -228,8 +242,11 @@ export default function Account() {
                           </div>
                           <div className="status">{b.status === 'pending' ? 'Ожидает подтверждения' : 'В работе'}</div>
                         </div>
-                        <div className="actions">
-                          <Link to={`/catalog/${b.car.id}`} className="btn btn-sm">Детали авто</Link>
+                        <div className="actions" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                          <Link to={`/car/${b.car.id}`} className="btn btn-sm">Детали авто</Link>
+                          <button className="btn btn-sm btn-ghost" disabled={cancelling === b.id} onClick={() => cancelBooking(b.id)}>
+                            {cancelling === b.id ? 'Отмена…' : 'Отменить бронь'}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -353,9 +370,9 @@ export default function Account() {
                         <div style={{ display: 'flex', gap: 16, background: 'var(--bg-2)', borderRadius: 12, padding: '20px 22px', alignItems: 'flex-start' }}>
                           <i className="ph-fill ph-coins" style={{ fontSize: 28, color: 'var(--gold)', flexShrink: 0, marginTop: 2 }} />
                           <div>
-                            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Оплата баллами</div>
+                            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>Списание баллами</div>
                             <div style={{ fontSize: 14, color: '#bdbdbd', lineHeight: 1.7 }}>
-                              Накопленными баллами можно оплатить до <b style={{ color: '#fff' }}>100%</b> стоимости аренды любого автомобиля.
+                              Накопленными баллами можно компенсировать до <b style={{ color: '#fff' }}>100%</b> стоимости аренды. Баллы списывает менеджер при оформлении — оплата по ссылке или наличными.
                             </div>
                           </div>
                         </div>
@@ -396,13 +413,27 @@ export default function Account() {
                   <div className="acc-block-head">
                     <h3>Документы</h3>
                   </div>
+                  {user?.is_verified ? (
+                    <div style={{ margin: '16px 24px 0', padding: '12px 16px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, color: '#86efac', fontSize: 13, lineHeight: 1.6 }}>
+                      <i className="ph-fill ph-check-circle" style={{ marginRight: 6 }} />
+                      Верификация пройдена. Документы заблокированы для изменений — чтобы что-то поправить, напишите менеджеру.
+                    </div>
+                  ) : (
+                    <div style={{ margin: '16px 24px 0', padding: '12px 16px', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.25)', borderRadius: 10, color: '#e8c66c', fontSize: 13, lineHeight: 1.6 }}>
+                      <i className="ph-fill ph-info" style={{ marginRight: 6 }} />
+                      Загрузите документы для верификации. До её прохождения вы можете заменять и редактировать файлы. Без верификации бронирование недоступно.
+                    </div>
+                  )}
                   <div className="doc-list">
                     {[
-                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт' },
+                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт (разворот)' },
+                      { field: 'passport_page_url', icon: 'ph-identification-badge', label: 'Паспорт (1-я страница)' },
+                      { field: 'registration_url', icon: 'ph-house', label: 'Прописка' },
                       { field: 'license_url', icon: 'ph-car', label: 'Водительское удостоверение' },
                     ].map(d => {
                       const url = user?.[d.field];
                       const busy = docUploading === d.field;
+                      const locked = user?.is_verified;
                       return (
                         <div className="doc-item" key={d.field}>
                           <div className="ico"><i className={`ph-fill ${d.icon}`} /></div>
@@ -417,10 +448,13 @@ export default function Account() {
                               <i className="ph-fill ph-eye" />
                             </button>
                           )}
-                          <label className="dl" style={{ cursor: busy ? 'default' : 'pointer' }} title="Загрузить">
-                            <i className={busy ? 'ph ph-spinner-gap spin' : 'ph-fill ph-upload-simple'} />
-                            <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} disabled={busy} onChange={(e) => handleDocChange(d.field, e)} />
-                          </label>
+                          {!locked && (
+                            <label className="dl" style={{ cursor: busy ? 'default' : 'pointer' }} title={url ? 'Заменить' : 'Загрузить'}>
+                              <i className={busy ? 'ph ph-spinner-gap spin' : 'ph-fill ph-upload-simple'} />
+                              <input type="file" accept="image/*,.pdf" style={{ display: 'none' }} disabled={busy} onChange={(e) => handleDocChange(d.field, e)} />
+                            </label>
+                          )}
+                          {locked && <i className="ph-fill ph-lock" style={{ color: 'var(--muted)' }} title="Заблокировано после верификации" />}
                         </div>
                       );
                     })}
@@ -450,6 +484,10 @@ export default function Account() {
                         <label>Email</label>
                         <input type="email" value={profileForm.email} onChange={e => setProfileForm(f => ({ ...f, email: e.target.value }))} />
                       </div>
+                    </div>
+                    <div className="field" style={{ marginTop: 16 }}>
+                      <label>Дата рождения</label>
+                      <input type="date" value={profileForm.dob} onChange={e => setProfileForm(f => ({ ...f, dob: e.target.value }))} />
                     </div>
                     <div className="profile-row" style={{ marginTop: 8 }}><span className="lbl">Уровень клуба</span><span className="v gold">{tierLabel}</span></div>
                     <div className="profile-row">

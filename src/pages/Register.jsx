@@ -15,11 +15,12 @@ export default function Register() {
   const onSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    if (!form.phone.trim()) return setError('Укажите телефон');
     if (form.password.length < 6) return setError('Пароль минимум 6 символов');
     if (form.password !== form.confirm) return setError('Пароли не совпадают');
     setSubmitting(true);
     try {
-      await register({ name: form.name, email: form.email, phone: form.phone || undefined, password: form.password });
+      await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
       nav('/account', { replace: true });
     } catch (err) {
       setError(err.message || 'Ошибка регистрации');
@@ -50,7 +51,7 @@ export default function Register() {
       <div className="auth-glass">
         <div className="auth-top">
           <Link to="/" className="auth-logo">
-            <img src="/logo.svg" alt="AURIX" />
+            <img src="/logo.svg" alt="AURIX MOTORS" />
           </Link>
           <Link to="/" className="auth-back">
             <i className="ph ph-arrow-left" /> Назад
@@ -58,7 +59,7 @@ export default function Register() {
         </div>
 
         <h1 className="auth-title">Регистрация</h1>
-        <p className="auth-sub">Создайте аккаунт AURIX и начните бронировать.</p>
+        <p className="auth-sub">Создайте аккаунт AURIX MOTORS и начните бронировать.</p>
 
         <form onSubmit={onSubmit} className="auth-form">
           <label>
@@ -70,8 +71,8 @@ export default function Register() {
             <input type="email" value={form.email} onChange={set('email')} placeholder="you@example.com" required />
           </label>
           <label>
-            <span>Телефон <em>(необязательно)</em></span>
-            <input value={form.phone} onChange={set('phone')} placeholder="+7 999 123 45 67" />
+            <span>Телефон</span>
+            <input type="tel" value={form.phone} onChange={set('phone')} placeholder="+7 999 123 45 67" required />
           </label>
           <label>
             <span>Пароль</span>

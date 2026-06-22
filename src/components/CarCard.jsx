@@ -74,7 +74,10 @@ export default function CarCard({ car, days }) {
       </div>
       <div className="card-body">
         <div className="card-name">{car.name}</div>
-        <div className="card-meta">{car.year} / {car.body}</div>
+        <div className="card-meta">
+          <span className="meta-chip">{car.year}</span>
+          {car.body && <span className="meta-chip">{car.body}</span>}
+        </div>
         <div className="card-specs">
           <div className="spec"><span className="spec-lbl"><span>{car.engine}</span><small>{car.fuel}</small></span></div>
           <div className="spec"><span className="spec-lbl"><span>{car.power_hp || car.power}</span><small>мощность</small></span></div>

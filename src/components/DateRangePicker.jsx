@@ -161,7 +161,9 @@ export default function DateRangePicker({
       )}
 
       {isOpen && (
-        <div className={`drp-popup${isHero ? ' drp-popup-hero' : ''}`}>
+        <>
+        {isSidebar && <div className="drp-modal-backdrop" onClick={() => setIsOpen(false)} />}
+        <div className={`drp-popup${isHero ? ' drp-popup-hero' : ''}${isSidebar ? ' drp-popup-modal' : ''}`}>
           <div className="drp-header">
             <button className="drp-nav" onClick={prevMonth}>
               <svg height="14" viewBox="0 0 16 16" width="14" fill="currentColor">
@@ -218,6 +220,7 @@ export default function DateRangePicker({
             }
           </div>
         </div>
+        </>
       )}
     </div>
   );

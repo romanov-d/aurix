@@ -1,10 +1,43 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { many, q, one } from '../db.js';
+import bcrypt from 'bcryptjs';
+import { many, q, one, getCashbackPercent } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
 
 const router = Router();
 router.use(requireRole('admin'));
+
+// ── Этапы воронки бронирования ──
+// Каждый этап маппится на «грубый» status, на котором держится дашборд.
+const STAGES = ['new', 'docs', 'prepay', 'manager', 'issued', 'completed', 'cancelled'];
+function statusForStage(stage) {
+  if (stage === 'issued') return 'active';
+  if (stage === 'completed') return 'completed';
+  if (stage === 'cancelled') return 'cancelled';
+  return 'pending'; // new / docs / prepay / manager
+}
+function stageForStatus(status) {
+  if (status === 'active') return 'issued';
+  if (status === 'completed') return 'completed';
+  if (status === 'cancelled') return 'cancelled';
+  return 'new';
+}
+
+// Начислить кэшбэк при переходе брони в «completed» (если ещё не начислялся)
+async function awardCashbackIfNeeded(booking) {
+  if (booking.status !== 'completed') return;
+  const already = await one(
+    `SELECT 1 FROM user_points WHERE user_id = $1 AND reason LIKE '%аренды #' || $2`,
+    [booking.user_id, booking.id]
+  );
+  if (already) return;
+  const pct = await getCashbackPercent();
+  const cashback = Math.round(Number(booking.total) * pct / 100);
+  if (cashback <= 0) return;
+  await q(`UPDATE users SET points = COALESCE(points,0) + $1 WHERE id = $2`, [cashback, booking.user_id]);
+  await q(`INSERT INTO user_points (user_id, amount, reason) VALUES ($1, $2, $3)`,
+    [booking.user_id, cashback, `Кэшбэк ${pct}% за завершение аренды #${booking.id}`]);
+}
 
 // Dashboard analytics
 router.get('/dashboard', async (req, res, next) => {
@@ -86,8 +119,8 @@ router.get('/bookings', async (req, res, next) => {
   try {
     const items = await many(
       `SELECT b.*,
-        json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'phone', u.phone) as user,
-        json_build_object('id', c.id, 'name', c.name, 'brand', c.brand) as car
+        json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'phone', u.phone, 'is_verified', u.is_verified) as user,
+        json_build_object('id', c.id, 'name', c.name, 'brand', c.brand, 'image_url', c.image_url) as car
        FROM bookings b
        JOIN users u ON b.user_id = u.id
        JOIN cars c ON b.car_id = c.id
@@ -99,16 +132,106 @@ router.get('/bookings', async (req, res, next) => {
   }
 });
 
+const patchBookingSchema = z.object({
+  status: z.enum(['pending', 'active', 'completed', 'cancelled']).optional(),
+  stage: z.enum(STAGES).optional(),
+  total: z.coerce.number().int().min(0).optional(),
+  manager: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  pickup_city: z.string().optional().nullable(),
+  with_delivery: z.boolean().optional(),
+  from_dt: z.string().datetime().optional(),
+  to_dt: z.string().datetime().optional(),
+});
+
 router.patch('/bookings/:id', async (req, res, next) => {
   try {
-    const body = z.object({ status: z.enum(['pending', 'active', 'completed', 'cancelled']) }).parse(req.body);
-    const { rows } = await q(
-      `UPDATE bookings SET status = $1 WHERE id = $2 RETURNING *`,
-      [body.status, req.params.id]
-    );
+    const body = patchBookingSchema.parse(req.body);
+
+    // Воронка ↔ статус: что бы ни прислали (stage или status) — синхронизируем оба
+    if (body.stage) body.status = statusForStage(body.stage);
+    else if (body.status) body.stage = stageForStatus(body.status);
+
+    if (body.status === 'cancelled') {
+      body.cancelled_at = new Date().toISOString();
+      body.cancelled_by = 'admin';
+    }
+
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+    for (const [k, v] of Object.entries(body)) {
+      if (v !== undefined) { sets.push(`${k} = $${idx++}`); vals.push(v); }
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Нечего обновлять' });
+
+    vals.push(req.params.id);
+    const { rows } = await q(`UPDATE bookings SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`, vals);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
+
+    await awardCashbackIfNeeded(rows[0]);
     res.json(rows[0]);
   } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
+    next(e);
+  }
+});
+
+// Ручное создание брони (клиент позвонил/пришёл). Можно по существующему user_id
+// или по контактам нового клиента (создадим пользователя на лету).
+const manualBookingSchema = z.object({
+  car_id: z.string(),
+  user_id: z.coerce.number().int().optional(),
+  client_name: z.string().min(2).optional(),
+  client_email: z.string().email().optional(),
+  client_phone: z.string().optional(),
+  from_dt: z.string().datetime(),
+  to_dt: z.string().datetime(),
+  total: z.coerce.number().int().min(0),
+  pickup_city: z.string().optional().nullable(),
+  with_delivery: z.boolean().default(false),
+  manager: z.string().optional().nullable(),
+  notes: z.string().optional().nullable(),
+  stage: z.enum(STAGES).default('new'),
+});
+
+router.post('/bookings', async (req, res, next) => {
+  try {
+    const body = manualBookingSchema.parse(req.body);
+
+    const car = await one(`SELECT id FROM cars WHERE id = $1`, [body.car_id]);
+    if (!car) return res.status(400).json({ error: 'Автомобиль не найден' });
+
+    let userId = body.user_id;
+    if (!userId) {
+      if (!body.client_email || !body.client_name) {
+        return res.status(400).json({ error: 'Укажите клиента (user_id) или имя + email нового клиента' });
+      }
+      const existing = await one(`SELECT id FROM users WHERE email = $1`, [body.client_email.toLowerCase()]);
+      if (existing) {
+        userId = existing.id;
+      } else {
+        const hash = bcrypt.hashSync(Math.random().toString(36).slice(2) + 'Aurix!', 10);
+        const created = await one(
+          `INSERT INTO users (email, name, phone, password_hash, role)
+           VALUES ($1, $2, $3, $4, 'user') RETURNING id`,
+          [body.client_email.toLowerCase(), body.client_name, body.client_phone || null, hash]
+        );
+        userId = created.id;
+      }
+    }
+
+    const status = statusForStage(body.stage);
+    const { rows } = await q(
+      `INSERT INTO bookings (car_id, user_id, from_dt, to_dt, pickup_city, with_delivery, total, status, stage, manager, notes, source)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,'manual') RETURNING *`,
+      [body.car_id, userId, body.from_dt, body.to_dt, body.pickup_city || null,
+       body.with_delivery, body.total, status, body.stage, body.manager || null, body.notes || null]
+    );
+    await awardCashbackIfNeeded(rows[0]);
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
     next(e);
   }
 });
@@ -125,6 +248,8 @@ router.get('/cars', async (req, res, next) => {
 });
 
 const updateCarSchema = z.object({
+  id: z.string().min(2).regex(/^[a-z0-9-]+$/, 'ID: только латиница, цифры и дефис').optional(),
+  sort_order: z.coerce.number().int().optional(),
   name: z.string().min(2).optional(),
   brand: z.string().min(2).optional(),
   year: z.coerce.number().int().min(1900).max(2100).optional(),
@@ -150,6 +275,15 @@ const updateCarSchema = z.object({
 router.patch('/cars/:id', async (req, res, next) => {
   try {
     const body = updateCarSchema.parse(req.body);
+
+    // Переименование ID (для поиска) — проверяем уникальность; FK обновятся каскадом
+    if (body.id && body.id !== req.params.id) {
+      const clash = await one(`SELECT id FROM cars WHERE id = $1`, [body.id]);
+      if (clash) return res.status(400).json({ error: 'Машина с таким ID уже существует' });
+    } else {
+      delete body.id;
+    }
+
     const sets = [];
     const vals = [];
     let idx = 1;
@@ -174,6 +308,34 @@ router.patch('/cars/:id', async (req, res, next) => {
     if (e instanceof z.ZodError) {
       return res.status(400).json({ error: 'Неверно заполнены поля формы', detail: e.errors });
     }
+    next(e);
+  }
+});
+
+// Удаление машины. Если на неё есть брони — БД не даст удалить (FK RESTRICT),
+// тогда отдаём понятное сообщение: лучше скрыть.
+router.delete('/cars/:id', async (req, res, next) => {
+  try {
+    const used = await one(`SELECT 1 FROM bookings WHERE car_id = $1 LIMIT 1`, [req.params.id]);
+    if (used) {
+      return res.status(409).json({ error: 'У машины есть бронирования — её нельзя удалить. Скройте её вместо удаления.' });
+    }
+    const { rows } = await q(`DELETE FROM cars WHERE id = $1 RETURNING id`, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// Смена порядка машин на сайте: принимаем массив id в нужном порядке
+router.post('/cars/reorder', async (req, res, next) => {
+  try {
+    const { ids } = z.object({ ids: z.array(z.string()).min(1) }).parse(req.body);
+    for (let i = 0; i < ids.length; i++) {
+      await q(`UPDATE cars SET sort_order = $1 WHERE id = $2`, [(i + 1) * 10, ids[i]]);
+    }
+    res.json({ ok: true });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Bad input', detail: e.errors });
     next(e);
   }
 });
@@ -210,18 +372,19 @@ router.post('/cars', async (req, res, next) => {
       return res.status(400).json({ error: 'Автомобиль с таким ID уже существует' });
     }
 
+    const maxRow = await one(`SELECT COALESCE(MAX(sort_order), 0) + 10 AS next FROM cars`);
     const { rows } = await q(
       `INSERT INTO cars (
         id, name, brand, year, body, fuel, engine, power_hp, drive,
         price_per_day, deposit, mileage_limit, overmileage_rate, photo_rate,
-        price_6_12, price_30, image_url, description, color, badge, status
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, 'published')
+        price_6_12, price_30, image_url, description, color, badge, sort_order, status
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, 'published')
       RETURNING *`,
       [
         body.id, body.name, body.brand, body.year, body.body, body.fuel, body.engine, body.power_hp, body.drive,
         body.price_per_day, body.deposit, body.mileage_limit, body.overmileage_rate, body.photo_rate,
         body.price_6_12 || null, body.price_30 || null, body.image_url, body.description || null,
-        body.color || null, body.badge || null
+        body.color || null, body.badge || null, maxRow?.next ?? 10
       ]
     );
 
@@ -247,7 +410,12 @@ router.get('/cars/:id/photos', async (req, res, next) => {
 
 router.post('/cars/:id/photos', async (req, res, next) => {
   try {
-    const { url } = z.object({ url: z.string().url() }).parse(req.body);
+    const { url } = z.object({
+      url: z.string().min(1).refine(
+        v => /^https?:\/\//.test(v) || v.startsWith('data:image/') || v.startsWith('/'),
+        'Нужна ссылка (http/https), путь /cars/... или загруженный файл'
+      )
+    }).parse(req.body);
     const maxOrder = await one(
       `SELECT COALESCE(MAX(sort_order), -1) + 1 AS next FROM car_photos WHERE car_id = $1`,
       [req.params.id]
@@ -268,25 +436,106 @@ router.delete('/cars/:id/photos/:photoId', async (req, res, next) => {
 });
 
 // Users
+const USER_LIST_COLS = `id, email, name, phone, role, is_verified, points, manager, dob, admin_note,
+  passport_url, license_url, passport_page_url, registration_url, created_at`;
+
 router.get('/users', async (req, res, next) => {
   try {
-    const items = await many(`SELECT id, email, name, phone, role, is_verified, passport_url, license_url, created_at FROM users ORDER BY created_at DESC`);
+    const items = await many(`SELECT ${USER_LIST_COLS} FROM users ORDER BY created_at DESC`);
     res.json(items);
   } catch (e) {
     next(e);
   }
 });
 
+// Ручное создание клиента
+const createUserSchema = z.object({
+  email: z.string().email(),
+  name: z.string().min(2),
+  phone: z.string().min(5),
+  password: z.string().min(6).optional(),
+  role: z.enum(['user', 'partner', 'admin']).default('user'),
+  is_verified: z.boolean().default(false),
+  manager: z.string().optional().nullable(),
+  admin_note: z.string().optional().nullable(),
+});
+
+router.post('/users', async (req, res, next) => {
+  try {
+    const body = createUserSchema.parse(req.body);
+    const exists = await one(`SELECT id FROM users WHERE email = $1`, [body.email.toLowerCase()]);
+    if (exists) return res.status(409).json({ error: 'Email уже зарегистрирован' });
+
+    const hash = bcrypt.hashSync(body.password || (Math.random().toString(36).slice(2) + 'Aurix!'), 10);
+    const { rows } = await q(
+      `INSERT INTO users (email, name, phone, password_hash, role, is_verified, manager, admin_note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${USER_LIST_COLS}`,
+      [body.email.toLowerCase(), body.name, body.phone, hash, body.role, body.is_verified,
+       body.manager || null, body.admin_note || null]
+    );
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
+    next(e);
+  }
+});
+
+const patchUserSchema = z.object({
+  name: z.string().min(2).optional(),
+  email: z.string().email().optional(),
+  phone: z.string().optional().nullable(),
+  role: z.enum(['user', 'partner', 'admin']).optional(),
+  is_verified: z.boolean().optional(),
+  manager: z.string().optional().nullable(),
+  admin_note: z.string().optional().nullable(),
+  dob: z.string().optional().nullable(),
+});
+
 router.patch('/users/:id', async (req, res, next) => {
   try {
-    const body = z.object({ is_verified: z.boolean() }).parse(req.body);
-    const { rows } = await q(
-      `UPDATE users SET is_verified = $1 WHERE id = $2 RETURNING id, email, name, phone, role, is_verified, created_at`,
-      [body.is_verified, req.params.id]
-    );
+    const body = patchUserSchema.parse(req.body);
+    if (body.email) body.email = body.email.toLowerCase();
+    if (body.dob === '') body.dob = null;
+
+    const sets = [];
+    const vals = [];
+    let idx = 1;
+    for (const [k, v] of Object.entries(body)) {
+      if (v !== undefined) { sets.push(`${k} = $${idx++}`); vals.push(v); }
+    }
+    if (!sets.length) return res.status(400).json({ error: 'Нечего обновлять' });
+
+    vals.push(req.params.id);
+    const { rows } = await q(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING ${USER_LIST_COLS}`, vals);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     res.json(rows[0]);
   } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
+    if (e && e.code === '23505') return res.status(400).json({ error: 'Этот email уже используется' });
+    next(e);
+  }
+});
+
+// Начислить / списать баллы клиента (без платёжной системы — вручную менеджером)
+router.post('/users/:id/points', async (req, res, next) => {
+  try {
+    const { amount, reason } = z.object({
+      amount: z.coerce.number().int().refine(v => v !== 0, 'Сумма не может быть 0'),
+      reason: z.string().min(2),
+    }).parse(req.body);
+
+    const user = await one(`SELECT id, points FROM users WHERE id = $1`, [req.params.id]);
+    if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
+    if (amount < 0 && (user.points || 0) + amount < 0) {
+      return res.status(400).json({ error: 'Недостаточно баллов на балансе клиента' });
+    }
+
+    await q(`UPDATE users SET points = COALESCE(points,0) + $1 WHERE id = $2`, [amount, req.params.id]);
+    await q(`INSERT INTO user_points (user_id, amount, reason) VALUES ($1,$2,$3)`, [req.params.id, amount, reason]);
+    const fresh = await one(`SELECT ${USER_LIST_COLS} FROM users WHERE id = $1`, [req.params.id]);
+    res.json(fresh);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
     next(e);
   }
 });
@@ -295,13 +544,15 @@ router.patch('/users/:id', async (req, res, next) => {
 router.get('/users/:id', async (req, res, next) => {
   try {
     const user = await one(
-      `SELECT id, email, name, phone, role, is_verified, points, passport_url, license_url, created_at
+      `SELECT id, email, name, phone, role, is_verified, points, manager, dob, admin_note,
+              passport_url, license_url, passport_page_url, registration_url, created_at
        FROM users WHERE id = $1`,
       [req.params.id]
     );
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
     const bookings = await many(
-      `SELECT b.id, b.status, b.from_dt, b.to_dt, b.total, b.created_at,
+      `SELECT b.id, b.status, b.stage, b.from_dt, b.to_dt, b.total, b.manager, b.notes,
+              b.pickup_city, b.with_delivery, b.source, b.created_at,
         json_build_object('id', c.id, 'name', c.name) as car
        FROM bookings b JOIN cars c ON b.car_id = c.id
        WHERE b.user_id = $1 ORDER BY b.created_at DESC`,
@@ -313,6 +564,32 @@ router.get('/users/:id', async (req, res, next) => {
     );
     res.json({ user, bookings, points });
   } catch (e) {
+    next(e);
+  }
+});
+
+// ── Настройки (кэшбэк %) ──
+router.get('/settings', async (req, res, next) => {
+  try {
+    const rows = await many(`SELECT key, value FROM app_settings`);
+    const settings = Object.fromEntries(rows.map(r => [r.key, r.value]));
+    res.json(settings);
+  } catch (e) { next(e); }
+});
+
+router.patch('/settings', async (req, res, next) => {
+  try {
+    const { cashback_percent } = z.object({
+      cashback_percent: z.coerce.number().min(0).max(100),
+    }).parse(req.body);
+    await q(
+      `INSERT INTO app_settings (key, value) VALUES ('cashback_percent', $1)
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`,
+      [String(cashback_percent)]
+    );
+    res.json({ cashback_percent: String(cashback_percent) });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверное значение', detail: e.errors });
     next(e);
   }
 });

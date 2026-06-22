@@ -5,6 +5,10 @@ import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
+const BRAND_LOGOS = {
+  Lexus: '/lexus.svg', Mercedes: '/mercedes.svg', Lamborghini: '/lamborghini.svg',
+  Ferrari: '/ferrari.svg', BMW: '/bmw.svg', 'Rolls-Royce': '/rolls-royce.svg', Porsche: '/porsche.svg',
+};
 const BODIES = ['Все', 'Купе', 'Купе/Кабриолет', 'Кабриолет', 'Внедорожник', 'Седан'];
 
 const pad = (n) => String(n).padStart(2, '0');
@@ -14,6 +18,32 @@ const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
 
 function getBrand(car) {
   return BRANDS.find(b => car.name.startsWith(b)) || car.brand || '';
+}
+
+// Формат цены с разделением разрядов: 300000 → «300 000»
+const fmtPrice = (n) => (n ? Number(n).toLocaleString('ru-RU') : '');
+const parsePrice = (s) => Number(String(s).replace(/\D/g, '')) || 0;
+
+// Карточка-заглушка на время загрузки (повторяет раскладку CarCard)
+function CardSkeleton() {
+  return (
+    <div className="card card-skeleton" aria-hidden="true">
+      <div className="card-img sk" />
+      <div className="card-body">
+        <div className="sk sk-line" style={{ width: '68%', height: 19 }} />
+        <div className="sk sk-line" style={{ width: '42%', height: 12, marginTop: 10 }} />
+        <div className="sk-specs">
+          <div className="sk sk-line" style={{ width: 46, height: 30 }} />
+          <div className="sk sk-line" style={{ width: 52, height: 30 }} />
+          <div className="sk sk-line" style={{ width: 58, height: 30 }} />
+        </div>
+        <div className="sk-price-row">
+          <div className="sk sk-line" style={{ width: 64, height: 12 }} />
+          <div className="sk sk-line" style={{ width: 92, height: 22 }} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function fmtDate(s) {
@@ -183,9 +213,9 @@ export default function Catalog() {
               <>
                 <div className="brand-popup-backdrop" onClick={() => setBrandsOpen(false)} />
                 <div className="brand-popup">
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, padding: '0 4px' }}>
-                    <span style={{ fontSize: 12, color: '#888' }}>Выберите марки</span>
-                    <button onClick={() => setSelectedBrands(new Set(BRANDS))} style={{ fontSize: 11, color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>Все</button>
+                  <div className="brand-popup-head">
+                    <span>Выберите марки</span>
+                    <button onClick={() => setSelectedBrands(new Set(BRANDS))}>Все</button>
                   </div>
                   {BRANDS.map(brand => (
                     <div
@@ -196,6 +226,7 @@ export default function Catalog() {
                       <span className="brand-check">
                         {selectedBrands.has(brand) && <i className="ph-fill ph-check" />}
                       </span>
+                      <img className="brand-logo" src={BRAND_LOGOS[brand]} alt="" loading="lazy" />
                       {brand}
                     </div>
                   ))}
@@ -208,8 +239,14 @@ export default function Catalog() {
           <div className="filter-group">
             <h5>Цена за сутки, ₽</h5>
             <div className="range">
-              <input type="number" value={minPrice} min={0} onChange={e => setMinPrice(Number(e.target.value))} />
-              <input type="number" value={maxPrice} min={0} onChange={e => setMaxPrice(Number(e.target.value))} />
+              <div className="price-input">
+                <input type="text" inputMode="numeric" value={fmtPrice(minPrice)} onChange={e => setMinPrice(parsePrice(e.target.value))} />
+                <span className="price-cur">₽</span>
+              </div>
+              <div className="price-input">
+                <input type="text" inputMode="numeric" value={fmtPrice(maxPrice)} onChange={e => setMaxPrice(parsePrice(e.target.value))} />
+                <span className="price-cur">₽</span>
+              </div>
             </div>
           </div>
 
@@ -236,7 +273,7 @@ export default function Catalog() {
           </div>
           <div id="fleet-slot" className="catalog-grid">
             {loading
-              ? <div style={{ padding: 40, color: '#888' }}>Загрузка…</div>
+              ? Array.from({ length: 6 }).map((_, i) => <CardSkeleton key={i} />)
               : filtered.length === 0
                 ? <div style={{ padding: 40, color: '#888' }}>
                     {datesActive ? 'Нет свободных авто на выбранные даты' : 'Ничего не найдено — попробуйте изменить фильтры'}

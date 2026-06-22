@@ -41,7 +41,15 @@ export function init() {
       await seedAdmin();
       console.log('[db] init: seedAdmin done, starting seedFaq...');
       await seedFaq();
-      console.log('[db] init: done');
+      console.log('[db] init: seedFaq done, starting seedSettings...');
+      await seedSettings();
+      console.log('[db] init: done (FK/backfill — в фоне)');
+      // FK-каскад и бэкфилл — в фоне, НЕ в await-цепочке init. FK DDL под
+      // конкуренцией может ждать блокировку и упереться в таймаут функции —
+      // поэтому он не должен блокировать ответ. Не доедет — самовосстановится
+      // на следующем холодном старте (проверка confupdtype).
+      migrateForeignKeys().catch((e) => console.warn('[db] FK migration skipped:', e.message));
+      backfillCashback().catch((e) => console.warn('[db] cashback backfill skipped:', e.message));
     })().catch((e) => {
       console.error('[db] init failed:', e);
       initPromise = null;
@@ -167,27 +175,78 @@ const SCHEMA_STATEMENTS = [
     answer     TEXT NOT NULL,
     sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  // ── Порядок машин на сайте ──
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS sort_order INTEGER NOT NULL DEFAULT 0`,
+  // ── Воронка / CRM по бронированиям ──
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stage TEXT NOT NULL DEFAULT 'new'`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS manager TEXT`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS notes TEXT`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by TEXT`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'site'`,
+  // ── Доп. данные клиента ──
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_page_url TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_url TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_note TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS manager TEXT`,
+  // ── Настройки приложения (кэшбэк % и пр.) ──
+  `CREATE TABLE IF NOT EXISTS app_settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
   )`
 ];
 
+// Перевод FK на cars(id) в ON UPDATE CASCADE (чтобы можно было менять ID машины).
+// ВАЖНО: это тяжёлый DDL (AccessExclusiveLock). Делаем строго один раз —
+// иначе на каждом холодном старте параллельные инстансы устроят гонку блокировок.
+const FK_CASCADE_STATEMENTS = [
+  `ALTER TABLE bookings   DROP CONSTRAINT IF EXISTS bookings_car_id_fkey`,
+  `ALTER TABLE bookings   ADD  CONSTRAINT bookings_car_id_fkey   FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE RESTRICT ON UPDATE CASCADE`,
+  `ALTER TABLE favorites  DROP CONSTRAINT IF EXISTS favorites_car_id_fkey`,
+  `ALTER TABLE favorites  ADD  CONSTRAINT favorites_car_id_fkey  FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE  ON UPDATE CASCADE`,
+  `ALTER TABLE reviews    DROP CONSTRAINT IF EXISTS reviews_car_id_fkey`,
+  `ALTER TABLE reviews    ADD  CONSTRAINT reviews_car_id_fkey    FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE  ON UPDATE CASCADE`,
+  `ALTER TABLE car_photos DROP CONSTRAINT IF EXISTS car_photos_car_id_fkey`,
+  `ALTER TABLE car_photos ADD  CONSTRAINT car_photos_car_id_fkey FOREIGN KEY (car_id) REFERENCES cars(id) ON DELETE CASCADE  ON UPDATE CASCADE`
+];
+
+// confupdtype = 'c' означает ON UPDATE CASCADE — значит миграция уже применена.
+// Без advisory-локов (они утекают через пул-пулер Neon). При гонке один инстанс
+// применит DDL, остальные либо упадут с короткой ошибкой (lock_timeout), либо
+// увидят уже применённое состояние и выйдут. Ошибки не фатальны для init().
+export async function migrateForeignKeys() {
+  const done = await one(`SELECT confupdtype FROM pg_constraint WHERE conname = 'bookings_car_id_fkey'`);
+  if (done && done.confupdtype === 'c') return; // уже применено
+
+  // Только pool.query() (HTTP, без сессий). Ставим короткий lock_timeout
+  // на сессию-уровне нельзя — поэтому каждый ALTER оборачиваем и не валим init.
+  for (const stmt of FK_CASCADE_STATEMENTS) {
+    await pool.query(stmt);
+  }
+  console.log('[db] FK ON UPDATE CASCADE applied');
+}
+
 export async function ensureSchema() {
+  // ВНИМАНИЕ: только pool.query() (HTTP). pool.connect()/сессии в драйвере
+  // @neondatabase/serverless требуют WebSocket и зависают в этом рантайме.
   console.log('[db] ensureSchema: running', SCHEMA_STATEMENTS.length, 'statements');
   for (let i = 0; i < SCHEMA_STATEMENTS.length; i++) {
-    console.log(`[db] ensureSchema: running stmt ${i}...`);
     await pool.query(SCHEMA_STATEMENTS[i]);
-    console.log(`[db] ensureSchema: stmt ${i} done`);
   }
 }
 
 export async function seedIfEmpty() {
-  for (const i of FLEET) {
+  for (let idx = 0; idx < FLEET.length; idx++) {
+    const i = FLEET[idx];
     await pool.query(
       `INSERT INTO cars (
          id, name, brand, year, body, fuel, engine, power_hp, drive,
          price_per_day, badge, image_url, status,
-         deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30, color, description
+         deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30, color, description, sort_order
        )
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18,$19,$20)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18,$19,$20,$21)
        ON CONFLICT (id) DO UPDATE SET
          name            = EXCLUDED.name,
          brand           = EXCLUDED.brand,
@@ -207,7 +266,8 @@ export async function seedIfEmpty() {
          price_6_12      = EXCLUDED.price_6_12,
          price_30        = EXCLUDED.price_30,
          color           = EXCLUDED.color,
-         description     = EXCLUDED.description`,
+         description     = EXCLUDED.description,
+         sort_order      = COALESCE(NULLIF(cars.sort_order, 0), EXCLUDED.sort_order)`,
       [
         i.id,
         i.name,
@@ -229,6 +289,7 @@ export async function seedIfEmpty() {
         i.price_30 ?? null,
         i.color || null,
         i.description || null,
+        (idx + 1) * 10,
       ]
     );
   }
@@ -264,4 +325,44 @@ export async function seedFaq() {
     await pool.query('INSERT INTO faq (question, answer, sort_order) VALUES ($1, $2, $3)', [qText, aText, order]);
   }
   console.log('[db] seeded faq items');
+}
+
+// Дефолтные настройки приложения (кэшбэк %)
+export async function seedSettings() {
+  await pool.query(
+    `INSERT INTO app_settings (key, value) VALUES ('cashback_percent', '5')
+     ON CONFLICT (key) DO NOTHING`
+  );
+}
+
+// Получить числовой % кэшбэка из настроек (по умолчанию 5)
+export async function getCashbackPercent() {
+  const row = await one(`SELECT value FROM app_settings WHERE key = 'cashback_percent'`);
+  const n = parseFloat(row?.value);
+  return Number.isFinite(n) ? n : 5;
+}
+
+// Начислить кэшбэк за завершённые брони, по которым он ещё не начислялся.
+// Закрывает кейс «в кабинете есть завершённая бронь, но бонусы не начислены».
+export async function backfillCashback() {
+  const pct = await getCashbackPercent();
+  const missing = await many(
+    `SELECT b.id, b.user_id, b.total
+     FROM bookings b
+     WHERE b.status = 'completed'
+       AND NOT EXISTS (
+         SELECT 1 FROM user_points p
+         WHERE p.user_id = b.user_id AND p.reason LIKE '%аренды #' || b.id
+       )`
+  );
+  for (const b of missing) {
+    const cashback = Math.round(Number(b.total) * pct / 100);
+    if (cashback <= 0) continue;
+    await pool.query(`UPDATE users SET points = COALESCE(points,0) + $1 WHERE id = $2`, [cashback, b.user_id]);
+    await pool.query(
+      `INSERT INTO user_points (user_id, amount, reason) VALUES ($1, $2, $3)`,
+      [b.user_id, cashback, `Кэшбэк ${pct}% за завершение аренды #${b.id}`]
+    );
+  }
+  if (missing.length) console.log(`[db] backfilled cashback for ${missing.length} bookings`);
 }

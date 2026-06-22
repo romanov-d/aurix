@@ -9,15 +9,27 @@ router.get('/', (req, res) => {
   res.json({ user: req.user });
 });
 
+const DOC_FIELDS = ['passport_url', 'license_url', 'passport_page_url', 'registration_url'];
+
 router.patch('/', async (req, res, next) => {
   try {
-    const { name, phone, email, avatar_url, passport_url, license_url } = req.body;
+    const { name, phone, email, avatar_url, dob,
+            passport_url, license_url, passport_page_url, registration_url } = req.body;
+
+    // Документы можно редактировать только до прохождения верификации
+    const docChange = { passport_url, license_url, passport_page_url, registration_url };
+    const editingDocs = DOC_FIELDS.some(f => docChange[f] !== undefined);
+    if (editingDocs && req.user.is_verified) {
+      return res.status(403).json({ error: 'Документы уже проверены и заблокированы. Для изменений обратитесь к менеджеру.' });
+    }
+
     const fields = [];
     const values = [];
     let idx = 1;
 
     if (name !== undefined) { fields.push(`name = $${idx++}`); values.push(name); }
     if (phone !== undefined) { fields.push(`phone = $${idx++}`); values.push(phone); }
+    if (dob !== undefined) { fields.push(`dob = $${idx++}`); values.push(dob || null); }
     if (email !== undefined) {
       const clean = String(email).trim().toLowerCase();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
@@ -28,6 +40,8 @@ router.patch('/', async (req, res, next) => {
     if (avatar_url !== undefined) { fields.push(`avatar_url = $${idx++}`); values.push(avatar_url); }
     if (passport_url !== undefined) { fields.push(`passport_url = $${idx++}`); values.push(passport_url); }
     if (license_url !== undefined) { fields.push(`license_url = $${idx++}`); values.push(license_url); }
+    if (passport_page_url !== undefined) { fields.push(`passport_page_url = $${idx++}`); values.push(passport_page_url); }
+    if (registration_url !== undefined) { fields.push(`registration_url = $${idx++}`); values.push(registration_url); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'Нет полей для обновления' });
@@ -35,7 +49,7 @@ router.patch('/', async (req, res, next) => {
 
     values.push(req.user.id);
     const { rows } = await q(
-      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, is_verified, passport_url, license_url, created_at`,
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, is_verified, dob, passport_url, license_url, passport_page_url, registration_url, created_at`,
       values
     );
 

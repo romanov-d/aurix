@@ -103,6 +103,11 @@ export default function Car() {
       nav('/login');
       return;
     }
+    // Бронь доступна только верифицированным клиентам
+    if (!user.is_verified && user.role !== 'admin') {
+      setError('Чтобы забронировать, сначала пройдите верификацию: загрузите документы в личном кабинете.');
+      return;
+    }
     setError('');
     setIsSubmitting(true);
     
@@ -337,12 +342,19 @@ export default function Car() {
             )}
           </div>
 
+          {user && !user.is_verified && user.role !== 'admin' && (
+            <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: '1px solid rgba(251,113,133,0.3)', borderRadius: 8, fontSize: 13, color: '#fda4af', lineHeight: 1.6 }}>
+              <i className="ph-fill ph-warning-circle" style={{ marginRight: 6 }} />
+              Бронирование доступно после верификации. <Link to="/account" style={{ color: 'var(--gold)', textDecoration: 'underline' }}>Загрузить документы →</Link>
+            </div>
+          )}
+
           {error && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 14, textAlign: 'center' }}>{error}</div>}
 
           <button onClick={handleBook} disabled={isSubmitting || isNegotiated} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14, opacity: isNegotiated ? 0.45 : 1 }}>
             {isSubmitting ? 'Оформление...' : isNegotiated ? 'Уточните цену по телефону' : (user ? 'Забронировать' : 'Войти для бронирования')}
           </button>
-          <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 14, letterSpacing: '.06em' }}>Мгновенное подтверждение · Оплата частями</p>
+          <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 14, letterSpacing: '.06em' }}>Подтверждение менеджером · Оплата по ссылке или наличными</p>
 
           <div className="spec-grid">
             <div className="s"><div className="lbl">Двигатель</div><div className="v">{car.engine} · {car.fuel?.toLowerCase()}</div></div>

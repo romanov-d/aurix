@@ -49,7 +49,8 @@ router.get('/', async (req, res, next) => {
 
     if (!DB_AVAILABLE) {
       let rows = FLEET.map(fleetToRow);
-      if (qs.body) rows = rows.filter(c => c.body === qs.body);
+      // Кузов сопоставляем по вхождению: «Купе/Кабриолет» попадает и в «Купе», и в «Кабриолет»
+      if (qs.body) rows = rows.filter(c => (c.body || '').toLowerCase().includes(qs.body.toLowerCase()));
       if (qs.brand) rows = rows.filter(c => c.brand.toLowerCase() === qs.brand.toLowerCase());
       if (qs.price_min != null) rows = rows.filter(c => c.price_per_day >= qs.price_min);
       if (qs.price_max != null) rows = rows.filter(c => c.price_per_day <= qs.price_max);
@@ -65,7 +66,7 @@ router.get('/', async (req, res, next) => {
     const params = [];
     const add = (sql, value) => { params.push(value); where.push(sql.replace('$?', `$${params.length}`)); };
 
-    if (qs.body) add('body = $?', qs.body);
+    if (qs.body) add('body ILIKE $?', `%${qs.body}%`);
     if (qs.brand) add('LOWER(brand) = LOWER($?)', qs.brand);
     if (qs.price_min != null) add('price_per_day >= $?', qs.price_min);
     if (qs.price_max != null) add('price_per_day <= $?', qs.price_max);
@@ -79,7 +80,7 @@ router.get('/', async (req, res, next) => {
       )`);
     }
 
-    let order = 'created_at DESC, id';
+    let order = 'sort_order ASC, created_at DESC, id';
     if (qs.sort === 'price-asc') order = 'price_per_day ASC';
     else if (qs.sort === 'price-desc') order = 'price_per_day DESC';
     else if (qs.sort === 'power') order = 'power_hp DESC NULLS LAST';

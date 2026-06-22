@@ -49,7 +49,7 @@ export default function Login() {
       <div className="auth-glass">
         <div className="auth-top">
           <Link to="/" className="auth-logo">
-            <img src="/logo.svg" alt="AURIX" />
+            <img src="/logo.svg" alt="AURIX MOTORS" />
           </Link>
           <Link to="/" className="auth-back">
             <i className="ph ph-arrow-left" /> Назад
