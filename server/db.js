@@ -1,6 +1,8 @@
-import { Pool } from '@neondatabase/serverless';
+import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { FLEET } from '../src/data/fleet.js';
+
+const { Pool } = pg;
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -19,8 +21,11 @@ if (connectionString) {
   } catch(e){}
 }
 
-// Use Pool instead of HTTP neon() to avoid timeout issues
-const pool = connectionString ? new Pool({ connectionString }) : null;
+// Стандартный драйвер pg (TCP) — работает и на VPS, и на Vercel.
+// Neon требует SSL (sslmode=require в строке); rejectUnauthorized:false на случай цепочки сертификатов.
+const pool = connectionString
+  ? new Pool({ connectionString, ssl: { rejectUnauthorized: false }, max: 10, connectionTimeoutMillis: 10000 })
+  : null;
 
 function assertSql() {
   if (!pool) throw new Error('Database is not configured: set DATABASE_URL');
