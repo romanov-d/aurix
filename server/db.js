@@ -43,6 +43,7 @@ export function init() {
       await seedFaq();
       console.log('[db] init: seedFaq done, starting seedSettings...');
       await seedSettings();
+      await seedBlog();
       console.log('[db] init: done (FK/backfill — в фоне)');
       // FK-каскад и бэкфилл — в фоне, НЕ в await-цепочке init. FK DDL под
       // конкуренцией может ждать блокировку и упереться в таймаут функции —
@@ -195,6 +196,18 @@ const SCHEMA_STATEMENTS = [
   `CREATE TABLE IF NOT EXISTS app_settings (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
+  )`,
+  // ── Блог ──
+  `CREATE TABLE IF NOT EXISTS blog_posts (
+    id         BIGSERIAL PRIMARY KEY,
+    title      TEXT NOT NULL,
+    excerpt    TEXT,
+    content    TEXT,
+    category   TEXT,
+    image_url  TEXT,
+    read_time  TEXT,
+    published  BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`
 ];
 
@@ -333,6 +346,40 @@ export async function seedSettings() {
     `INSERT INTO app_settings (key, value) VALUES ('cashback_percent', '5')
      ON CONFLICT (key) DO NOTHING`
   );
+}
+
+// Стартовые статьи блога (только если блог пуст)
+export async function seedBlog() {
+  const result = await pool.query('SELECT COUNT(*) AS count FROM blog_posts');
+  if (parseInt(result.rows[0].count) > 0) return;
+
+  const posts = [
+    ['Топ-5 суперкаров для идеального летнего сезона в Москве',
+     'Рассказываем о лучших кабриолетах и спортивных купе из нашего автопарка, которые раскроют всю красоту летних дорог столицы.',
+     'Лето в Москве — идеальное время, чтобы пересесть за руль суперкара. Мы собрали пять моделей из автопарка AURIX MOTORS, которые превратят каждую поездку в событие.\n\nОткрытый верх, мощный мотор и безупречный стиль — всё, что нужно для незабываемого сезона. Бронируйте заранее: летом спрос на кабриолеты максимальный.',
+     'Обзоры', 'https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1200&q=80', '5 мин'],
+    ['Как правильно ухаживать за матовым кузовом автомобиля',
+     'Особенности детейлинга, правила мойки и защиты матовых плёнок и лакокрасочного покрытия эксклюзивных моделей.',
+     'Матовый кузов требует особого подхода. Никакой полировки и абразивных средств — только специализированные шампуни с нейтральным pH.\n\nМойка — вручную, мягкой микрофиброй, без круговых движений. Регулярная защита плёнки сохранит глубину матового эффекта на годы.',
+     'Лайфхаки', 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80', '4 мин'],
+    ['Культура суперкаров: почему аренда меняет представление о владении',
+     'Анализируем экономику и эмоции: почему шеринг и долгосрочная аренда спорткаров становятся популярнее классической покупки.',
+     'Владение суперкаром — это не только удовольствие, но и расходы: страховка, обслуживание, потеря в цене. Аренда снимает эти заботы.\n\nВы платите только за время за рулём и можете менять модель под настроение. Именно поэтому всё больше ценителей выбирают аренду вместо покупки.',
+     'Тренды', 'https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?auto=format&fit=crop&w=1200&q=80', '7 мин'],
+    ['Особенности управления мощным заднеприводным спорткаром',
+     'Базовые советы по безопасности, работа с системами стабилизации и как получить максимум удовольствия без риска.',
+     'Задний привод и сотни лошадиных сил требуют уважения. Плавный газ, прогретые шины и включённые системы стабилизации — основа безопасной езды.\n\nНачинайте спокойно, чувствуйте автомобиль и не выключайте электронных помощников на дороге общего пользования.',
+     'Школа вождения', 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=1200&q=80', '6 мин'],
+  ];
+
+  for (const [title, excerpt, content, category, image, readTime] of posts) {
+    await pool.query(
+      `INSERT INTO blog_posts (title, excerpt, content, category, image_url, read_time)
+       VALUES ($1,$2,$3,$4,$5,$6)`,
+      [title, excerpt, content, category, image, readTime]
+    );
+  }
+  console.log('[db] seeded blog posts');
 }
 
 // Получить числовой % кэшбэка из настроек (по умолчанию 5)

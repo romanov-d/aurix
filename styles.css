@@ -549,6 +549,33 @@ section{padding:96px 0}
 .card-price .val{font-family:'Inter',sans-serif;font-size:20px;font-weight:700;color:var(--gold);white-space:nowrap}
 .card-price .val small{font-size:11px;color:var(--muted);font-family:'Inter';margin-left:4px}
 
+/* ==== БЛОГ ==== */
+.blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:28px}
+.blog-card{display:flex;flex-direction:column;background:#101010;border:1px solid rgba(255,255,255,.05);border-radius:14px;overflow:hidden;transition:transform .3s ease,border-color .3s ease;color:inherit}
+.blog-card:hover{transform:translateY(-5px);border-color:var(--gold)}
+.blog-card-img{position:relative;height:220px;overflow:hidden;background:#1b1b1b}
+.blog-card-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s ease}
+.blog-card:hover .blog-card-img img{transform:scale(1.05)}
+.blog-cat{position:absolute;top:14px;left:14px;background:var(--gold);color:#161616;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:5px 11px;border-radius:7px}
+.blog-card-body{padding:24px;display:flex;flex-direction:column;flex-grow:1}
+.blog-card-meta{display:flex;justify-content:space-between;font-size:12px;color:#888;margin-bottom:12px}
+.blog-card-body h3{font-size:18px;line-height:1.4;margin-bottom:12px;color:var(--head);font-weight:600}
+.blog-card-body p{color:#aaa;font-size:14px;line-height:1.6;margin-bottom:20px;flex-grow:1}
+.blog-more{color:var(--gold);font-weight:600;font-size:14px;display:inline-flex;align-items:center;gap:6px;margin-top:auto}
+.blog-card:hover .blog-more i{transform:translateX(3px);transition:transform .2s}
+/* Страница поста */
+.blog-post-meta{display:flex;align-items:center;gap:10px;margin-top:14px;font-size:13px;color:#9a9a9a;flex-wrap:wrap}
+.blog-cat-inline{background:var(--gold);color:#161616;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:4px 10px;border-radius:6px}
+.blog-post-cover{border-radius:14px;overflow:hidden;margin:28px 0;aspect-ratio:16/9;background:#1b1b1b}
+.blog-post-cover img{width:100%;height:100%;object-fit:cover}
+.blog-post-lead{font-size:17px;line-height:1.7;color:var(--head);margin-bottom:24px;font-weight:500}
+.blog-post-content p{font-size:15px;line-height:1.9;color:#cfcfcf;margin-bottom:18px}
+
+/* ==== Заголовки без курсива (em) ==== */
+h1 em, h2 em, h3 em, h4 em { font-style: normal !important; }
+/* Клубная карта — капс без широкого межбуквенного отступа */
+.club-card .ctier, .club-card .cname .who, .club-card .cname .nm { letter-spacing: normal; }
+
 /* ==== Плашка верификации в ЛК ==== */
 .acc-verify-banner{display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:12px;margin-bottom:18px}
 .acc-verify-banner > i{font-size:24px;flex-shrink:0}

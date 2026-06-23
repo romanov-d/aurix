@@ -107,8 +107,8 @@ export default function Club() {
             <div>
               <div className={`club-card ${currentTier.toLowerCase()}`}>
                 <div className="ctop">
-                  <div className="logo-mark">A</div>
-                  <div className="ctier" style={{ textTransform: 'uppercase', letterSpacing: '0.1em' }}>{currentTier}</div>
+                  <img src="/letter.svg" className="logo-mark-img" alt="AURIX MOTORS" />
+                  <div className="ctier" style={{ textTransform: 'uppercase' }}>{currentTier}</div>
                 </div>
                 <div className="cnum">
                   {user 
@@ -129,9 +129,9 @@ export default function Club() {
               </div>
             </div>
             <div>
-              <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Привилегии</span></div>
+              <div className="row-eyebrow"><span className="eyebrow">Привилегии</span></div>
               <h2 className="serif" style={{ fontSize: 38, letterSpacing: '.04em', marginTop: 14 }}>
-                Закрытый клуб <em className="gold" style={{ fontStyle: 'italic' }}>AURIX MOTORS</em>
+                Закрытый клуб <em className="gold">AURIX MOTORS</em>
               </h2>
               <p className="muted" style={{ marginTop: 18, fontSize: 14, lineHeight: 1.85, color: '#bdbdbd' }}>
                 Клубная карта — это не просто скидка, а статус. Разместите депозит и получите персональную скидку от 5 до 40% на любую аренду. Карта действует без ограничений по числу поездок.
@@ -166,7 +166,7 @@ export default function Club() {
 
           <div className="section-head center">
             <div className="row-eyebrow" style={{ justifyContent: 'center' }}>
-              <span className="bar"></span><span className="eyebrow">Уровни членства</span><span className="bar"></span>
+              <span className="eyebrow">Уровни членства</span>
             </div>
             <h2>Выберите свой <em>статус</em></h2>
             {user && (
@@ -189,11 +189,6 @@ export default function Club() {
                   {isActive && (
                     <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: '#000', background: 'var(--gold)', padding: '4px 10px', marginBottom: 12, display: 'inline-block', fontWeight: 700 }}>
                       Ваш статус
-                    </div>
-                  )}
-                  {!isActive && tier.popular && (
-                    <div style={{ fontSize: 10, letterSpacing: '.2em', textTransform: 'uppercase', color: '#000', background: 'var(--gold)', padding: '4px 10px', marginBottom: 12, display: 'inline-block', fontWeight: 700 }}>
-                      Популярно
                     </div>
                   )}
                   <h3 style={{ color: tier.label === 'Black' ? '#fff' : undefined }}>{tier.label}</h3>
@@ -221,20 +216,18 @@ export default function Club() {
           <div className="divider-h"></div>
 
           {/* Gift certificates */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1, background: 'var(--line)', border: '1px solid var(--line)' }}>
-            <div style={{ background: '#101010', padding: '40px 40px', gridColumn: '1 / -1' }}>
-              <div className="row-eyebrow" style={{ marginBottom: 16 }}>
-                <span className="bar"></span><span className="eyebrow">Подарочные сертификаты</span>
-              </div>
-              <h2 className="serif" style={{ fontSize: 30, marginBottom: 16 }}>
-                Подарите <em>впечатления</em>
-              </h2>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.85, maxWidth: 600 }}>
-                Подарочный сертификат на аренду любого автомобиля из нашего парка. Стоимость сертификата равна стоимости <strong>одних суток аренды</strong> выбранного автомобиля. Срок действия сертификата — <strong>1 год</strong> с даты оформления.
-              </p>
-              <div style={{ marginTop: 28 }}>
-                <Link to="/contacts" className="btn">Оформить сертификат</Link>
-              </div>
+          <div style={{ background: '#101010', borderRadius: 16, padding: '40px' }}>
+            <div className="row-eyebrow" style={{ marginBottom: 16 }}>
+              <span className="eyebrow">Подарочные сертификаты</span>
+            </div>
+            <h2 className="serif" style={{ fontSize: 30, marginBottom: 16 }}>
+              Подарите <em>впечатления</em>
+            </h2>
+            <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.85, maxWidth: 600 }}>
+              Подарочный сертификат на аренду любого автомобиля из нашего парка. Стоимость сертификата равна стоимости <strong>одних суток аренды</strong> выбранного автомобиля. Срок действия сертификата — <strong>1 год</strong> с даты оформления.
+            </p>
+            <div style={{ marginTop: 28 }}>
+              <Link to="/contacts" className="btn">Оформить сертификат</Link>
             </div>
           </div>
 

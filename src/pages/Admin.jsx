@@ -31,6 +31,7 @@ export default function Admin() {
   const [cars, setCars] = useState([]);
   const [users, setUsers] = useState([]);
   const [faqs, setFaqs] = useState([]);
+  const [blogPosts, setBlogPosts] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [client, setClient] = useState(null);      // { user, bookings, points }
@@ -87,15 +88,17 @@ export default function Admin() {
       api('/admin/users'),
       api('/faq'),
       api('/admin/dashboard'),
-      api('/admin/settings').catch(() => ({ cashback_percent: '5' }))
+      api('/admin/settings').catch(() => ({ cashback_percent: '5' })),
+      api('/blog?all=1').catch(() => [])
     ])
-      .then(([b, c, u, f, d, s]) => {
+      .then(([b, c, u, f, d, s, bp]) => {
         setBookings(b);
         setCars(c);
         setUsers(u);
         setFaqs(f);
         setDashboard(d);
         if (s) setSettings({ cashback_percent: s.cashback_percent ?? '5' });
+        setBlogPosts(Array.isArray(bp) ? bp : []);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -105,6 +108,66 @@ export default function Admin() {
   const [faqForm, setFaqForm] = useState({ id: '', question: '', answer: '', sort_order: 10 });
   const [faqError, setFaqError] = useState('');
   const [faqSaving, setFaqSaving] = useState(false);
+
+  // ── Блог ──
+  const emptyBlog = { id: '', title: '', category: '', excerpt: '', content: '', image_url: '', read_time: '', published: true };
+  const [showBlogModal, setShowBlogModal] = useState(false);
+  const [blogForm, setBlogForm] = useState(emptyBlog);
+  const [blogError, setBlogError] = useState('');
+  const [blogSaving, setBlogSaving] = useState(false);
+
+  const openBlogModal = (post = null) => {
+    setBlogForm(post ? {
+      id: post.id, title: post.title || '', category: post.category || '', excerpt: post.excerpt || '',
+      content: post.content || '', image_url: post.image_url || '', read_time: post.read_time || '',
+      published: post.published ?? true,
+    } : emptyBlog);
+    setBlogError('');
+    setShowBlogModal(true);
+  };
+
+  const handleBlogImage = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой (макс 2 МБ).'); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => setBlogForm(f => ({ ...f, image_url: reader.result }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSaveBlog = async (e) => {
+    e.preventDefault();
+    setBlogError(''); setBlogSaving(true);
+    try {
+      const payload = {
+        title: blogForm.title, category: blogForm.category || null, excerpt: blogForm.excerpt || null,
+        content: blogForm.content || null, image_url: blogForm.image_url || null,
+        read_time: blogForm.read_time || null, published: blogForm.published,
+      };
+      if (blogForm.id) {
+        const updated = await api(`/blog/${blogForm.id}`, { method: 'PUT', body: payload });
+        setBlogPosts(ps => ps.map(p => p.id === blogForm.id ? updated : p));
+      } else {
+        const created = await api('/blog', { method: 'POST', body: payload });
+        setBlogPosts(ps => [created, ...ps]);
+      }
+      setShowBlogModal(false);
+    } catch (err) {
+      setBlogError(err.message || 'Ошибка при сохранении статьи');
+    } finally {
+      setBlogSaving(false);
+    }
+  };
+
+  const handleDeleteBlog = async (id) => {
+    if (!confirm('Удалить статью?')) return;
+    try {
+      await api(`/blog/${id}`, { method: 'DELETE' });
+      setBlogPosts(ps => ps.filter(p => p.id !== id));
+    } catch (err) {
+      alert(err.message || 'Ошибка при удалении');
+    }
+  };
 
   const handleSaveFaq = async (e) => {
     e.preventDefault();
@@ -465,6 +528,7 @@ export default function Admin() {
             <a href="#users" onClick={(e) => { e.preventDefault(); setActiveTab('users'); }} className={activeTab === 'users' ? 'active' : ''}><i className="ph-fill ph-users" /> Пользователи</a>
             <a href="#tariffs" onClick={(e) => { e.preventDefault(); setActiveTab('tariffs'); }} className={activeTab === 'tariffs' ? 'active' : ''}><i className="ph-fill ph-table" /> Тарифы</a>
             <a href="#faq" onClick={(e) => { e.preventDefault(); setActiveTab('faq'); }} className={activeTab === 'faq' ? 'active' : ''}><i className="ph-fill ph-question" /> FAQ</a>
+            <a href="#blog" onClick={(e) => { e.preventDefault(); setActiveTab('blog'); }} className={activeTab === 'blog' ? 'active' : ''}><i className="ph-fill ph-newspaper" /> Блог</a>
             <a href="#settings" onClick={(e) => { e.preventDefault(); setActiveTab('settings'); }} className={activeTab === 'settings' ? 'active' : ''}><i className="ph-fill ph-gear" /> Настройки</a>
           </nav>
         </aside>
@@ -1033,8 +1097,106 @@ export default function Admin() {
               </table>
             </div>
           )}
+
+          {activeTab === 'blog' && (
+            <div className="acc-block">
+              <div className="acc-block-head">
+                <h3>Блог ({blogPosts.length})</h3>
+                <button className="btn btn-sm" onClick={() => openBlogModal()}><i className="ph ph-plus" /> Добавить статью</button>
+              </div>
+              <table className="acc-table" style={{ width: '100%' }}>
+                <thead>
+                  <tr>
+                    <th style={{ width: 70 }}>Фото</th>
+                    <th>Заголовок</th>
+                    <th style={{ width: 130 }}>Категория</th>
+                    <th style={{ width: 110 }}>Статус</th>
+                    <th style={{ width: 130, textAlign: 'right' }}>Действия</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blogPosts.map(p => (
+                    <tr key={p.id}>
+                      <td>
+                        {p.image_url
+                          ? <img src={p.image_url} alt="" style={{ width: 54, height: 40, objectFit: 'cover', borderRadius: 6 }} />
+                          : <div style={{ width: 54, height: 40, borderRadius: 6, background: 'var(--bg-2)' }} />}
+                      </td>
+                      <td>
+                        <Link to={`/blog/${p.id}`} style={{ color: 'var(--head)', textDecoration: 'none', fontWeight: 600 }}>{p.title}</Link>
+                        <div style={{ fontSize: 12, color: '#666' }}>{formatDate(p.created_at)}</div>
+                      </td>
+                      <td><span style={{ fontSize: 13, color: '#bdbdbd' }}>{p.category || '—'}</span></td>
+                      <td><span className={`tag ${p.published ? 'done' : 'cancel'}`}>{p.published ? 'Опубл.' : 'Черновик'}</span></td>
+                      <td style={{ textAlign: 'right' }}>
+                        <div style={{ display: 'inline-flex', gap: 8 }}>
+                          <button className="btn btn-sm" onClick={() => openBlogModal(p)}><i className="ph ph-pencil" /></button>
+                          <button className="btn btn-sm btn-ghost" onClick={() => handleDeleteBlog(p.id)}><i className="ph ph-trash" /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {blogPosts.length === 0 && (
+                    <tr><td colSpan="5" style={{ textAlign: 'center', padding: '40px 0', color: '#888' }}>Статей пока нет. Добавьте первую.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </main>
       </div>
+
+      {showBlogModal && (
+        <div className="modal-overlay">
+          <div className="modal-card" style={{ maxWidth: 640, maxHeight: '88vh', overflowY: 'auto' }}>
+            <button className="modal-close" onClick={() => setShowBlogModal(false)}><i className="ph ph-x" /></button>
+            <h3>{blogForm.id ? 'Редактировать статью' : 'Новая статья'}</h3>
+            {blogError && <div className="auth-error" style={{ marginBottom: 16 }}>{blogError}</div>}
+            <form onSubmit={handleSaveBlog} className="modal-form">
+              <div className="field">
+                <label>Заголовок</label>
+                <input value={blogForm.title} onChange={e => setBlogForm({ ...blogForm, title: e.target.value })} required />
+              </div>
+              <div className="modal-grid-2">
+                <div className="field">
+                  <label>Категория</label>
+                  <input value={blogForm.category} onChange={e => setBlogForm({ ...blogForm, category: e.target.value })} placeholder="Обзоры, Тренды…" />
+                </div>
+                <div className="field">
+                  <label>Время чтения</label>
+                  <input value={blogForm.read_time} onChange={e => setBlogForm({ ...blogForm, read_time: e.target.value })} placeholder="5 мин" />
+                </div>
+              </div>
+              <div className="field">
+                <label>Краткое описание (для карточки)</label>
+                <textarea rows={2} value={blogForm.excerpt} onChange={e => setBlogForm({ ...blogForm, excerpt: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Текст статьи (абзацы — через пустую строку)</label>
+                <textarea rows={8} value={blogForm.content} onChange={e => setBlogForm({ ...blogForm, content: e.target.value })} />
+              </div>
+              <div className="field">
+                <label>Изображение</label>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <input style={{ flex: 1, minWidth: 200 }} value={blogForm.image_url} onChange={e => setBlogForm({ ...blogForm, image_url: e.target.value })} placeholder="https://… или загрузите файл" />
+                  <label className="btn btn-sm btn-ghost" style={{ cursor: 'pointer' }}>
+                    <i className="ph ph-upload-simple" /> Файл
+                    <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleBlogImage} />
+                  </label>
+                </div>
+                {blogForm.image_url && <img src={blogForm.image_url} alt="" style={{ marginTop: 10, width: 160, height: 100, objectFit: 'cover', borderRadius: 8 }} />}
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#bdbdbd', margin: '4px 0' }}>
+                <input type="checkbox" checked={blogForm.published} onChange={e => setBlogForm({ ...blogForm, published: e.target.checked })} style={{ accentColor: 'var(--gold)' }} /> Опубликовать (видно на сайте)
+              </label>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 12 }}>
+                <button type="button" className="btn btn-ghost" onClick={() => setShowBlogModal(false)} disabled={blogSaving}>Отмена</button>
+                <button type="submit" className="btn btn-filled" disabled={blogSaving}>{blogSaving ? 'Сохранение…' : 'Сохранить'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showAddModal && (
         <div className="modal-overlay">
