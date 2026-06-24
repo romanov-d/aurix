@@ -43,6 +43,11 @@ export default function Admin() {
   const [settings, setSettings] = useState({ cashback_percent: '5' });
   // Карточка брони (изменить)
   const [bookingCard, setBookingCard] = useState(null);
+  // Фильтры броней
+  const [bookingStageFilter, setBookingStageFilter] = useState('all');
+  const [bookingQuery, setBookingQuery] = useState('');
+  // Карточка-«проваливание» в машину (история, характеристики)
+  const [carView, setCarView] = useState(null);
   // Модалки ручного добавления
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddBooking, setShowAddBooking] = useState(false);
@@ -743,11 +748,41 @@ export default function Admin() {
             );
           })()}
 
-          {activeTab === 'bookings' && (
+          {activeTab === 'bookings' && (() => {
+            const q = bookingQuery.trim().toLowerCase();
+            const shownBookings = bookings.filter(b => {
+              if (bookingStageFilter !== 'all') {
+                if (bookingStageFilter === 'active' && b.status !== 'active') return false;
+                if (bookingStageFilter === 'pending' && b.status !== 'pending') return false;
+                if (bookingStageFilter === 'completed' && b.status !== 'completed') return false;
+                if (bookingStageFilter === 'cancelled' && b.status !== 'cancelled') return false;
+              }
+              if (q) {
+                const hay = [`#${b.id}`, b.car?.name, b.user?.name, b.user?.email, b.user?.phone, b.manager].join(' ').toLowerCase();
+                if (!hay.includes(q)) return false;
+              }
+              return true;
+            });
+            return (
             <div className="acc-block">
-              <div className="acc-block-head">
-                <h3>Все бронирования ({bookings.length})</h3>
-                <button className="btn btn-sm" onClick={() => setShowAddBooking(true)}><i className="ph ph-plus" /> Добавить бронь</button>
+              <div className="acc-block-head" style={{ flexWrap: 'wrap', gap: 12 }}>
+                <h3>Бронирования ({shownBookings.length})</h3>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <div style={{ position: 'relative' }}>
+                    <i className="ph ph-magnifying-glass" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
+                    <input value={bookingQuery} onChange={e => setBookingQuery(e.target.value)} placeholder="Поиск: клиент / авто / #ID"
+                      style={{ background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 12px 8px 32px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', width: 220 }} />
+                  </div>
+                  <select value={bookingStageFilter} onChange={e => setBookingStageFilter(e.target.value)}
+                    style={{ background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' }}>
+                    <option value="all">Все статусы</option>
+                    <option value="pending">Ожидают</option>
+                    <option value="active">В аренде</option>
+                    <option value="completed">Завершённые</option>
+                    <option value="cancelled">Отменённые</option>
+                  </select>
+                  <button className="btn btn-sm" onClick={() => setShowAddBooking(true)}><i className="ph ph-plus" /> Добавить</button>
+                </div>
               </div>
               <table className="acc-table" style={{ width: '100%' }}>
                 <thead>
@@ -761,11 +796,11 @@ export default function Admin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookings.map(b => (
+                  {shownBookings.map(b => (
                     <tr key={b.id}>
                       <td>
                         <b>#{b.id}</b>{b.source === 'manual' && <span className="tag" style={{ marginLeft: 6, fontSize: 10 }}>вручную</span>}<br/>
-                        <span style={{ fontSize: 13, color: '#888' }}>{b.car.name}</span>
+                        <button onClick={() => setCarView(cars.find(c => c.id === b.car.id) || b.car)} style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit', fontSize: 13, textDecoration: 'underline', textUnderlineOffset: 2 }} title="Карточка авто">{b.car.name}</button>
                       </td>
                       <td>
                         <button
@@ -806,10 +841,14 @@ export default function Admin() {
                       </td>
                     </tr>
                   ))}
+                  {shownBookings.length === 0 && (
+                    <tr><td colSpan="6" style={{ textAlign: 'center', padding: '36px 0', color: '#888' }}>Ничего не найдено</td></tr>
+                  )}
                 </tbody>
               </table>
             </div>
-          )}
+            );
+          })()}
 
           {activeTab === 'cars' && (
             <div className="acc-block">
@@ -832,7 +871,7 @@ export default function Admin() {
                     <>
                       <tr key={c.id} style={{ borderBottom: expandedCar === c.id ? '0' : undefined }}>
                         <td>
-                          <Link to={`/car/${c.id}`} style={{ color: '#fff', textDecoration: 'none' }}><b>{c.name}</b></Link><br/>
+                          <button onClick={() => setCarView(c)} style={{ background: 'none', border: 0, padding: 0, color: 'var(--head)', cursor: 'pointer', font: 'inherit', textAlign: 'left' }} title="Открыть карточку"><b>{c.name}</b></button><br/>
                           <span style={{ fontSize: 12, color: '#555' }}>{c.id}</span>
                         </td>
                         <td>
@@ -1468,6 +1507,96 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {carView && (() => {
+        const c = carView;
+        const lbl = { fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 };
+        const money = (v) => (v || v === 0) ? `${Number(v).toLocaleString('ru-RU')} ₽` : '—';
+        const carBookings = bookings.filter(b => b.car?.id === c.id);
+        const now = new Date();
+        const upcoming = carBookings.filter(b => b.status !== 'cancelled' && new Date(b.to_dt) >= now)
+          .sort((a, b) => new Date(a.from_dt) - new Date(b.from_dt));
+        const revenue = carBookings.filter(b => b.status === 'completed').reduce((s, b) => s + (b.total || 0), 0);
+        const specs = [
+          ['Год', c.year], ['Кузов', c.body], ['Топливо', c.fuel], ['Двигатель', c.engine],
+          ['Мощность', c.power_hp ? `${c.power_hp} л.с.` : '—'], ['Коробка', c.drive], ['Цвет', c.color || '—'],
+        ];
+        const prices = [
+          ['1–5 суток', money(c.price_per_day)], ['6–12 суток', money(c.price_6_12)], ['от 30 суток', money(c.price_30)],
+          ['Залог', money(c.deposit)], ['Пробег/сут', c.mileage_limit ? `${c.mileage_limit} км` : '—'],
+          ['Перекат', c.overmileage_rate ? `${c.overmileage_rate} ₽/км` : '—'], ['Фото/час', money(c.photo_rate)],
+        ];
+        return (
+        <div className="modal-overlay" onClick={() => setCarView(null)}>
+          <div className="modal-card" style={{ maxWidth: 720, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setCarView(null)}><i className="ph ph-x" /></button>
+            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 8 }}>
+              {c.image_url && <img src={c.image_url} alt="" style={{ width: 160, height: 100, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <h3 style={{ margin: '0 0 4px' }}>{c.name}</h3>
+                <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>ID: {c.id}</div>
+                <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>{CAR_STATUS_RU[c.status] || c.status}</span>
+                {c.badge && <span className="tag" style={{ marginLeft: 6, color: 'var(--gold)' }}>{c.badge}</span>}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0 18px' }}>
+              {cars.find(x => x.id === c.id) && <button className="btn btn-sm" onClick={() => { setCarView(null); openEditCarModal(cars.find(x => x.id === c.id)); }}><i className="ph ph-pencil-simple" /> Редактировать</button>}
+              <a className="btn btn-sm btn-ghost" href={`/car/${c.id}`} target="_blank" rel="noopener noreferrer">На сайте ↗</a>
+            </div>
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
+              <div style={{ flex: 1, minWidth: 130, background: 'var(--bg-2)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={lbl}>Выручка (завершённые)</div><div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 18 }}>{revenue.toLocaleString('ru-RU')} ₽</div>
+              </div>
+              <div style={{ flex: 1, minWidth: 130, background: 'var(--bg-2)', borderRadius: 10, padding: '12px 14px' }}>
+                <div style={lbl}>Всего броней</div><div style={{ fontWeight: 700, fontSize: 18 }}>{carBookings.length}</div>
+              </div>
+            </div>
+
+            <div style={{ ...lbl, marginBottom: 8 }}>Характеристики</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 18 }}>
+              {specs.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14 }}>{v || '—'}</div></div>)}
+            </div>
+
+            <div style={{ ...lbl, marginBottom: 8 }}>Тарифы</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 18 }}>
+              {prices.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14, color: 'var(--gold)' }}>{v}</div></div>)}
+            </div>
+
+            <div style={{ ...lbl, marginBottom: 8 }}>Ближайшая занятость ({upcoming.length})</div>
+            {upcoming.length ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
+                {upcoming.map(b => (
+                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, background: 'rgba(212,175,55,.07)', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+                    <span>{formatDate(b.from_dt)} — {formatDate(b.to_dt)}</span>
+                    <span style={{ color: '#bdbdbd' }}>{b.user?.name}</span>
+                    <span className={`tag ${statusTagClass(b.status)}`}>{stageRu(b.stage)}</span>
+                  </div>
+                ))}
+              </div>
+            ) : <p style={{ color: '#888', fontSize: 13, marginBottom: 18 }}>Свободна — будущих броней нет</p>}
+
+            <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({carBookings.length})</div>
+            {carBookings.length ? (
+              <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
+                <tbody>
+                  {carBookings.map(b => (
+                    <tr key={b.id}>
+                      <td>#{b.id}</td>
+                      <td><button onClick={() => { setCarView(null); openClient(b.user.id); }} style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>{b.user?.name}</button></td>
+                      <td>{formatDate(b.from_dt)} — {formatDate(b.to_dt)}</td>
+                      <td>{b.total?.toLocaleString()} ₽</td>
+                      <td><span className={`tag ${statusTagClass(b.status)}`}>{stageRu(b.stage)}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
+          </div>
+        </div>
+        );
+      })()}
 
       {showAddUser && (
         <AddUserModal onClose={() => setShowAddUser(false)} onCreated={(u) => { setUsers(us => [u, ...us]); setShowAddUser(false); }} />
