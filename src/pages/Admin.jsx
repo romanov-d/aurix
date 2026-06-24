@@ -512,6 +512,142 @@ export default function Admin() {
 
   const formatDate = (iso) => new Date(iso).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 
+  const lbl = { fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 };
+  const backBtn = (onClick, text) => (
+    <button className="btn btn-sm btn-ghost" onClick={onClick} style={{ marginBottom: 18 }}><i className="ph ph-arrow-left" /> {text}</button>
+  );
+
+  // ── Карточка авто как страница (с настоящим календарём) ──
+  function renderCarDetail() {
+    const c = carView;
+    const money = (v) => (v || v === 0) ? `${Number(v).toLocaleString('ru-RU')} ₽` : '—';
+    const carBookings = bookings.filter(b => b.car?.id === c.id);
+    const revenue = carBookings.filter(b => b.status === 'completed').reduce((s, b) => s + (b.total || 0), 0);
+    const fullCar = cars.find(x => x.id === c.id) || c;
+    const specs = [['Год', c.year], ['Кузов', c.body], ['Топливо', c.fuel], ['Двигатель', c.engine], ['Мощность', c.power_hp ? `${c.power_hp} л.с.` : '—'], ['Коробка', c.drive], ['Цвет', c.color || '—']];
+    const prices = [['1–5 суток', money(c.price_per_day)], ['6–12 суток', money(c.price_6_12)], ['от 30 суток', money(c.price_30)], ['Залог', money(c.deposit)], ['Пробег/сут', c.mileage_limit ? `${c.mileage_limit} км` : '—'], ['Перекат', c.overmileage_rate ? `${c.overmileage_rate} ₽/км` : '—'], ['Фото/час', money(c.photo_rate)]];
+    return (
+      <div>
+        {backBtn(() => setCarView(null), 'Назад в автопарк')}
+        <div className="acc-block" style={{ padding: 24 }}>
+          <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 14 }}>
+            {c.image_url && <img src={c.image_url} alt="" style={{ width: 200, height: 124, objectFit: 'cover', borderRadius: 12, flexShrink: 0 }} />}
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <h3 style={{ margin: '0 0 4px', fontSize: 24 }}>{c.name}</h3>
+              <div style={{ fontSize: 12, color: '#666', marginBottom: 10 }}>ID: {c.id}</div>
+              <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>{CAR_STATUS_RU[c.status] || c.status}</span>
+              {c.badge && <span className="tag" style={{ marginLeft: 6, color: 'var(--gold)' }}>{c.badge}</span>}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
+                <button className="btn btn-sm" onClick={() => openEditCarModal(fullCar)}><i className="ph ph-pencil-simple" /> Редактировать</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => toggleCarExpand(c.id)}><i className="ph ph-image" /> Фото / плашка</button>
+                <a className="btn btn-sm btn-ghost" href={`/car/${c.id}`} target="_blank" rel="noopener noreferrer">На сайте ↗</a>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ background: 'var(--bg-2)', borderRadius: 10, padding: '12px 16px', minWidth: 120 }}><div style={lbl}>Выручка</div><div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 18 }}>{revenue.toLocaleString('ru-RU')} ₽</div></div>
+              <div style={{ background: 'var(--bg-2)', borderRadius: 10, padding: '12px 16px', minWidth: 100 }}><div style={lbl}>Броней</div><div style={{ fontWeight: 700, fontSize: 18 }}>{carBookings.length}</div></div>
+            </div>
+          </div>
+
+          <div className="car-detail-grid" style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 24, alignItems: 'start' }}>
+            <div>
+              <div style={{ ...lbl, marginBottom: 8 }}>Календарь занятости</div>
+              <BookingCalendar bookings={carBookings} onPick={(b) => openBookingCard(b)} />
+              <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>Клик по занятой дате — откроется бронь.</div>
+            </div>
+            <div>
+              <div style={{ ...lbl, marginBottom: 8 }}>Характеристики</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 18 }}>
+                {specs.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14 }}>{v || '—'}</div></div>)}
+              </div>
+              <div style={{ ...lbl, marginBottom: 8 }}>Тарифы</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                {prices.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14, color: 'var(--gold)' }}>{v}</div></div>)}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ ...lbl, margin: '22px 0 8px' }}>История бронирований ({carBookings.length})</div>
+          {carBookings.length ? (
+            <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
+              <tbody>
+                {carBookings.map(b => (
+                  <tr key={b.id} style={{ cursor: 'pointer' }} onClick={() => openBookingCard(b)}>
+                    <td>#{b.id}</td>
+                    <td><button onClick={(e) => { e.stopPropagation(); openClient(b.user.id); }} style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>{b.user?.name}</button></td>
+                    <td>{formatDate(b.from_dt)} — {formatDate(b.to_dt)}</td>
+                    <td>{b.total?.toLocaleString()} ₽</td>
+                    <td><span className={`tag ${statusTagClass(b.status)}`}>{stageRu(b.stage)}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
+        </div>
+      </div>
+    );
+  }
+
+  // ── Карточка клиента как страница ──
+  function renderClientDetail() {
+    const u = client.user;
+    const inp = { width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '10px 12px', borderRadius: 8, fontSize: 14, fontFamily: 'inherit' };
+    const save = (patch) => saveClientCard(patch).catch(e => alert(e.message));
+    const docs = [['passport_url', 'Паспорт'], ['passport_page_url', 'Паспорт (1-я стр.)'], ['registration_url', 'Прописка'], ['license_url', 'Вод. удостоверение']];
+    return (
+      <div>
+        {backBtn(() => setClient(null), 'Назад к пользователям')}
+        <div className="acc-block" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px' }}>Карточка клиента · ID {u.id}</h3>
+          {clientLoading ? <p style={{ color: '#888' }}>Загрузка профиля…</p> : (
+            <div style={{ maxWidth: 760 }} key={u.id}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 16 }}>
+                <div><div style={lbl}>ФИО</div><input style={inp} defaultValue={u.name || ''} onBlur={e => e.target.value !== u.name && save({ name: e.target.value })} /></div>
+                <div><div style={lbl}>Телефон</div><input style={inp} defaultValue={u.phone || ''} onBlur={e => e.target.value !== (u.phone || '') && save({ phone: e.target.value })} /></div>
+                <div><div style={lbl}>Email</div><input style={inp} defaultValue={u.email || ''} onBlur={e => e.target.value !== u.email && save({ email: e.target.value })} /></div>
+                <div><div style={lbl}>Дата рождения</div><input type="date" style={inp} defaultValue={(u.dob || '').slice(0, 10)} onBlur={e => save({ dob: e.target.value })} /></div>
+                <div><div style={lbl}>Роль</div><select style={inp} defaultValue={u.role} onChange={e => save({ role: e.target.value })}>{Object.entries(ROLE_RU).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div><div style={lbl}>Ответственный менеджер</div><input style={inp} defaultValue={u.manager || ''} placeholder="Имя менеджера" onBlur={e => e.target.value !== (u.manager || '') && save({ manager: e.target.value })} /></div>
+              </div>
+              <div style={{ marginBottom: 16 }}>
+                <div style={lbl}>Примечание для админов</div>
+                <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} defaultValue={u.admin_note || ''} placeholder="Заметки по клиенту (видны только админам)" onBlur={e => e.target.value !== (u.admin_note || '') && save({ admin_note: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 10 }}>
+                <div><div style={lbl}>Баланс баллов</div><div style={{ color: 'var(--gold)', fontSize: 18, fontWeight: 700 }}>{(u.points || 0).toLocaleString()} ₽</div></div>
+                <button className="btn btn-sm" onClick={() => { const a = parseInt(prompt('Сколько баллов начислить?')); if (a > 0) adjustPoints(a, prompt('Причина начисления:') || 'Начисление администратором').catch(e => alert(e.message)); }}>+ Начислить</button>
+                <button className="btn btn-sm btn-ghost" onClick={() => { const a = parseInt(prompt('Сколько баллов списать?')); if (a > 0) adjustPoints(-a, prompt('Причина списания:') || 'Списание администратором').catch(e => alert(e.message)); }}>− Списать</button>
+                <div style={{ marginLeft: 'auto' }}>
+                  <span style={{ color: u.is_verified ? '#22c55e' : '#fb7185', fontSize: 13, marginRight: 8 }}>{u.is_verified ? '✓ Верифицирован' : 'Не верифицирован'}</span>
+                  <button className="btn btn-sm" onClick={() => save({ is_verified: !u.is_verified })}>{u.is_verified ? 'Снять' : 'Верифицировать'}</button>
+                </div>
+              </div>
+              <div style={{ ...lbl, marginBottom: 8 }}>Документы</div>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
+                {docs.map(([f, name]) => u[f] ? <button key={f} type="button" className="btn btn-sm" onClick={() => viewDoc(u[f])}>{name} ↗</button> : <span key={f} className="tag cancel">{name}: нет</span>)}
+              </div>
+              <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
+              {client.bookings.length ? (
+                <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
+                  <tbody>
+                    {client.bookings.map(bk => (
+                      <tr key={bk.id}>
+                        <td>{bk.car.name}{bk.with_delivery && <span className="tag" style={{ marginLeft: 6, fontSize: 10 }}>доставка</span>}{bk.notes && <div style={{ fontSize: 11, color: '#888' }}>{bk.notes}</div>}</td>
+                        <td>{formatDate(bk.from_dt)} — {formatDate(bk.to_dt)}</td>
+                        <td>{bk.total.toLocaleString()} ₽</td>
+                        <td><span className={`tag ${statusTagClass(bk.status)}`}>{stageRu(bk.stage)}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="acc-page-header">
@@ -539,6 +675,7 @@ export default function Admin() {
         </aside>
 
         <main className="acc-content">
+          {carView ? renderCarDetail() : client ? renderClientDetail() : (<>
           {activeTab === 'dashboard' && dashboard && (() => {
             const d = dashboard;
             const fmtMoney = (v) => v >= 1000000 ? `${(v / 1000000).toFixed(1)} млн` : v >= 1000 ? `${Math.round(v / 1000)} тыс` : String(v);
@@ -1182,6 +1319,7 @@ export default function Admin() {
               </table>
             </div>
           )}
+          </>)}
         </main>
       </div>
 
@@ -1395,86 +1533,6 @@ export default function Admin() {
         </div>
       )}
 
-      {client && (() => {
-        const u = client.user;
-        const lbl = { fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 };
-        const inp = { width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '8px 10px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit' };
-        const save = (patch) => saveClientCard(patch).catch(e => alert(e.message));
-        const docs = [
-          ['passport_url', 'Паспорт'],
-          ['passport_page_url', 'Паспорт (1-я стр.)'],
-          ['registration_url', 'Прописка'],
-          ['license_url', 'Вод. удостоверение'],
-        ];
-        return (
-        <div className="modal-overlay" onClick={() => setClient(null)}>
-          <div className="modal-card" style={{ maxWidth: 680, maxHeight: '88vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setClient(null)}><i className="ph ph-x" /></button>
-            <h3 style={{ margin: '0 0 4px' }}>Карточка клиента · ID {u.id}</h3>
-            {clientLoading ? (
-              <p style={{ color: '#888' }}>Загрузка профиля…</p>
-            ) : (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, margin: '16px 0' }} key={u.id}>
-                  <div><div style={lbl}>ФИО</div><input style={inp} defaultValue={u.name || ''} onBlur={e => e.target.value !== u.name && save({ name: e.target.value })} /></div>
-                  <div><div style={lbl}>Телефон</div><input style={inp} defaultValue={u.phone || ''} onBlur={e => e.target.value !== (u.phone || '') && save({ phone: e.target.value })} /></div>
-                  <div><div style={lbl}>Email</div><input style={inp} defaultValue={u.email || ''} onBlur={e => e.target.value !== u.email && save({ email: e.target.value })} /></div>
-                  <div><div style={lbl}>Дата рождения</div><input type="date" style={inp} defaultValue={(u.dob || '').slice(0, 10)} onBlur={e => save({ dob: e.target.value })} /></div>
-                  <div><div style={lbl}>Роль</div>
-                    <select style={inp} defaultValue={u.role} onChange={e => save({ role: e.target.value })}>
-                      {Object.entries(ROLE_RU).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                    </select>
-                  </div>
-                  <div><div style={lbl}>Ответственный менеджер</div><input style={inp} defaultValue={u.manager || ''} placeholder="Имя менеджера" onBlur={e => e.target.value !== (u.manager || '') && save({ manager: e.target.value })} /></div>
-                </div>
-
-                <div style={{ marginBottom: 16 }}>
-                  <div style={lbl}>Примечание для админов</div>
-                  <textarea style={{ ...inp, minHeight: 60, resize: 'vertical' }} defaultValue={u.admin_note || ''} placeholder="Заметки по клиенту (видны только админам)" onBlur={e => e.target.value !== (u.admin_note || '') && save({ admin_note: e.target.value })} />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', marginBottom: 16, padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 10 }}>
-                  <div>
-                    <div style={lbl}>Баланс баллов</div>
-                    <div style={{ color: 'var(--gold)', fontSize: 18, fontWeight: 700 }}>{(u.points || 0).toLocaleString()} ₽</div>
-                  </div>
-                  <button className="btn btn-sm" onClick={() => { const a = parseInt(prompt('Сколько баллов начислить?')); if (a > 0) adjustPoints(a, prompt('Причина начисления:') || 'Начисление администратором').catch(e => alert(e.message)); }}>+ Начислить</button>
-                  <button className="btn btn-sm btn-ghost" onClick={() => { const a = parseInt(prompt('Сколько баллов списать?')); if (a > 0) adjustPoints(-a, prompt('Причина списания:') || 'Списание администратором').catch(e => alert(e.message)); }}>− Списать</button>
-                  <div style={{ marginLeft: 'auto' }}>
-                    <span style={{ color: u.is_verified ? '#22c55e' : '#fb7185', fontSize: 13, marginRight: 8 }}>{u.is_verified ? '✓ Верифицирован' : 'Не верифицирован'}</span>
-                    <button className="btn btn-sm" onClick={() => save({ is_verified: !u.is_verified })}>{u.is_verified ? 'Снять' : 'Верифицировать'}</button>
-                  </div>
-                </div>
-
-                <div style={{ ...lbl, marginBottom: 8 }}>Документы</div>
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
-                  {docs.map(([f, name]) => u[f]
-                    ? <button key={f} type="button" className="btn btn-sm" onClick={() => viewDoc(u[f])}>{name} ↗</button>
-                    : <span key={f} className="tag cancel">{name}: нет</span>)}
-                </div>
-
-                <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
-                {client.bookings.length ? (
-                  <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
-                    <tbody>
-                      {client.bookings.map(bk => (
-                        <tr key={bk.id}>
-                          <td>{bk.car.name}{bk.with_delivery && <span className="tag" style={{ marginLeft: 6, fontSize: 10 }}>доставка</span>}{bk.notes && <div style={{ fontSize: 11, color: '#888' }}>{bk.notes}</div>}</td>
-                          <td>{formatDate(bk.from_dt)} — {formatDate(bk.to_dt)}</td>
-                          <td>{bk.total.toLocaleString()} ₽</td>
-                          <td><span className={`tag ${statusTagClass(bk.status)}`}>{stageRu(bk.stage)}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
-              </>
-            )}
-          </div>
-        </div>
-        );
-      })()}
-
       {bookingCard && (
         <div className="modal-overlay" onClick={() => setBookingCard(null)}>
           <div className="modal-card" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
@@ -1508,96 +1566,6 @@ export default function Admin() {
         </div>
       )}
 
-      {carView && (() => {
-        const c = carView;
-        const lbl = { fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 3 };
-        const money = (v) => (v || v === 0) ? `${Number(v).toLocaleString('ru-RU')} ₽` : '—';
-        const carBookings = bookings.filter(b => b.car?.id === c.id);
-        const now = new Date();
-        const upcoming = carBookings.filter(b => b.status !== 'cancelled' && new Date(b.to_dt) >= now)
-          .sort((a, b) => new Date(a.from_dt) - new Date(b.from_dt));
-        const revenue = carBookings.filter(b => b.status === 'completed').reduce((s, b) => s + (b.total || 0), 0);
-        const specs = [
-          ['Год', c.year], ['Кузов', c.body], ['Топливо', c.fuel], ['Двигатель', c.engine],
-          ['Мощность', c.power_hp ? `${c.power_hp} л.с.` : '—'], ['Коробка', c.drive], ['Цвет', c.color || '—'],
-        ];
-        const prices = [
-          ['1–5 суток', money(c.price_per_day)], ['6–12 суток', money(c.price_6_12)], ['от 30 суток', money(c.price_30)],
-          ['Залог', money(c.deposit)], ['Пробег/сут', c.mileage_limit ? `${c.mileage_limit} км` : '—'],
-          ['Перекат', c.overmileage_rate ? `${c.overmileage_rate} ₽/км` : '—'], ['Фото/час', money(c.photo_rate)],
-        ];
-        return (
-        <div className="modal-overlay" onClick={() => setCarView(null)}>
-          <div className="modal-card" style={{ maxWidth: 720, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setCarView(null)}><i className="ph ph-x" /></button>
-            <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 8 }}>
-              {c.image_url && <img src={c.image_url} alt="" style={{ width: 160, height: 100, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <h3 style={{ margin: '0 0 4px' }}>{c.name}</h3>
-                <div style={{ fontSize: 12, color: '#666', marginBottom: 8 }}>ID: {c.id}</div>
-                <span className={`tag ${c.status === 'published' ? 'done' : c.status === 'hidden' ? 'cancel' : 'ok'}`}>{CAR_STATUS_RU[c.status] || c.status}</span>
-                {c.badge && <span className="tag" style={{ marginLeft: 6, color: 'var(--gold)' }}>{c.badge}</span>}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '8px 0 18px' }}>
-              {cars.find(x => x.id === c.id) && <button className="btn btn-sm" onClick={() => { setCarView(null); openEditCarModal(cars.find(x => x.id === c.id)); }}><i className="ph ph-pencil-simple" /> Редактировать</button>}
-              <a className="btn btn-sm btn-ghost" href={`/car/${c.id}`} target="_blank" rel="noopener noreferrer">На сайте ↗</a>
-            </div>
-
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 18 }}>
-              <div style={{ flex: 1, minWidth: 130, background: 'var(--bg-2)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={lbl}>Выручка (завершённые)</div><div style={{ color: 'var(--gold)', fontWeight: 700, fontSize: 18 }}>{revenue.toLocaleString('ru-RU')} ₽</div>
-              </div>
-              <div style={{ flex: 1, minWidth: 130, background: 'var(--bg-2)', borderRadius: 10, padding: '12px 14px' }}>
-                <div style={lbl}>Всего броней</div><div style={{ fontWeight: 700, fontSize: 18 }}>{carBookings.length}</div>
-              </div>
-            </div>
-
-            <div style={{ ...lbl, marginBottom: 8 }}>Характеристики</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 18 }}>
-              {specs.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14 }}>{v || '—'}</div></div>)}
-            </div>
-
-            <div style={{ ...lbl, marginBottom: 8 }}>Тарифы</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 12, marginBottom: 18 }}>
-              {prices.map(([k, v]) => <div key={k}><div style={lbl}>{k}</div><div style={{ fontSize: 14, color: 'var(--gold)' }}>{v}</div></div>)}
-            </div>
-
-            <div style={{ ...lbl, marginBottom: 8 }}>Ближайшая занятость ({upcoming.length})</div>
-            {upcoming.length ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
-                {upcoming.map(b => (
-                  <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, background: 'rgba(212,175,55,.07)', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
-                    <span>{formatDate(b.from_dt)} — {formatDate(b.to_dt)}</span>
-                    <span style={{ color: '#bdbdbd' }}>{b.user?.name}</span>
-                    <span className={`tag ${statusTagClass(b.status)}`}>{stageRu(b.stage)}</span>
-                  </div>
-                ))}
-              </div>
-            ) : <p style={{ color: '#888', fontSize: 13, marginBottom: 18 }}>Свободна — будущих броней нет</p>}
-
-            <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({carBookings.length})</div>
-            {carBookings.length ? (
-              <table className="acc-table" style={{ width: '100%', fontSize: 13 }}>
-                <tbody>
-                  {carBookings.map(b => (
-                    <tr key={b.id}>
-                      <td>#{b.id}</td>
-                      <td><button onClick={() => { setCarView(null); openClient(b.user.id); }} style={{ background: 'none', border: 0, padding: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit', textDecoration: 'underline', textUnderlineOffset: 2 }}>{b.user?.name}</button></td>
-                      <td>{formatDate(b.from_dt)} — {formatDate(b.to_dt)}</td>
-                      <td>{b.total?.toLocaleString()} ₽</td>
-                      <td><span className={`tag ${statusTagClass(b.status)}`}>{stageRu(b.stage)}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <p style={{ color: '#888', fontSize: 13 }}>Бронирований пока нет</p>}
-          </div>
-        </div>
-        );
-      })()}
-
       {showAddUser && (
         <AddUserModal onClose={() => setShowAddUser(false)} onCreated={(u) => { setUsers(us => [u, ...us]); setShowAddUser(false); }} />
       )}
@@ -1606,6 +1574,60 @@ export default function Admin() {
         <AddBookingModal cars={cars} users={users} onClose={() => setShowAddBooking(false)} onCreated={() => { refreshBookings(); setShowAddBooking(false); }} />
       )}
     </>
+  );
+}
+
+// ── Календарь занятости авто (месяц, клик по дате → бронь) ──
+const CAL_MONTHS = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+const CAL_DOW = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+function BookingCalendar({ bookings, onPick }) {
+  const today = new Date();
+  const [ym, setYm] = useState({ y: today.getFullYear(), m: today.getMonth() });
+  const first = new Date(ym.y, ym.m, 1);
+  let lead = first.getDay(); lead = lead === 0 ? 6 : lead - 1;
+  const daysInMonth = new Date(ym.y, ym.m + 1, 0).getDate();
+  const cells = [];
+  for (let i = 0; i < lead; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+  const colorFor = (st) => st === 'completed' ? '#34d399' : st === 'active' ? '#d4af37' : st === 'pending' ? '#60a5fa' : '#888';
+  const bookingForDay = (d) => {
+    const dayStart = new Date(ym.y, ym.m, d, 0, 0, 0);
+    const dayEnd = new Date(ym.y, ym.m, d, 23, 59, 59);
+    return bookings.find(b => {
+      if (b.status === 'cancelled') return false;
+      return new Date(b.from_dt) <= dayEnd && new Date(b.to_dt) >= dayStart;
+    });
+  };
+  const prev = () => setYm(s => s.m === 0 ? { y: s.y - 1, m: 11 } : { y: s.y, m: s.m - 1 });
+  const next = () => setYm(s => s.m === 11 ? { y: s.y + 1, m: 0 } : { y: s.y, m: s.m + 1 });
+  const isToday = (d) => today.getFullYear() === ym.y && today.getMonth() === ym.m && today.getDate() === d;
+  return (
+    <div style={{ background: 'var(--bg-2)', borderRadius: 12, padding: '14px 16px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <button className="btn btn-sm btn-ghost" onClick={prev}><i className="ph ph-caret-left" /></button>
+        <b>{CAL_MONTHS[ym.m]} {ym.y}</b>
+        <button className="btn btn-sm btn-ghost" onClick={next}><i className="ph ph-caret-right" /></button>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 5 }}>
+        {CAL_DOW.map(d => <div key={d} style={{ textAlign: 'center', fontSize: 11, color: '#888' }}>{d}</div>)}
+        {cells.map((d, i) => {
+          if (!d) return <div key={'e' + i} />;
+          const b = bookingForDay(d);
+          const col = b ? colorFor(b.status) : null;
+          return (
+            <button key={d} onClick={() => b && onPick(b)} disabled={!b} title={b ? `#${b.id} · ${b.user?.name || ''}` : ''}
+              style={{ aspectRatio: '1', borderRadius: 8, border: isToday(d) ? '1px solid var(--gold)' : '1px solid transparent', background: b ? col + '22' : 'var(--bg-1)', color: b ? col : '#777', cursor: b ? 'pointer' : 'default', fontSize: 13, fontWeight: b ? 700 : 400, fontFamily: 'inherit' }}>
+              {d}
+            </button>
+          );
+        })}
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 12, fontSize: 11, color: '#888', flexWrap: 'wrap' }}>
+        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#60a5fa', marginRight: 5 }} />Ожидает</span>
+        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#d4af37', marginRight: 5 }} />В аренде</span>
+        <span><span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#34d399', marginRight: 5 }} />Завершена</span>
+      </div>
+    </div>
   );
 }
 

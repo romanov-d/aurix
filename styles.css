@@ -571,6 +571,9 @@ section{padding:96px 0}
 .blog-post-lead{font-size:17px;line-height:1.7;color:var(--head);margin-bottom:24px;font-weight:500}
 .blog-post-content p{font-size:15px;line-height:1.9;color:#cfcfcf;margin-bottom:18px}
 
+/* ==== Карточка авто в админке — адаптив ==== */
+@media (max-width:900px){ .car-detail-grid{grid-template-columns:1fr !important} }
+
 /* ==== Заголовки без курсива (em) ==== */
 h1 em, h2 em, h3 em, h4 em { font-style: normal !important; }
 /* Клубная карта — капс без широкого межбуквенного отступа */
