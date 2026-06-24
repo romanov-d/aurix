@@ -126,6 +126,11 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMPTZ`,
+  // Подтверждение email (отдельно от СБ-верификации документов) + одноразовые коды (вход/рега)
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_expires TIMESTAMPTZ`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_purpose TEXT`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_url TEXT`,

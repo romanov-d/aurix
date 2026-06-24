@@ -17,8 +17,12 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
-    async login(body) { const { user } = await Auth.login(body); setUser(user); return user; },
-    async register(body) { const { user } = await Auth.register(body); setUser(user); return user; },
+    // login возвращает { user } (вошёл) ИЛИ { needsCode, email } (нужен 2FA-код)
+    async login(body) { const res = await Auth.login(body); if (res.user) setUser(res.user); return res; },
+    async loginVerify(body) { const { user } = await Auth.loginVerify(body); setUser(user); return user; },
+    async register(body) { const res = await Auth.register(body); if (res.user) setUser(res.user); return res; },
+    async verifyEmailCode(code) { const { user } = await Auth.verifyCode({ code }); setUser(user); return user; },
+    async resendEmailCode() { return Auth.resendCode(); },
     async logout() { await Auth.logout(); setUser(null); },
     async refresh() { try { const { user } = await Auth.me(); setUser(user); } catch { setUser(null); } },
   };

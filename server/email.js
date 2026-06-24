@@ -4,8 +4,39 @@ const resend = process.env.RESEND_API_KEY
   ? new Resend(process.env.RESEND_API_KEY)
   : null;
 
-const FROM = 'AURIX MOTORS <noreply@aurixmotors.com>';
-const SITE = process.env.SITE_URL || 'https://aurix-zeta.vercel.app';
+// Отправитель берётся из env (домен должен быть verified в Resend), иначе дефолт.
+const FROM = process.env.EMAIL_FROM || 'AURIX MOTORS <noreply@aurixmotors.ru>';
+const SITE = process.env.SITE_URL || 'https://aurixmotors.ru';
+
+export const resendConfigured = !!resend;
+
+// Отправка 6-значного кода (вход / подтверждение почты)
+export async function sendCodeEmail(email, code, purpose = 'login') {
+  const title = purpose === 'login' ? 'Код для входа' : 'Подтверждение email';
+  const lead = purpose === 'login'
+    ? 'Используйте этот код, чтобы войти в личный кабинет AURIX MOTORS:'
+    : 'Введите этот код, чтобы подтвердить ваш email:';
+
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — код в консоли');
+    console.log(`[email] ${title} для ${email}: ${code}`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `${title} — AURIX MOTORS`,
+    html: `
+      <div style="background:#000;color:#fff;font-family:sans-serif;padding:48px;max-width:480px;margin:0 auto">
+        <h1 style="font-size:22px;margin:0 0 14px;color:#fff">${title}</h1>
+        <p style="color:#9a9a9a;font-size:15px;line-height:1.6;margin:0 0 24px">${lead}</p>
+        <div style="font-size:38px;font-weight:700;letter-spacing:10px;color:#D4AF37;text-align:center;background:#111;border-radius:12px;padding:18px 0">${code}</div>
+        <p style="color:#555;font-size:12px;margin-top:24px">Код действует 10 минут. Если вы не запрашивали — проигнорируйте письмо.</p>
+      </div>
+    `,
+  });
+}
 
 export async function sendVerificationEmail(email, token) {
   if (!resend) {
