@@ -26,6 +26,7 @@ export default function Admin() {
   const { user } = useAuth();
   const nav = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [sideOpen, setSideOpen] = useState(false);
   
   const [bookings, setBookings] = useState([]);
   const [cars, setCars] = useState([]);
@@ -651,18 +652,20 @@ export default function Admin() {
   return (
     <>
       <div className="acc-page-header">
-        <div className="container">
+        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <button className="acc-burger" onClick={() => setSideOpen(true)}><i className="ph ph-list" /> Меню</button>
           <h1><i className="ph-fill ph-shield-check" style={{ marginRight: 12, color: 'var(--gold)' }} />Панель управления</h1>
         </div>
       </div>
-      <div className="container account" style={{ marginTop: '24px' }}>
+      <div className={`container account${sideOpen ? ' side-open' : ''}`} style={{ marginTop: '24px' }}>
+        <div className="acc-side-backdrop" onClick={() => setSideOpen(false)} />
         <aside className="acc-side">
           <div style={{ marginBottom: '18px', padding: '0 14px' }}>
             <Link to="/" className="btn btn-sm btn-ghost" style={{ width: '100%', justifyContent: 'center', border: '1px solid var(--line)', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center' }}>
               <i className="ph ph-arrow-left" style={{ marginRight: '6px' }} /> Вернуться на сайт
             </Link>
           </div>
-          <nav className="acc-nav">
+          <nav className="acc-nav" onClick={() => setSideOpen(false)}>
             <a href="#dashboard" onClick={(e) => { e.preventDefault(); setActiveTab('dashboard'); }} className={activeTab === 'dashboard' ? 'active' : ''}><i className="ph-fill ph-chart-line-up" /> Дашборд</a>
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования</a>
             <a href="#cars" onClick={(e) => { e.preventDefault(); setActiveTab('cars'); }} className={activeTab === 'cars' ? 'active' : ''}><i className="ph-fill ph-car" /> Автомобили</a>

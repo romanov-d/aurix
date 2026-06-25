@@ -12,6 +12,7 @@ export default function Account() {
   const nav = useNavigate();
   const location = useLocation();
   const [activeTab, setActiveTab] = useState('overview');
+  const [sideOpen, setSideOpen] = useState(false);
 
   // Открыть нужную вкладку по хешу URL (напр. /account#documents)
   useEffect(() => {
@@ -162,11 +163,13 @@ export default function Account() {
   return (
     <>
       <div className="acc-page-header">
-        <div className="container">
+        <div className="container" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+          <button className="acc-burger" onClick={() => setSideOpen(true)}><i className="ph ph-list" /> Меню</button>
           <h1><i className="ph-fill ph-user-circle" style={{ marginRight: 12, color: 'var(--gold)' }} />Личный кабинет</h1>
         </div>
       </div>
-      <div className="container account" style={{ marginTop: '24px' }}>
+      <div className={`container account${sideOpen ? ' side-open' : ''}`} style={{ marginTop: '24px' }}>
+        <div className="acc-side-backdrop" onClick={() => setSideOpen(false)} />
         <aside className="acc-side">
           <div style={{ marginBottom: '10px', padding: '0 14px' }}>
             <Link to="/catalog" className="btn btn-filled" style={{ width: '100%', justifyContent: 'center', borderRadius: '999px', fontSize: '13px', display: 'flex', alignItems: 'center', padding: '12px 16px' }}>
@@ -198,7 +201,7 @@ export default function Account() {
               <div className="tier">{tierLabel}</div>
             </div>
           </div>
-          <nav className="acc-nav">
+          <nav className="acc-nav" onClick={() => setSideOpen(false)}>
             <a href="#overview" onClick={(e) => { e.preventDefault(); setActiveTab('overview'); }} className={activeTab === 'overview' ? 'active' : ''}><i className="ph-fill ph-squares-four" /> Обзор</a>
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования {activeBookings.length > 0 && <span className="badge">{activeBookings.length}</span>}</a>
             <a href="#history" onClick={(e) => { e.preventDefault(); setActiveTab('history'); }} className={activeTab === 'history' ? 'active' : ''}><i className="ph-fill ph-clock-counter-clockwise" /> История</a>
