@@ -22,10 +22,51 @@ if (connectionString) {
 }
 
 // Стандартный драйвер pg (TCP) — работает и на VPS, и на Vercel.
-// Neon требует SSL (sslmode=require в строке); rejectUnauthorized:false на случай цепочки сертификатов.
-const pool = connectionString
-  ? new Pool({ connectionString, ssl: { rejectUnauthorized: false }, max: 10, connectionTimeoutMillis: 10000 })
+//
+// ВАЖНО про SSL. Если в строке подключения есть sslmode=require/verify-*, pg
+// строит ssl-конфиг ИЗ СТРОКИ и переопределяет переданный объект ssl — тогда
+// rejectUnauthorized:false игнорируется и самоподписанный сертификат БД даёт
+// "self-signed certificate in certificate chain". Поэтому вырезаем sslmode из
+// строки и задаём SSL только объектом — соединение остаётся зашифрованным
+// (ssl-объект включает TLS), но без проверки цепочки сертификатов.
+let poolConnString = connectionString;
+if (poolConnString) {
+  try {
+    const u = new URL(poolConnString);
+    u.searchParams.delete('sslmode');
+    u.searchParams.delete('ssl');
+    poolConnString = u.toString();
+  } catch { /* строка не URL — оставляем как есть */ }
+}
+
+const pool = poolConnString
+  ? new Pool({
+      connectionString: poolConnString,
+      ssl: { rejectUnauthorized: false }, // принять самоподписанный сертификат своей БД
+      max: 10,
+      connectionTimeoutMillis: 10000,
+      // Запросы и блокировки НЕ должны висеть вечно. Без этих таймаутов
+      // недоступная/залоченная БД морозит весь сайт (профиль грузится
+      // бесконечно, авто не приходят, статика блокируется через loadUser).
+      // Лучше быстрый 500, который фронт отрисует, чем вечный спиннер.
+      statement_timeout: 15000,   // PG отменит любой запрос дольше 15с
+      query_timeout: 15000,       // клиентский предохранитель pg
+      lock_timeout: 5000,         // не ждать AccessExclusiveLock на DDL дольше 5с
+      idleTimeoutMillis: 30000,
+    })
   : null;
+
+// КРИТИЧНО. pg.Pool эмитит 'error', когда простаивающее соединение рвётся
+// (Neon и любой облачный Postgres закрывают idle-коннекты по таймауту). БЕЗ
+// этого обработчика Node роняет ошибку как uncaughtException и КРАШИТ весь
+// процесс — тогда рвутся ВСЕ запросы разом, включая статику (logo3.png), с
+// "The network connection was lost", процесс уходит в цикл падений/рестартов.
+// Здесь просто логируем: битый коннект пул выкинет и заведёт новый сам.
+if (pool) {
+  pool.on('error', (err) => {
+    console.error('[db] пул: ошибка простаивающего соединения (процесс продолжает работу):', err.message);
+  });
+}
 
 function assertSql() {
   if (!pool) throw new Error('Database is not configured: set DATABASE_URL');
