@@ -5,6 +5,7 @@ import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 import CarCard from '../components/CarCard.jsx';
 import CircularGallery from '../components/CircularGallery.jsx';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { api } from '../api/client.js';
 
 const AV = (id) => `https://images.unsplash.com/${id}?w=160&h=160&fit=crop&crop=faces&q=80`;
@@ -253,7 +254,9 @@ export default function Home() {
             </div>
           ) : (
             <div className="rv2-gallery">
-              <CircularGallery reviews={REVIEWS} bend={2} scrollSpeed={2} scrollEase={0.04} />
+              <ErrorBoundary name="reviews-gallery" fallback={null}>
+                <CircularGallery reviews={REVIEWS} bend={2} scrollSpeed={2} scrollEase={0.04} />
+              </ErrorBoundary>
             </div>
           )}
         </div>

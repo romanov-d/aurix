@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { GrainGradient } from '@paper-design/shaders-react';
+import ErrorBoundary from '../components/ErrorBoundary.jsx';
 
 export default function Register() {
   const { register, verifyEmailCode, resendEmailCode } = useAuth();
@@ -48,20 +49,22 @@ export default function Register() {
   return (
     <div className="auth-fullscreen">
       <div className="auth-shader">
-        <GrainGradient
-          style={{ width: '100%', height: '100%' }}
-          colorBack="hsl(0,0%,0%)"
-          softness={0.55}
-          intensity={0.65}
-          noise={0}
-          shape="corners"
-          offsetX={0}
-          offsetY={0}
-          scale={1}
-          rotation={0}
-          speed={1.6}
-          colors={['hsl(46,65%,55%)', 'hsl(42,60%,40%)', 'hsl(32,45%,15%)']}
-        />
+        <ErrorBoundary name="register-shader" fallback={null}>
+          <GrainGradient
+            style={{ width: '100%', height: '100%' }}
+            colorBack="hsl(0,0%,0%)"
+            softness={0.55}
+            intensity={0.65}
+            noise={0}
+            shape="corners"
+            offsetX={0}
+            offsetY={0}
+            scale={1}
+            rotation={0}
+            speed={1.6}
+            colors={['hsl(46,65%,55%)', 'hsl(42,60%,40%)', 'hsl(32,45%,15%)']}
+          />
+        </ErrorBoundary>
       </div>
 
       <div className="auth-glass">
