@@ -23,12 +23,17 @@ if (connectionString) {
 
 // Стандартный драйвер pg (TCP) — работает и на VPS, и на Vercel.
 //
-// ВАЖНО про SSL. Если в строке подключения есть sslmode=require/verify-*, pg
-// строит ssl-конфиг ИЗ СТРОКИ и переопределяет переданный объект ssl — тогда
-// rejectUnauthorized:false игнорируется и самоподписанный сертификат БД даёт
-// "self-signed certificate in certificate chain". Поэтому вырезаем sslmode из
-// строки и задаём SSL только объектом — соединение остаётся зашифрованным
-// (ssl-объект включает TLS), но без проверки цепочки сертификатов.
+// ВАЖНО про SSL. Новый pg трактует sslmode=require как verify-full (полная
+// проверка цепочки) → самоподписанный сертификат своей БД даёт
+// "self-signed certificate in certificate chain", и rejectUnauthorized:false
+// в объекте ssl это НЕ перебивает. sslmode приходит из двух мест:
+//   1) query-параметр в строке подключения (?sslmode=require)
+//   2) переменная окружения PGSSLMODE (libpq-стиль) — её pg тоже читает
+// Нейтрализуем ОБА источника, тогда SSL задаётся только нашим объектом:
+// соединение шифруется (ssl-объект включает TLS), но без проверки цепочки.
+delete process.env.PGSSLMODE;
+delete process.env.PGSSLROOTCERT;
+
 let poolConnString = connectionString;
 if (poolConnString) {
   try {
@@ -38,6 +43,7 @@ if (poolConnString) {
     poolConnString = u.toString();
   } catch { /* строка не URL — оставляем как есть */ }
 }
+console.log('[db] SSL: проверка цепочки ОТКЛЮЧЕНА (rejectUnauthorized:false), sslmode/PGSSLMODE нейтрализованы');
 
 const pool = poolConnString
   ? new Pool({
