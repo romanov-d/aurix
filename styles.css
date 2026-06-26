@@ -1293,6 +1293,17 @@ footer{background:var(--bg-1);border-top:0}
 .acc-stat .v{font-family:'Inter',sans-serif !important;color:var(--head) !important;font-size:28px !important;font-weight:700;letter-spacing:-.01em}
 .acc-stat .v small{font-size:12px !important;color:#9a9a9a !important;font-family:inherit !important;font-weight:400;margin-left:6px}
 
+/* Мобильная вёрстка плашек ЛК. Редизайн выше форсит 4 колонки и перебивает
+   ранний @media — поэтому оверрайд ставим здесь, ПОСЛЕ него, по порядку. */
+@media (max-width:760px){
+  .acc-stats{grid-template-columns:repeat(2,1fr);gap:10px}
+  .acc-stat{padding:16px !important}
+  .acc-stat .v{font-size:22px !important}
+}
+@media (max-width:480px){
+  .acc-stats{grid-template-columns:1fr}   /* друг под другом на телефоне */
+}
+
 .acc-block{background:var(--bg-1) !important;border:0 !important;margin-bottom:18px;border-radius:14px !important}
 .acc-block-head{padding:18px 24px !important;border-bottom:1px solid var(--bg-3) !important}
 .acc-block-head h3,.acc-block-head h2,.acc-block-head .title{font-family:'Inter',sans-serif !important;color:var(--head) !important;font-size:17px !important;font-weight:600 !important;letter-spacing:0 !important;text-transform:none !important;margin:0}
