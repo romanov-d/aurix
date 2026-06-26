@@ -57,9 +57,48 @@ async function markRead(threadId, readerRole, lastMessageId) {
   );
 }
 
+// ─── SSE-хаб (один процесс pm2 fork → in-memory) ─────────────────────────────
+const sseClients = new Map(); // userId(str) -> Set<res>
+const sseAdmins = new Set();  // Set<res>
+
+function sseInit(res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache, no-transform',
+    Connection: 'keep-alive',
+    'X-Accel-Buffering': 'no', // nginx: не буферизовать SSE
+  });
+  res.write(':ok\n\n');
+}
+function sseSend(res, data) {
+  try { res.write(`data: ${JSON.stringify(data)}\n\n`); } catch { /* соединение закрыто */ }
+}
+// Heartbeat — держим соединение живым через прокси
+setInterval(() => {
+  for (const set of sseClients.values()) for (const r of set) { try { r.write(':ping\n\n'); } catch { /* */ } }
+  for (const r of sseAdmins) { try { r.write(':ping\n\n'); } catch { /* */ } }
+}, 25000).unref?.();
+
+// Уведомить владельца треда и всех менеджеров о новом сообщении
+function notifyMessage(thread, msg) {
+  const payload = { type: 'message', thread_id: thread.id, message: msg };
+  const set = sseClients.get(String(thread.user_id));
+  if (set) for (const r of set) sseSend(r, payload);
+  for (const r of sseAdmins) sseSend(r, payload);
+}
+
 // ─── Клиент ──────────────────────────────────────────────────────────────────
 export const clientRouter = Router();
 clientRouter.use(requireAuth);
+
+// SSE-поток клиента
+clientRouter.get('/stream', (req, res) => {
+  sseInit(res);
+  const uid = String(req.user.id);
+  if (!sseClients.has(uid)) sseClients.set(uid, new Set());
+  sseClients.get(uid).add(res);
+  req.on('close', () => { sseClients.get(uid)?.delete(res); });
+});
 
 // Список моих диалогов (с контекстом машины и числом непрочитанных от менеджера)
 clientRouter.get('/threads', async (req, res, next) => {
@@ -115,6 +154,7 @@ clientRouter.post('/threads/:id/messages', async (req, res, next) => {
     if (!body && !attachment) return res.status(400).json({ error: 'Пустое сообщение' });
     const msg = await insertMessage(thread, { senderId: req.user.id, senderRole: 'user', body, attachment });
     await markRead(thread.id, 'user', msg.id);
+    notifyMessage(thread, msg);
     res.json(msg);
   } catch (e) { next(e); }
 });
@@ -148,6 +188,13 @@ clientRouter.get('/unread-count', async (req, res, next) => {
 // ─── Админ / менеджер ────────────────────────────────────────────────────────
 export const adminRouter = Router();
 adminRouter.use(requireRole('admin'));
+
+// SSE-поток менеджера (все диалоги)
+adminRouter.get('/stream', (req, res) => {
+  sseInit(res);
+  sseAdmins.add(res);
+  req.on('close', () => sseAdmins.delete(res));
+});
 
 // Список ВСЕХ диалогов: клиент, контекст машины, превью, непрочитанные
 adminRouter.get('/threads', async (req, res, next) => {
@@ -210,6 +257,7 @@ adminRouter.post('/threads/:id/messages', async (req, res, next) => {
     // первый ответивший менеджер закрепляется за тредом
     if (!thread.manager) await q(`UPDATE chat_threads SET manager = $1 WHERE id = $2`, [req.user.name, thread.id]);
     await markRead(thread.id, 'admin', msg.id);
+    notifyMessage(thread, msg);
     res.json(msg);
   } catch (e) { next(e); }
 });

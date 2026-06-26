@@ -8,6 +8,8 @@ export const sendMessage    = (id, body) => api(`/chat/threads/${id}/messages`, 
 export const markThreadRead = (id) => api(`/chat/threads/${id}/read`, { method: 'POST' });
 export const myUnread       = () => api('/chat/unread-count');
 
+export const clientStreamUrl = '/api/chat/stream';
+
 // ─── Админ / менеджер ───
 export const adminThreads        = (params = {}) => api(`/admin/chat/threads?${new URLSearchParams(params)}`);
 export const adminThreadMessages = (id, after = 0) => api(`/admin/chat/threads/${id}/messages?after=${after}`);
@@ -15,3 +17,4 @@ export const adminSend           = (id, body) => api(`/admin/chat/threads/${id}/
 export const adminMarkRead       = (id) => api(`/admin/chat/threads/${id}/read`, { method: 'POST' });
 export const adminPatchThread    = (id, body) => api(`/admin/chat/threads/${id}`, { method: 'PATCH', body });
 export const adminUnread         = () => api('/admin/chat/unread-count');
+export const adminStreamUrl      = '/api/admin/chat/stream';

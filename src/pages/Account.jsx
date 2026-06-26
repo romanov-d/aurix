@@ -7,6 +7,7 @@ import { api } from '../api/client.js';
 import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
 import AccountChat from '../components/AccountChat.jsx';
+import { myUnread } from '../api/chat.js';
 
 export default function Account() {
   const { user, logout, refresh } = useAuth();
@@ -29,6 +30,17 @@ export default function Account() {
   const [profileForm, setProfileForm] = useState({ name: '', phone: '', email: '', dob: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileMsg, setProfileMsg] = useState('');
+  const [chatUnread, setChatUnread] = useState(0);
+
+  // Бейдж непрочитанных в чате — лёгкий опрос
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    const tick = () => myUnread().then((r) => { if (alive) setChatUnread(r.count || 0); }).catch(() => {});
+    tick();
+    const t = setInterval(tick, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, [user, activeTab]);
 
   useEffect(() => {
     if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', dob: (user.dob || '').slice(0, 10) });
@@ -209,7 +221,7 @@ export default function Account() {
             <a href="#favorites" onClick={(e) => { e.preventDefault(); setActiveTab('favorites'); }} className={activeTab === 'favorites' ? 'active' : ''}><i className="ph-fill ph-heart" /> Избранное {favoriteIds.length > 0 && <span className="badge">{favoriteIds.length}</span>}</a>
             <a href="#bonuses" onClick={(e) => { e.preventDefault(); setActiveTab('bonuses'); }} className={activeTab === 'bonuses' ? 'active' : ''}><i className="ph-fill ph-gift" /> Бонусы</a>
             <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab('documents'); }} className={activeTab === 'documents' ? 'active' : ''}><i className="ph-fill ph-file-text" /> Документы</a>
-            <a href="#chat" onClick={(e) => { e.preventDefault(); setActiveTab('chat'); }} className={activeTab === 'chat' ? 'active' : ''}><i className="ph-fill ph-chat-circle-dots" /> Чат с менеджером</a>
+            <a href="#chat" onClick={(e) => { e.preventDefault(); setActiveTab('chat'); }} className={activeTab === 'chat' ? 'active' : ''}><i className="ph-fill ph-chat-circle-dots" /> Чат с менеджером {chatUnread > 0 && <span className="badge">{chatUnread}</span>}</a>
             <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
           <div className="acc-logout">

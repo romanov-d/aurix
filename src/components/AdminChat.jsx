@@ -85,10 +85,12 @@ export default function AdminChat() {
               </button>
             </div>
             <ChatBox
+              key={active.id}
               threadId={active.id}
               selfRole="admin"
+              streamUrl={Chat.adminStreamUrl}
               loadMessages={(after) => Chat.adminThreadMessages(active.id, after).then((r) => r.messages)}
-              onSend={(body) => Chat.adminSend(active.id, { body })}
+              onSend={(body, attachment) => Chat.adminSend(active.id, { body, attachment })}
               onRead={() => Chat.adminMarkRead(active.id)}
               disabled={active.status === 'closed'}
             />
