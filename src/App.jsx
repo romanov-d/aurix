@@ -1,24 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import Preloader from './components/Preloader.jsx';
-import Home from './pages/Home.jsx';
-import Catalog from './pages/Catalog.jsx';
-import Car from './pages/Car.jsx';
-import LongTerm from './pages/LongTerm.jsx';
-import Club from './pages/Club.jsx';
-import Terms from './pages/Terms.jsx';
-import Privacy from './pages/Privacy.jsx';
-import Blog from './pages/Blog.jsx';
-import BlogPost from './pages/BlogPost.jsx';
-import Contacts from './pages/Contacts.jsx';
-import Account from './pages/Account.jsx';
-import RentOut from './pages/RentOut.jsx';
-import Tariffs from './pages/Tariffs.jsx';
-import Login from './pages/Login.jsx';
-import Register from './pages/Register.jsx';
-import Admin from './pages/Admin.jsx';
+import Home from './pages/Home.jsx'; // главная — eager, чтобы лендинг был мгновенным
+// Остальные страницы — отдельными чанками (code-splitting): грузятся по заходу,
+// чтобы стартовый бандл не тащил всю админку и второстепенные страницы на телефон.
+const Catalog = lazy(() => import('./pages/Catalog.jsx'));
+const Car = lazy(() => import('./pages/Car.jsx'));
+const LongTerm = lazy(() => import('./pages/LongTerm.jsx'));
+const Club = lazy(() => import('./pages/Club.jsx'));
+const Terms = lazy(() => import('./pages/Terms.jsx'));
+const Privacy = lazy(() => import('./pages/Privacy.jsx'));
+const Blog = lazy(() => import('./pages/Blog.jsx'));
+const BlogPost = lazy(() => import('./pages/BlogPost.jsx'));
+const Contacts = lazy(() => import('./pages/Contacts.jsx'));
+const Account = lazy(() => import('./pages/Account.jsx'));
+const RentOut = lazy(() => import('./pages/RentOut.jsx'));
+const Tariffs = lazy(() => import('./pages/Tariffs.jsx'));
+const Login = lazy(() => import('./pages/Login.jsx'));
+const Register = lazy(() => import('./pages/Register.jsx'));
+const Admin = lazy(() => import('./pages/Admin.jsx'));
 import RequireAuth from './components/RequireAuth.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 
@@ -59,6 +61,7 @@ export default function App() {
       <Preloader />
       {!noHeader && <Header />}
       <div className={noHeader ? '' : isHome ? '' : 'page-wrap'}>
+      <Suspense fallback={<div style={{ minHeight: '70vh' }} />}>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/catalog" element={<Catalog />} />
@@ -77,6 +80,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>
+      </Suspense>
       </div>
       {!noFooter && <Footer />}
     </AuthProvider>
