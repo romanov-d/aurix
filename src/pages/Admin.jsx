@@ -1187,7 +1187,7 @@ export default function Admin() {
             );
           })()}
 
-          {activeTab === 'chat' && <AdminChat />}
+          {activeTab === 'chat' && <AdminChat onOpenClient={openClient} />}
 
           {activeTab === 'tariffs' && (
             <div className="acc-block">

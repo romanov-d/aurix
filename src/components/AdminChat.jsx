@@ -3,7 +3,7 @@ import ChatBox from './ChatBox.jsx';
 import * as Chat from '../api/chat.js';
 
 // Инбокс менеджера: слева список всех диалогов, справа переписка.
-export default function AdminChat() {
+export default function AdminChat({ onOpenClient }) {
   const [threads, setThreads] = useState([]);
   const [active, setActive] = useState(null);
   const [statusFilter, setStatusFilter] = useState('open');
@@ -76,7 +76,9 @@ export default function AdminChat() {
           <>
             <div className="admin-chat-header">
               <div className="ach-who">
-                <b>{active.user_name}</b>
+                <button type="button" className="ach-name-btn" onClick={() => onOpenClient?.(active.user_id)} title="Открыть профиль клиента">
+                  {active.user_name} <i className="ph ph-arrow-square-out" />
+                </button>
                 <span className="ach-contact">{active.user_phone || active.user_email || ''}</span>
               </div>
               {active.car_name && <span className="ach-car"><i className="ph-fill ph-car" /> {active.car_name}</span>}
