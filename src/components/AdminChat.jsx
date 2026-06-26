@@ -1,0 +1,100 @@
+import { useState, useEffect, useCallback } from 'react';
+import ChatBox from './ChatBox.jsx';
+import * as Chat from '../api/chat.js';
+
+// Инбокс менеджера: слева список всех диалогов, справа переписка.
+export default function AdminChat() {
+  const [threads, setThreads] = useState([]);
+  const [active, setActive] = useState(null);
+  const [statusFilter, setStatusFilter] = useState('open');
+  const [search, setSearch] = useState('');
+
+  const loadThreads = useCallback(async () => {
+    try {
+      const params = {};
+      if (statusFilter !== 'all') params.status = statusFilter;
+      if (search.trim()) params.q = search.trim();
+      setThreads(await Chat.adminThreads(params));
+    } catch { /* тихо */ }
+  }, [statusFilter, search]);
+
+  useEffect(() => {
+    loadThreads();
+    const t = setInterval(loadThreads, 5000);
+    return () => clearInterval(t);
+  }, [loadThreads]);
+
+  const openThread = async (th) => {
+    setActive(th);
+    try { await Chat.adminMarkRead(th.id); loadThreads(); } catch { /* */ }
+  };
+
+  const toggleStatus = async () => {
+    if (!active) return;
+    const next = active.status === 'closed' ? 'open' : 'closed';
+    try {
+      const updated = await Chat.adminPatchThread(active.id, { status: next });
+      setActive({ ...active, ...updated });
+      loadThreads();
+    } catch (e) { alert(e.message || 'Ошибка'); }
+  };
+
+  const fmt = (iso) => {
+    try { return new Date(iso).toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }); }
+    catch { return ''; }
+  };
+
+  return (
+    <div className="admin-chat">
+      <div className="admin-chat-list">
+        <div className="admin-chat-filters">
+          <input placeholder="Поиск: клиент / машина…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+            <option value="open">Открытые</option>
+            <option value="closed">Закрытые</option>
+            <option value="all">Все</option>
+          </select>
+        </div>
+        {threads.length === 0 && <div className="admin-chat-empty">Диалогов нет</div>}
+        {threads.map((t) => (
+          <button key={t.id} className={`admin-chat-item ${active?.id === t.id ? 'active' : ''}`} onClick={() => openThread(t)}>
+            <div className="aci-top">
+              <span className="aci-name">{t.user_name || 'Клиент'}</span>
+              {t.unread > 0 && <span className="aci-badge">{t.unread}</span>}
+            </div>
+            {t.car_name && <span className="aci-car"><i className="ph-fill ph-car" /> {t.car_name}</span>}
+            <span className="aci-last">{t.last_body || '—'}</span>
+            <span className="aci-time">{fmt(t.last_message_at)}{t.status === 'closed' ? ' · закрыт' : ''}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="admin-chat-main">
+        {!active ? (
+          <div className="admin-chat-placeholder">Выберите диалог слева</div>
+        ) : (
+          <>
+            <div className="admin-chat-header">
+              <div className="ach-who">
+                <b>{active.user_name}</b>
+                <span className="ach-contact">{active.user_phone || active.user_email || ''}</span>
+              </div>
+              {active.car_name && <span className="ach-car"><i className="ph-fill ph-car" /> {active.car_name}</span>}
+              <button className="btn btn-sm" onClick={toggleStatus}>
+                {active.status === 'closed' ? 'Переоткрыть' : 'Закрыть'}
+              </button>
+            </div>
+            <ChatBox
+              threadId={active.id}
+              selfRole="admin"
+              loadMessages={(after) => Chat.adminThreadMessages(active.id, after).then((r) => r.messages)}
+              onSend={(body) => Chat.adminSend(active.id, { body })}
+              onRead={() => Chat.adminMarkRead(active.id)}
+              disabled={active.status === 'closed'}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

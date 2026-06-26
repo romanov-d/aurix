@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
+import AdminChat from '../components/AdminChat.jsx';
 
 // ── Русские названия статусов ──
 const BOOKING_STATUS_RU = { pending: 'Ожидает', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
@@ -670,6 +671,7 @@ export default function Admin() {
             <a href="#bookings" onClick={(e) => { e.preventDefault(); setActiveTab('bookings'); }} className={activeTab === 'bookings' ? 'active' : ''}><i className="ph-fill ph-calendar-check" /> Бронирования</a>
             <a href="#cars" onClick={(e) => { e.preventDefault(); setActiveTab('cars'); }} className={activeTab === 'cars' ? 'active' : ''}><i className="ph-fill ph-car" /> Автомобили</a>
             <a href="#users" onClick={(e) => { e.preventDefault(); setActiveTab('users'); }} className={activeTab === 'users' ? 'active' : ''}><i className="ph-fill ph-users" /> Пользователи</a>
+            <a href="#chat" onClick={(e) => { e.preventDefault(); setActiveTab('chat'); }} className={activeTab === 'chat' ? 'active' : ''}><i className="ph-fill ph-chat-circle-dots" /> Чаты</a>
             <a href="#tariffs" onClick={(e) => { e.preventDefault(); setActiveTab('tariffs'); }} className={activeTab === 'tariffs' ? 'active' : ''}><i className="ph-fill ph-table" /> Тарифы</a>
             <a href="#faq" onClick={(e) => { e.preventDefault(); setActiveTab('faq'); }} className={activeTab === 'faq' ? 'active' : ''}><i className="ph-fill ph-question" /> FAQ</a>
             <a href="#blog" onClick={(e) => { e.preventDefault(); setActiveTab('blog'); }} className={activeTab === 'blog' ? 'active' : ''}><i className="ph-fill ph-newspaper" /> Блог</a>
@@ -1173,6 +1175,8 @@ export default function Admin() {
             </div>
             );
           })()}
+
+          {activeTab === 'chat' && <AdminChat />}
 
           {activeTab === 'tariffs' && (
             <div className="acc-block">

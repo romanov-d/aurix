@@ -265,6 +265,37 @@ const SCHEMA_STATEMENTS = [
     read_time  TEXT,
     published  BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  // ── Чат «клиент ↔ менеджер» ──
+  `CREATE TABLE IF NOT EXISTS chat_threads (
+    id              BIGSERIAL PRIMARY KEY,
+    user_id         BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    car_id          TEXT   REFERENCES cars(id) ON DELETE SET NULL,
+    booking_id      BIGINT REFERENCES bookings(id) ON DELETE SET NULL,
+    subject         TEXT,
+    status          TEXT NOT NULL DEFAULT 'open',
+    manager         TEXT,
+    last_message_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE TABLE IF NOT EXISTS chat_messages (
+    id              BIGSERIAL PRIMARY KEY,
+    thread_id       BIGINT NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+    sender_id       BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    sender_role     TEXT NOT NULL,
+    body            TEXT,
+    attachment_url  TEXT,
+    attachment_name TEXT,
+    attachment_type TEXT,
+    attachment_size INTEGER,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_chat_msg_thread ON chat_messages(thread_id, created_at)`,
+  `CREATE TABLE IF NOT EXISTS chat_reads (
+    thread_id            BIGINT NOT NULL REFERENCES chat_threads(id) ON DELETE CASCADE,
+    reader_role          TEXT NOT NULL,
+    last_read_message_id BIGINT,
+    PRIMARY KEY (thread_id, reader_role)
   )`
 ];
 

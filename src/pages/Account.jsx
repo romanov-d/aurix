@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
-const ACCOUNT_TABS = ['overview', 'bookings', 'history', 'favorites', 'bonuses', 'documents', 'profile'];
+const ACCOUNT_TABS = ['overview', 'bookings', 'history', 'favorites', 'bonuses', 'documents', 'profile', 'chat'];
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
 import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
+import AccountChat from '../components/AccountChat.jsx';
 
 export default function Account() {
   const { user, logout, refresh } = useAuth();
@@ -208,6 +209,7 @@ export default function Account() {
             <a href="#favorites" onClick={(e) => { e.preventDefault(); setActiveTab('favorites'); }} className={activeTab === 'favorites' ? 'active' : ''}><i className="ph-fill ph-heart" /> Избранное {favoriteIds.length > 0 && <span className="badge">{favoriteIds.length}</span>}</a>
             <a href="#bonuses" onClick={(e) => { e.preventDefault(); setActiveTab('bonuses'); }} className={activeTab === 'bonuses' ? 'active' : ''}><i className="ph-fill ph-gift" /> Бонусы</a>
             <a href="#documents" onClick={(e) => { e.preventDefault(); setActiveTab('documents'); }} className={activeTab === 'documents' ? 'active' : ''}><i className="ph-fill ph-file-text" /> Документы</a>
+            <a href="#chat" onClick={(e) => { e.preventDefault(); setActiveTab('chat'); }} className={activeTab === 'chat' ? 'active' : ''}><i className="ph-fill ph-chat-circle-dots" /> Чат с менеджером</a>
             <a href="#profile" onClick={(e) => { e.preventDefault(); setActiveTab('profile'); }} className={activeTab === 'profile' ? 'active' : ''}><i className="ph-fill ph-user" /> Профиль</a>
           </nav>
           <div className="acc-logout">
@@ -236,7 +238,9 @@ export default function Account() {
               </div>
             )
           )}
-          {loading ? (
+          {activeTab === 'chat' ? (
+            <AccountChat />
+          ) : loading ? (
             <AccountContentSkeleton />
           ) : (
             <>

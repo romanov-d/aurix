@@ -12,6 +12,7 @@ import adminRouter from './routes/admin.js';
 import contactRouter from './routes/contact.js';
 import faqRouter from './routes/faq.js';
 import blogRouter from './routes/blog.js';
+import { clientRouter as chatRouter, adminRouter as chatAdminRouter } from './routes/chat.js';
 
 export const app = express();
 app.use(express.json({ limit: '5mb' })); // allows base64 avatar + document uploads (до ~2 МБ файлы)
@@ -44,6 +45,8 @@ app.use('/api/cars', carsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/me', meRouter);
 app.use('/api/bookings', bookingsRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/admin/chat', chatAdminRouter); // ДО /api/admin, иначе перехватит общий роутер
 app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/faq', faqRouter);
