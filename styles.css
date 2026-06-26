@@ -2120,6 +2120,8 @@ html{scroll-behavior:smooth}
 .chat-msg.mine .chat-bubble{background:linear-gradient(135deg,var(--gold-dark),var(--gold));color:#1a1407}
 .chat-att{display:inline-flex;align-items:center;gap:6px;margin-top:6px;font-size:13px;color:inherit;text-decoration:underline}
 .chat-time{font-size:11px;color:var(--muted);margin-top:3px}
+.chat-skeleton{display:flex;flex-direction:column;gap:10px}
+.chat-bubble-sk{height:40px;border-radius:14px}
 .chat-input{display:flex;gap:8px;padding:14px;border-top:1px solid var(--bg-3)}
 .chat-input input{flex:1;min-width:0;background:var(--bg-3);border:1px solid var(--line);color:var(--head);padding:11px 14px;border-radius:10px;font-family:inherit;font-size:14px}
 .chat-input button{background:var(--gold);color:#1a1407;border:0;padding:0 20px;border-radius:10px;font-weight:600;cursor:pointer}

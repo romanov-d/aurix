@@ -15,6 +15,7 @@ const MAX_FILE = 2 * 1024 * 1024; // 2 МБ
 
 export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRead, streamUrl, disabled }) {
   const [messages, setMessages] = useState([]);
+  const [loaded, setLoaded] = useState(false);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [attach, setAttach] = useState(null); // { url, name, type, size }
@@ -41,10 +42,18 @@ export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRe
   useEffect(() => {
     setMessages([]);
     lastId.current = 0;
+    setLoaded(false);
     if (!threadId) return;
     let alive = true;
 
-    poll();
+    // Первичная загрузка — снимает скелетон даже если сообщений нет
+    (async () => {
+      try {
+        const fresh = await loadMessages(0);
+        if (alive && Array.isArray(fresh) && fresh.length) { fresh.forEach(pushMsg); onRead?.(); }
+      } catch { /* */ }
+      finally { if (alive) setLoaded(true); }
+    })();
     const timer = setInterval(() => alive && poll(), 12000); // страховка
 
     // SSE — мгновенная доставка
@@ -104,10 +113,18 @@ export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRe
   return (
     <div className="chatbox">
       <div className="chat-msgs">
-        {messages.length === 0 && (
+        {!loaded ? (
+          <div className="chat-skeleton">
+            {[['theirs', 150], ['mine', 110], ['theirs', 210], ['mine', 90], ['theirs', 170]].map(([side, w], i) => (
+              <div key={i} className={`chat-msg ${side}`}>
+                <div className="sk chat-bubble-sk" style={{ width: w }} />
+              </div>
+            ))}
+          </div>
+        ) : messages.length === 0 ? (
           <div className="chat-empty">Сообщений пока нет. Напишите первым — менеджер ответит.</div>
-        )}
-        {messages.map((m) => (
+        ) : null}
+        {loaded && messages.map((m) => (
           <div key={m.id} className={`chat-msg ${m.sender_role === selfRole ? 'mine' : 'theirs'}`}>
             <div className="chat-bubble">
               {m.body && <span className="chat-text">{m.body}</span>}

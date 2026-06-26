@@ -5,6 +5,7 @@ import * as Chat from '../api/chat.js';
 // Инбокс менеджера: слева список всех диалогов, справа переписка.
 export default function AdminChat({ onOpenClient }) {
   const [threads, setThreads] = useState([]);
+  const [listLoaded, setListLoaded] = useState(false);
   const [active, setActive] = useState(null);
   const [statusFilter, setStatusFilter] = useState('open');
   const [search, setSearch] = useState('');
@@ -16,6 +17,7 @@ export default function AdminChat({ onOpenClient }) {
       if (search.trim()) params.q = search.trim();
       setThreads(await Chat.adminThreads(params));
     } catch { /* тихо */ }
+    finally { setListLoaded(true); }
   }, [statusFilter, search]);
 
   useEffect(() => {
@@ -55,8 +57,15 @@ export default function AdminChat({ onOpenClient }) {
             <option value="all">Все</option>
           </select>
         </div>
-        {threads.length === 0 && <div className="admin-chat-empty">Диалогов нет</div>}
-        {threads.map((t) => (
+        {!listLoaded && [0, 1, 2, 3].map((i) => (
+          <div key={`sk${i}`} className="admin-chat-item" style={{ pointerEvents: 'none' }}>
+            <div className="sk sk-line" style={{ width: '55%', height: 13 }} />
+            <div className="sk sk-line" style={{ width: '82%', height: 11, marginTop: 6 }} />
+            <div className="sk sk-line" style={{ width: '35%', height: 10, marginTop: 6 }} />
+          </div>
+        ))}
+        {listLoaded && threads.length === 0 && <div className="admin-chat-empty">Диалогов нет</div>}
+        {listLoaded && threads.map((t) => (
           <button key={t.id} className={`admin-chat-item ${active?.id === t.id ? 'active' : ''}`} onClick={() => openThread(t)}>
             <div className="aci-top">
               <span className="aci-name">{t.user_name || 'Клиент'}</span>

@@ -28,7 +28,20 @@ export default function AccountChat() {
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [wantThread]);
 
   if (err) return <div className="acc-block"><div className="acc-block-head"><h3>Чат с менеджером</h3></div><div style={{ padding: 20, color: '#ff8a8a' }}>{err}</div></div>;
-  if (!threads) return <div className="acc-block"><div className="acc-block-head"><h3>Чат с менеджером</h3></div><div style={{ padding: 20, color: '#888' }}>Загрузка…</div></div>;
+  if (!threads) return (
+    <div className="acc-block chat-block">
+      <div className="acc-block-head"><h3>Чат с менеджером</h3></div>
+      <div className="chatbox">
+        <div className="chat-msgs">
+          <div className="chat-skeleton">
+            {[['theirs', 150], ['mine', 110], ['theirs', 210], ['mine', 90]].map(([side, w], i) => (
+              <div key={i} className={`chat-msg ${side}`}><div className="sk chat-bubble-sk" style={{ width: w }} /></div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const active = threads.find((t) => t.id === activeId) || threads[0];
 
