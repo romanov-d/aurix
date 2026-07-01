@@ -59,7 +59,14 @@ app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
 // Сами файлы статики уже раздаются выше (до loadUser). Здесь — только отдача
 // index.html для клиентских маршрутов React Router. На Vercel этим занимается платформа.
 if (distDir) {
-  app.get(/^(?!\/api\/).*/, (_req, res) => {
+  app.get(/^(?!\/api\/).*/, (req, res) => {
+    // Отсутствующий чанк/ассет НЕ подменяем на index.html — иначе браузер
+    // получит HTML вместо JS и упадёт с «Importing a module script failed».
+    // Хешированные ассеты живут в /assets — если файла нет, это честный 404.
+    if (req.path.startsWith('/assets/')) return res.status(404).end();
+    // index.html не кэшируем: он всегда должен ссылаться на актуальные чанки,
+    // иначе после деплоя старый index.html тянет несуществующие хеши.
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.sendFile(path.join(distDir, 'index.html'));
   });
 }
