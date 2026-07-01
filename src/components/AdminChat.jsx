@@ -3,7 +3,7 @@ import ChatBox from './ChatBox.jsx';
 import * as Chat from '../api/chat.js';
 
 // Инбокс менеджера: слева список всех диалогов, справа переписка.
-export default function AdminChat({ onOpenClient }) {
+export default function AdminChat({ onOpenClient, openUserId, onOpened }) {
   const [threads, setThreads] = useState([]);
   const [listLoaded, setListLoaded] = useState(false);
   const [active, setActive] = useState(null);
@@ -25,6 +25,29 @@ export default function AdminChat({ onOpenClient }) {
     const t = setInterval(loadThreads, 5000);
     return () => clearInterval(t);
   }, [loadThreads]);
+
+  // Менеджер сам инициирует диалог: из списка пользователей пришёл openUserId —
+  // создаём/находим тред этого клиента, открываем его и переключаемся на «Открытые».
+  useEffect(() => {
+    if (!openUserId) return;
+    let alive = true;
+    (async () => {
+      try {
+        const th = await Chat.adminOpenThread(openUserId);
+        if (!alive) return;
+        setStatusFilter('open');
+        setSearch('');
+        setActive(th);
+        loadThreads();
+      } catch (e) {
+        alert(e.message || 'Не удалось открыть диалог');
+      } finally {
+        onOpened?.();
+      }
+    })();
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openUserId]);
 
   const openThread = async (th) => {
     setActive(th);

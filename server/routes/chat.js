@@ -196,6 +196,26 @@ adminRouter.get('/stream', (req, res) => {
   req.on('close', () => sseAdmins.delete(res));
 });
 
+// Менеджер сам открывает диалог с клиентом (инициатива менеджера) по user_id
+adminRouter.post('/threads', async (req, res, next) => {
+  try {
+    const userId = parseInt(req.body?.user_id);
+    if (!userId) return res.status(400).json({ error: 'Не указан пользователь' });
+    const u = await one('SELECT id FROM users WHERE id = $1', [userId]);
+    if (!u) return res.status(404).json({ error: 'Пользователь не найден' });
+    const base = await findOrCreateThread(userId, {});
+    // вернуть с данными клиента — чтобы шапка чата сразу показала имя/контакты
+    const thread = await one(
+      `SELECT t.*, u.name AS user_name, u.email AS user_email, u.phone AS user_phone, c.name AS car_name
+         FROM chat_threads t JOIN users u ON u.id = t.user_id
+         LEFT JOIN cars c ON c.id = t.car_id
+        WHERE t.id = $1`,
+      [base.id]
+    );
+    res.json(thread);
+  } catch (e) { next(e); }
+});
+
 // Список ВСЕХ диалогов: клиент, контекст машины, превью, непрочитанные
 adminRouter.get('/threads', async (req, res, next) => {
   try {

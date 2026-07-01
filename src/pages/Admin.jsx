@@ -30,6 +30,8 @@ export default function Admin() {
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sideOpen, setSideOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
+  const [chatUserId, setChatUserId] = useState(null); // менеджер пишет клиенту первым
+  const messageUser = (id) => { setChatUserId(id); setActiveTab('chat'); };
 
   // Бейдж непрочитанных чатов в меню админки
   useEffect(() => {
@@ -1178,7 +1180,12 @@ export default function Admin() {
                           <button className="btn btn-sm" style={{ fontSize: 11, padding: '2px 8px' }} onClick={() => verifyUser(u.id, true)}>Верифицировать</button>
                         )}
                       </td>
-                      <td><button className="btn btn-sm btn-ghost" onClick={() => openClient(u.id)}>Карточка</button></td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button className="btn btn-sm" onClick={() => messageUser(u.id)} title="Написать клиенту"><i className="ph ph-chat-circle-dots" /> Написать</button>
+                          <button className="btn btn-sm btn-ghost" onClick={() => openClient(u.id)}>Карточка</button>
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -1187,7 +1194,7 @@ export default function Admin() {
             );
           })()}
 
-          {activeTab === 'chat' && <AdminChat onOpenClient={openClient} />}
+          {activeTab === 'chat' && <AdminChat onOpenClient={openClient} openUserId={chatUserId} onOpened={() => setChatUserId(null)} />}
 
           {activeTab === 'tariffs' && (
             <div className="acc-block">

@@ -12,6 +12,7 @@ export const clientStreamUrl = '/api/chat/stream';
 
 // ─── Админ / менеджер ───
 export const adminThreads        = (params = {}) => api(`/admin/chat/threads?${new URLSearchParams(params)}`);
+export const adminOpenThread     = (user_id) => api('/admin/chat/threads', { method: 'POST', body: { user_id } });
 export const adminThreadMessages = (id, after = 0) => api(`/admin/chat/threads/${id}/messages?after=${after}`);
 export const adminSend           = (id, body) => api(`/admin/chat/threads/${id}/messages`, { method: 'POST', body });
 export const adminMarkRead       = (id) => api(`/admin/chat/threads/${id}/read`, { method: 'POST' });
