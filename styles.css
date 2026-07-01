@@ -775,7 +775,7 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 .terms-nav{position:sticky;top:96px;align-self:start}
 .terms-nav a{display:block;padding:12px 0;border-bottom:1px solid var(--line);font-size:13px;color:#cfcfcf;letter-spacing:.06em}
 .terms-nav a:hover,.terms-nav a.active{color:var(--gold);padding-left:8px}
-.terms-content h3{font-family:'Inter',sans-serif;color:var(--gold);font-size:22px;letter-spacing:.04em;margin:32px 0 16px}
+.terms-content h3{font-family:'Inter',sans-serif;color:var(--gold);font-size:22px;letter-spacing:.04em;margin:32px 0 16px;scroll-margin-top:110px}
 .terms-content h3:first-child{margin-top:0}
 .terms-content p{color:#bdbdbd;font-size:14px;line-height:1.85;margin-bottom:14px}
 .terms-content ul{margin:10px 0 20px 20px;color:#bdbdbd;font-size:14px;line-height:1.9}
