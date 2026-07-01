@@ -37,7 +37,21 @@ const distDir = process.env.VERCEL
   ? null
   : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 if (distDir) {
-  app.use(express.static(distDir, { maxAge: '7d', index: false }));
+  app.use(express.static(distDir, {
+    index: false,
+    setHeaders(res, filePath) {
+      // Хешированные чанки (/assets/*-<hash>.js|css): имя меняется при любом
+      // изменении содержимого, поэтому кешируем навсегда как immutable —
+      // хард-ресет не будет их бесполезно перезапрашивать.
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        // Не-хешированные файлы (hero.png, logo3.png, *.svg) могут меняться при
+        // том же имени — короткий кеш, чтобы обновления подхватывались.
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  }));
 }
 
 app.use(loadUser);

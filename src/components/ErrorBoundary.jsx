@@ -30,7 +30,7 @@ export function reloadOnce() {
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, info: null };
   }
 
   static getDerivedStateFromError(error) {
@@ -41,6 +41,7 @@ export default class ErrorBoundary extends React.Component {
     // Ленивый чанк не подгрузился (деплой сменил хеши / сеть моргнула) —
     // тихо перезагружаемся один раз вместо экрана ошибки.
     if (isChunkLoadError(error) && reloadOnce()) return;
+    this.setState({ info });
     console.error('[ErrorBoundary]', this.props.name || '', error, info?.componentStack);
   }
 
@@ -59,13 +60,21 @@ export default class ErrorBoundary extends React.Component {
           </div>
         );
       }
+      // ВАЖНО: Safari в error.stack НЕ включает текст ошибки (в отличие от
+      // Chrome). Поэтому показываем name+message ОТДЕЛЬНО и ПЕРВЫМИ — иначе на
+      // iOS видны только безымянные кадры React и причину не понять. Ниже —
+      // componentStack (какой компонент упал) и сырой stack.
+      const err = this.state.error;
+      const head = `${err?.name || 'Error'}: ${err?.message || String(err)}`;
       return (
         <div style={{ padding: 24, color: '#eee', fontFamily: 'system-ui, sans-serif', maxWidth: 720, margin: '40px auto' }}>
           <h2 style={{ color: '#E7C063' }}>Что-то пошло не так</h2>
-          <p style={{ color: '#aaa' }}>Страница не смогла отрисоваться. Текст ошибки:</p>
-          <pre style={{ whiteSpace: 'pre-wrap', color: '#ff8a8a', background: '#1a1a1a', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>
-            {String(this.state.error?.stack || this.state.error?.message || this.state.error)}
-          </pre>
+          <p style={{ color: '#aaa' }}>Страница не смогла отрисоваться. Причина:</p>
+          <pre style={{ whiteSpace: 'pre-wrap', color: '#ffd27a', background: '#1a1a1a', padding: 12, borderRadius: 8, fontSize: 13, fontWeight: 600, overflowX: 'auto' }}>{head}</pre>
+          {this.state.info?.componentStack && (
+            <pre style={{ whiteSpace: 'pre-wrap', color: '#9ecbff', background: '#141414', padding: 12, borderRadius: 8, fontSize: 12, overflowX: 'auto' }}>{this.state.info.componentStack}</pre>
+          )}
+          <pre style={{ whiteSpace: 'pre-wrap', color: '#ff8a8a', background: '#1a1a1a', padding: 12, borderRadius: 8, fontSize: 11, overflowX: 'auto' }}>{String(err?.stack || '')}</pre>
         </div>
       );
     }

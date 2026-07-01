@@ -19,6 +19,36 @@
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
+<!-- Предохранитель загрузки. Если после деплоя index.html ссылается на входной
+     чанк /assets/index-*.js, которого уже нет на сервере (хеши сменились), то
+     этот <script type="module"> молча падает с 404: React не стартует, а
+     vite:preloadError/ErrorBoundary (они ловят только ленивые чанки) не
+     срабатывают → белый экран без восстановления. Здесь ловим этот случай:
+     если через 10 с #root пуст — один раз перезагружаемся с обходом кеша;
+     если и это не помогло — показываем сообщение вместо белого экрана. -->
+<script>
+  (function () {
+    var KEY = 'aurix-boot-reload';
+    function mounted() { var r = document.getElementById('root'); return r && r.children.length > 0; }
+    setTimeout(function () {
+      if (mounted()) { try { sessionStorage.removeItem(KEY); } catch (e) {} return; }
+      var tried = 0; try { tried = +sessionStorage.getItem(KEY) || 0; } catch (e) {}
+      if (tried < 1) {
+        try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
+        // index.html отдаётся с no-store, поэтому обычный reload берёт свежий
+        // index.html с актуальными хешами чанков — обход кеша не нужен.
+        location.reload();
+      } else {
+        var r = document.getElementById('root');
+        if (r) r.innerHTML = '<div style="max-width:520px;margin:60px auto;padding:24px;text-align:center;color:#eee;font-family:system-ui,sans-serif">'
+          + '<h2 style="color:#E7C063">Не удалось загрузить сайт</h2>'
+          + '<p style="color:#aaa">Вышло обновление. Нажмите, чтобы загрузить свежую версию.</p>'
+          + '<button onclick="try{sessionStorage.removeItem(\'aurix-boot-reload\')}catch(e){};location.reload()" '
+          + 'style="margin-top:12px;background:#E7C063;color:#1a1407;border:0;padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer">Обновить</button></div>';
+      }
+    }, 10000);
+  })();
+</script>
 <!-- SaleBot онлайн-чат — грузим ПОСЛЕ загрузки страницы, чтобы не висел на прелоадере -->
 <script>
   window.addEventListener('load', function () {

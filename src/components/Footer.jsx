@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
-import { GrainGradient } from '@paper-design/shaders-react';
-import ErrorBoundary from './ErrorBoundary.jsx';
+import SafeShader from './SafeShader.jsx';
 
 /* ── Иконка мессенджера MAX ── */
 function IconMax() {
@@ -16,22 +15,19 @@ export default function Footer() {
     <footer className="ft">
       {/* Animated gradient behind glass */}
       <div className="ft-shader">
-        <ErrorBoundary name="footer-shader" fallback={null}>
-          <GrainGradient
-            style={{ width: '100%', height: '100%' }}
-            colorBack="hsl(0,0%,0%)"
-            softness={0.6}
-            intensity={0.7}
-            noise={0}
-            shape="corners"
-            offsetX={0}
-            offsetY={0}
-            scale={1}
-            rotation={0}
-            speed={1.8}
-            colors={['hsl(46,65%,55%)', 'hsl(42,60%,40%)', 'hsl(32,45%,15%)']}
-          />
-        </ErrorBoundary>
+        <SafeShader
+          colorBack="hsl(0,0%,0%)"
+          softness={0.6}
+          intensity={0.7}
+          noise={0}
+          shape="corners"
+          offsetX={0}
+          offsetY={0}
+          scale={1}
+          rotation={0}
+          speed={1.8}
+          colors={['hsl(46,65%,55%)', 'hsl(42,60%,40%)', 'hsl(32,45%,15%)']}
+        />
       </div>
 
       <div className="ft-wrap">
