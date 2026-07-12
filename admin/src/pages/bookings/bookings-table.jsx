@@ -53,6 +53,17 @@ export function BookingsTable() {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState([{ id: 'id', desc: true }]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+
+  // Смена статуса брони (Выдать/Завершить/Отменить) → PATCH + обновление строки
+  const patchBooking = async (id, body) => {
+    try {
+      const updated = await api.patch(`/admin/bookings/${id}`, body);
+      setRows((rs) => rs.map((b) => (String(b.id) === String(id) ? { ...b, ...updated } : b)));
+    } catch (e) {
+      alert(e.message || 'Не удалось изменить бронь');
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -75,12 +86,13 @@ export function BookingsTable() {
 
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter((b) =>
-      [b.id, b.user?.name, b.user?.email, b.user?.phone, b.car?.name]
-        .some((v) => String(v || '').toLowerCase().includes(q)),
-    );
-  }, [rows, searchQuery]);
+    return rows.filter((b) => {
+      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
+      if (!q) return true;
+      return [b.id, b.user?.name, b.user?.email, b.user?.phone, b.car?.name]
+        .some((v) => String(v || '').toLowerCase().includes(q));
+    });
+  }, [rows, searchQuery, statusFilter]);
 
   const columns = useMemo(
     () => [
@@ -155,13 +167,24 @@ export function BookingsTable() {
       {
         id: 'actions',
         header: '',
-        cell: () => (
-          <Button mode="link" underlined="dashed">
-            Открыть
-          </Button>
-        ),
+        cell: ({ row }) => {
+          const b = row.original;
+          return (
+            <div className="flex items-center gap-1.5 justify-end">
+              {b.status === 'pending' && (
+                <Button size="sm" variant="outline" onClick={() => patchBooking(b.id, { status: 'active' })}>Выдать</Button>
+              )}
+              {b.status === 'active' && (
+                <Button size="sm" variant="outline" onClick={() => patchBooking(b.id, { status: 'completed' })}>Завершить</Button>
+              )}
+              {(b.status === 'pending' || b.status === 'active') && (
+                <Button size="sm" variant="ghost" onClick={() => { if (confirm('Отменить бронь?')) patchBooking(b.id, { status: 'cancelled' }); }}>Отменить</Button>
+              )}
+            </div>
+          );
+        },
         enableSorting: false,
-        size: 90,
+        size: 240,
       },
     ],
     [],
@@ -194,6 +217,17 @@ export function BookingsTable() {
             <CardTitle>Брони {!loading && `(${rows.length})`}</CardTitle>
           </CardHeading>
           <CardToolbar>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+            >
+              <option value="all">Все статусы</option>
+              <option value="pending">Ожидают</option>
+              <option value="active">В аренде</option>
+              <option value="completed">Завершённые</option>
+              <option value="cancelled">Отменённые</option>
+            </select>
             <div className="relative">
               <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
               <Input
