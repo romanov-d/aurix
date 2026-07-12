@@ -10,6 +10,7 @@ import {
 } from '@/partials/common/toolbar';
 import { Container } from '@/components/common/container';
 import { DashboardContent } from './dashboard-content';
+import { DashboardDataContext } from './dashboard-data';
 
 export function DashboardPage() {
   const [data, setData] = useState(null);
@@ -40,7 +41,9 @@ export function DashboardPage() {
         ) : !data ? (
           <div className="py-10 text-center text-muted-foreground">Загрузка…</div>
         ) : (
-          <DashboardContent data={data} />
+          <DashboardDataContext.Provider value={data}>
+            <DashboardContent />
+          </DashboardDataContext.Provider>
         )}
       </Container>
     </Fragment>
