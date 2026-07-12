@@ -7,3 +7,6 @@ dist
 .DS_Store
 legacy
 *.log
+
+admin/node_modules
+admin/dist

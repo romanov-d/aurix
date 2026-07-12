@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "aurix-preview", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "preview", "--port", "4173"], "port": 4173 },
-    { "name": "aurix-dev", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5173", "--strictPort"], "port": 5173 }
+    { "name": "aurix-dev", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "--port", "5173", "--strictPort"], "port": 5173 },
+    { "name": "admin", "runtimeExecutable": "npm", "runtimeArgs": ["--prefix", "/Users/macbookbro/Documents/GitHub/aurix/admin", "run", "dev", "--", "--port", "5190", "--strictPort"], "port": 5190 }
   ]
 }
