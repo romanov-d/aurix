@@ -58,9 +58,11 @@ import {
 export const MENU_SIDEBAR = [
   { heading: 'AURIX' },
   {
-    title: 'Брони',
+    title: 'Прокат',
     icon: CalendarCheck,
-    path: '/bookings',
+    children: [
+      { title: 'Брони', path: '/bookings' },
+    ],
   },
   {
     title: 'Dashboards',
