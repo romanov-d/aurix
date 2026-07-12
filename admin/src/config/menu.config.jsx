@@ -56,6 +56,12 @@ import {
 } from 'lucide-react';
 
 export const MENU_SIDEBAR = [
+  { heading: 'AURIX' },
+  {
+    title: 'Брони',
+    icon: CalendarCheck,
+    path: '/bookings',
+  },
   {
     title: 'Dashboards',
     icon: LayoutGrid,

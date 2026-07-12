@@ -79,6 +79,7 @@ import {
   ProjectColumn3Page,
 } from '@/pages/public-profile';
 import { AllProductsPage, DashboardPage } from '@/pages/store-admin';
+import { BookingsPage } from '@/pages/bookings';
 import {
   MyOrdersPage,
   OrderPlacedPage,
@@ -100,6 +101,8 @@ export function AppRoutingSetup() {
       <Route element={<RequireAuth />}>
         <Route element={<Demo1Layout />}>
           <Route path="/" element={<DefaultPage />} />
+          {/* AURIX */}
+          <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/dark-sidebar" element={<Demo1DarkSidebarPage />} />
           <Route
             path="/public-profile/profiles/default/"
