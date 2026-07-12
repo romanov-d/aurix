@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { SupabaseAdapter } from '@/auth/adapters/supabase-adapter';
+import { AurixAdapter as SupabaseAdapter } from '@/auth/adapters/aurix-adapter';
 import { AuthContext } from '@/auth/context/auth-context';
 import * as authHelper from '@/auth/lib/helpers';
 
