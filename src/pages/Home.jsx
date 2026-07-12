@@ -189,10 +189,10 @@ export default function Home() {
             <p className="exp-lead">AURIX MOTORS — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</p>
           </div>
           <div className="exp-photos">
-            {/* TODO: заменить на реальные фото (офис / руль / авто) */}
-            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
-            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1511919884226-fd3cad34687c?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
-            <div className="exp-photo"><img src="https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=700&q=80&auto=format&fit=crop" alt="" loading="lazy" /></div>
+            {/* Локальные фото из парка — внешний CDN (Unsplash) режется в РФ и не грузится */}
+            <div className="exp-photo"><img src="/cars/mercedes_sl43_black.webp" alt="" loading="lazy" /></div>
+            <div className="exp-photo"><img src="/cars/lambo_urus.webp" alt="" loading="lazy" /></div>
+            <div className="exp-photo"><img src="/cars/rolls_royce.webp" alt="" loading="lazy" /></div>
           </div>
         </div>
       </section>

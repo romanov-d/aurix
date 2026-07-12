@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const pad = n => String(n).padStart(2, '0');
 const toStr = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
@@ -58,6 +59,7 @@ export default function DateRangePicker({
   const [viewYear, setViewYear] = useState(initDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initDate.getMonth());
   const ref = useRef(null);
+  const popupRef = useRef(null); // модалка рендерится порталом вне ref — нужен свой ref
 
   const fromDate = from ? fromStr(from) : null;
   const toDate   = to   ? fromStr(to)   : null;
@@ -65,7 +67,9 @@ export default function DateRangePicker({
 
   useEffect(() => {
     function outside(e) {
-      if (ref.current && !ref.current.contains(e.target)) {
+      const inTrigger = ref.current && ref.current.contains(e.target);
+      const inPopup = popupRef.current && popupRef.current.contains(e.target);
+      if (!inTrigger && !inPopup) {
         setIsOpen(false);
         setHoverDate(null);
         if (picking && !to) {
@@ -160,10 +164,14 @@ export default function DateRangePicker({
         </button>
       )}
 
-      {isOpen && (
+      {isOpen && (() => {
+        // Сайдбарную модалку рендерим порталом в body: иначе она заперта в
+        // stacking-context sticky-сайдбара .filters, и колонка с карточками
+        // (позже в DOM) рисуется поверх календаря — даты не выбрать.
+        const node = (
         <>
         {isSidebar && <div className="drp-modal-backdrop" onClick={() => setIsOpen(false)} />}
-        <div className={`drp-popup${isHero ? ' drp-popup-hero' : ''}${isSidebar ? ' drp-popup-modal' : ''}`}>
+        <div ref={popupRef} className={`drp-popup${isHero ? ' drp-popup-hero' : ''}${isSidebar ? ' drp-popup-modal' : ''}`}>
           <div className="drp-header">
             <button className="drp-nav" onClick={prevMonth}>
               <svg height="14" viewBox="0 0 16 16" width="14" fill="currentColor">
@@ -221,7 +229,9 @@ export default function DateRangePicker({
           </div>
         </div>
         </>
-      )}
+        );
+        return isSidebar ? createPortal(node, document.body) : node;
+      })()}
     </div>
   );
 }
