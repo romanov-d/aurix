@@ -1,0 +1,177 @@
+# AURIX — перенос админки и ЛК клиента на Metronic 9.5
+
+Живой план разработки. Обновляется по ходу. Цель — перенести служебную панель
+(админку) и личный кабинет клиента на Metronic 9.5, добавить новый этап
+(залоги/штрафы, балансы, аудит), сохранить наш Express + Postgres бэкенд.
+
+---
+
+## 1. Архитектура
+
+- **`aurix/admin/`** — отдельное Vite + React 19 + Tailwind 4 приложение на Metronic 9.5.
+  Не смешивается с основным сайтом (React 18) — свой бандл, свои зависимости.
+- **Бэкенд общий** — наш Express (`aurix/server`) + Postgres (201.51.12.75).
+  Никакого Supabase (выпилен из авторизации).
+- **Dev:** Vite проксирует `/api` → `localhost:3001`. **Prod:** nginx отдаёт
+  `/admin` (собранный `admin/dist`) и `/api` (Node) на одном домене → cookie-сессия
+  работает без CORS.
+- **ЛК клиента** — на тех же Metronic-страницах (раздел Store-Client), тот же бэкенд.
+  Разграничение по роли: `admin` видит панель, `user` — свой кабинет.
+
+**Принцип работы с шаблоном:** ядро Metronic (компоненты `components/ui/*`, лейаут
+demo1, дизайн-система) НЕ переписываем. Добавляем свои страницы в `src/pages/*`,
+пункты в `menu.config.jsx`, тему в `css/config.reui.css`. Демо-страницы оставляем
+как справочник/источник идей — не удаляем.
+
+## 2. Брендинг (сделано)
+
+- `--primary: #D4AF37` (золото AURIX), тёмная тема по умолчанию.
+- Лого AURIX вместо Metronic.
+
+## 3. Авторизация (сделано)
+
+- `src/auth/adapters/aurix-adapter.js` — login / getCurrentUser / logout через
+  `/api/auth` (JWT в httpOnly-cookie). Вход только для роли `admin`.
+- `src/lib/aurix-api.js` — fetch-клиент (`credentials: include`).
+
+---
+
+## 4. Карта соответствия: наши сущности ↔ Metronic (что откуда берём)
+
+| Наш модуль | Готовая страница/компонент Metronic | Статус |
+|---|---|---|
+| Брони (таблица) | store-admin `recent-orders` (TanStack DataGrid) | ✅ сделано |
+| Дашборд-метрики | store-admin dashboard: Orders, Sales Activity, Inventory; ряды из Gamer/Company профилей | ⏳ |
+| Карточка брони | store-client `order-receipt` + sheet-формы; timeline из account/activity | ⏳ |
+| Автопарк | store-admin `inventory/all-products` (DataGrid + карточки) | ⏳ |
+| Клиенты (список) | `network/user-table/store-clients` | ⏳ |
+| Карточка клиента | `public-profile/profiles/default` (каркас) + метрик-ряд из `gamer` + Highlights из `company` | ⏳ |
+| Балансы клиента | `account/billing` (basic + history) | ⏳ |
+| Чат | topbar `chat-sheet` + concepts `ai/chat` | ⏳ |
+| Аудит действий | `account/activity` + `security/security-log` | ⏳ |
+| Договор/счёт | Invoice Generator (демо) как образец | ⏳ |
+| ЛК: мои аренды | store-client `my-orders` | ⏳ |
+| ЛК: оформление | store-client `checkout/*` | ⏳ |
+
+## 5. Разделы АДМИНКИ (что строим)
+
+### 5.1 Дашборд
+Метрики на наших числах (идеи из Metronic):
+- Выручка за период + график по месяцам (Orders-график).
+- Активные брони / ожидают выдачи / на возврат / завершено (Sales Activity — воронка стадий).
+- Загрузка автопарка: свободно / в аренде / закрыто (Inventory-полоса).
+- Топ-авто по доходу (Bestsellers).
+- Ряд KPI в стиле Gamer: всего броней, средний чек, депозит на руках, штрафов за месяц.
+
+### 5.2 Брони ✅ + карточка брони ⏳
+- Список — сделано (`/bookings`).
+- Карточка: даты/сумма/менеджер/стадия (наш PATCH), блок «Залог и расчёт» (Блок 1),
+  timeline действий (Блок 3).
+
+### 5.3 Автопарк
+- DataGrid машин: фото, цена, статус, «закрыта до» (наш `closed_until`).
+- Карточка машины: цены/залог/пробег, галерея фото (`car_photos`), плашка.
+
+### 5.4 Клиенты
+- Список (DataGrid) из `/api/admin/users`: ФИО, телефон, статус верификации, баланс.
+- Карточка клиента (профиль Default): контакты, документы, менеджер;
+  ряд метрик (аренд, налёт ₽, депозитный баланс, штрафов); Highlights (стаж, статус, дата).
+
+### 5.5 Чат
+- Перенос нашего чата менеджер↔клиент в chat-sheet Metronic.
+
+### 5.6 Финансы — НОВЫЙ ЭТАП
+**Блок 1. Залоги и штрафы** (в карточке брони):
+- Ввод залога вручную; возврат 50% в течение суток; остаток после осмотра.
+- Удержания: список позиций (мойка, химчистка, царапина, перепробег, ремонт) —
+  сумма + пояснение + фото. Итог «вернули X / удержали Y за то-то».
+- Внутренний календарь выплат/возвратов.
+
+**Блок 2. Балансы клиента** (в карточке клиента):
+- Денежный баланс (предоплата «карта») и депозитный баланс — отдельно.
+- Пополнение/списание вручную с пояснением; история движений; свободные заметки.
+
+### 5.7 Аудит — НОВЫЙ ЭТАП (Блок 3)
+- Журнал: кто (админ/система/клиент), что изменил, когда, старое→новое.
+- Точки логирования: бронь, залог, удержания, баланс, статус машины.
+- Вкладка «Журнал» + лента в карточках брони/клиента.
+
+## 6. ЛК КЛИЕНТА на Metronic (Store-Client)
+
+- **Профиль/обзор:** ряд метрик (аренд, налёт ₽, депозитный баланс, штрафов, уровень клуба).
+- **Мои аренды:** список (`my-orders`) + чек/договор (`order-receipt`).
+- **Финансы:** денежный и депозитный баланс + история движений (billing/history).
+- **Штрафы/удержания:** по каждой аренде — позиции с пояснением и фото.
+- **Документы:** загрузка/статус верификации (паспорт, права).
+- **Поддержка:** чат.
+
+## 7. Изменения БД (для нового этапа)
+
+```
+-- Блок 1: залоги и удержания
+ALTER TABLE bookings ADD COLUMN deposit_amount   INTEGER DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN deposit_returned INTEGER DEFAULT 0;
+ALTER TABLE bookings ADD COLUMN deposit_status   TEXT;      -- held/partial/returned
+
+CREATE TABLE rental_charges (               -- удержания/штрафы по аренде
+  id BIGSERIAL PRIMARY KEY,
+  booking_id BIGINT REFERENCES bookings(id) ON DELETE CASCADE,
+  type TEXT, amount INTEGER, note TEXT, photo_url TEXT,
+  created_by BIGINT, created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE deposit_movements (            -- календарь возвратов/удержаний залога
+  id BIGSERIAL PRIMARY KEY,
+  booking_id BIGINT REFERENCES bookings(id) ON DELETE CASCADE,
+  kind TEXT, amount INTEGER, due_date DATE, status TEXT, created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Блок 2: балансы клиента
+ALTER TABLE users ADD COLUMN money_balance   INTEGER DEFAULT 0;
+ALTER TABLE users ADD COLUMN deposit_balance INTEGER DEFAULT 0;
+
+CREATE TABLE balance_transactions (
+  id BIGSERIAL PRIMARY KEY,
+  user_id BIGINT REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT,        -- topup/charge
+  target TEXT,      -- money/deposit
+  amount INTEGER, reason TEXT, booking_id BIGINT,
+  created_by BIGINT, created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Блок 3: аудит
+CREATE TABLE audit_log (
+  id BIGSERIAL PRIMARY KEY,
+  entity_type TEXT, entity_id TEXT, action TEXT,
+  actor_id BIGINT, actor_role TEXT,
+  changes JSONB,    -- {field: [old, new]}
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+Все DDL — идемпотентно в `ensureSchema` (как остальные ALTER … IF NOT EXISTS).
+
+## 8. Дорожная карта (фазы)
+
+1. **Каркас** ✅ — приложение в репо, бренд, авторизация на нашем бэке.
+2. **Первые данные** ✅ — страница «Брони».
+3. **Админка-обзор** — дашборд на реальных числах.
+4. **Сущности** — Автопарк, Клиенты (список + карточки).
+5. **Новый этап** — Блок 1 (залоги/штрафы) → Блок 2 (балансы) → Блок 3 (аудит).
+6. **Чат** — перенос переписки.
+7. **ЛК клиента** — Store-Client страницы.
+8. **Деплой** — nginx `/admin`, сборка, поддомен/путь на Beget.
+
+## 9. Деплой (prod)
+
+- `cd admin && npm ci && npm run build` → `admin/dist`.
+- nginx: `location /admin/ { try_files … /admin/index.html; }`, `base: '/admin/'` в vite.
+- `/api` — тот же Node (pm2). Cookie `Secure` в prod (https) — ок.
+
+## 10. Лицензия
+
+Metronic — 1 лицензия = 1 проект/деплой (подтверждено, куплена). Для SaaS с платными
+пользователями может потребоваться extended — держать в уме при масштабировании.
+
+---
+
+_Последнее обновление: этап 2 завершён (страница «Брони» на реальных данных)._

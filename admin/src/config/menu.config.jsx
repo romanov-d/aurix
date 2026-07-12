@@ -65,6 +65,13 @@ export const MENU_SIDEBAR = [
     ],
   },
   {
+    title: 'Клиенты',
+    icon: Users,
+    children: [
+      { title: 'Все клиенты', path: '/clients' },
+    ],
+  },
+  {
     title: 'Dashboards',
     icon: LayoutGrid,
     children: [
