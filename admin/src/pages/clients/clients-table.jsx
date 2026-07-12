@@ -9,6 +9,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Search, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/aurix-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -149,8 +150,10 @@ export function ClientsTable() {
       {
         id: 'actions',
         header: '',
-        cell: () => (
-          <Button mode="link" underlined="dashed">Открыть</Button>
+        cell: ({ row }) => (
+          <Button mode="link" underlined="dashed" asChild>
+            <Link to={`/clients/${row.original.id}`}>Открыть</Link>
+          </Button>
         ),
         enableSorting: false,
         size: 90,

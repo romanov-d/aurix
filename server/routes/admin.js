@@ -553,7 +553,8 @@ router.get('/users/:id', async (req, res, next) => {
   try {
     const user = await one(
       `SELECT id, email, name, phone, role, is_verified, points, manager, dob, admin_note,
-              passport_url, license_url, passport_page_url, registration_url, created_at
+              passport_url, license_url, passport_page_url, registration_url, created_at,
+              money_balance, deposit_balance
        FROM users WHERE id = $1`,
       [req.params.id]
     );
@@ -570,8 +571,52 @@ router.get('/users/:id', async (req, res, next) => {
       `SELECT id, amount, reason, created_at FROM user_points WHERE user_id = $1 ORDER BY created_at DESC`,
       [req.params.id]
     );
-    res.json({ user, bookings, points });
+    const transactions = await many(
+      `SELECT id, kind, target, amount, reason, booking_id, created_at
+       FROM balance_transactions WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.params.id]
+    );
+    res.json({ user, bookings, points, transactions });
   } catch (e) {
+    next(e);
+  }
+});
+
+// Пополнение/списание баланса клиента (денежный или депозитный) — вручную
+// менеджером, с пояснением. Атомарно: движение баланса + запись в историю.
+const balanceSchema = z.object({
+  kind: z.enum(['topup', 'charge']),
+  target: z.enum(['money', 'deposit']),
+  amount: z.coerce.number().int().positive(),
+  reason: z.string().max(500).optional().nullable(),
+  booking_id: z.coerce.number().int().optional().nullable(),
+});
+
+router.post('/users/:id/balance', async (req, res, next) => {
+  try {
+    const body = balanceSchema.parse(req.body);
+    const col = body.target === 'money' ? 'money_balance' : 'deposit_balance';
+    const delta = body.kind === 'topup' ? body.amount : -body.amount;
+
+    const user = await one(`SELECT id, ${col} AS bal FROM users WHERE id = $1`, [req.params.id]);
+    if (!user) return res.status(404).json({ error: 'Клиент не найден' });
+    if ((user.bal || 0) + delta < 0) {
+      return res.status(400).json({ error: 'Недостаточно средств на балансе для списания' });
+    }
+
+    const updated = await one(
+      `UPDATE users SET ${col} = COALESCE(${col}, 0) + $1 WHERE id = $2
+       RETURNING money_balance, deposit_balance`,
+      [delta, req.params.id]
+    );
+    const { rows } = await q(
+      `INSERT INTO balance_transactions (user_id, kind, target, amount, reason, booking_id, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, kind, target, amount, reason, booking_id, created_at`,
+      [req.params.id, body.kind, body.target, body.amount, body.reason || null, body.booking_id || null, req.user.id]
+    );
+    res.status(201).json({ ...updated, transaction: rows[0] });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
     next(e);
   }
 });

@@ -183,6 +183,22 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_expires TIMESTAMPTZ`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_purpose TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_attempts INTEGER NOT NULL DEFAULT 0`,
+  // Балансы клиента (новый этап, Блок 2): денежный (предоплата «карта») и
+  // депозитный. Начисления ручные менеджером — без платёжной системы.
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS money_balance   INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS deposit_balance INTEGER NOT NULL DEFAULT 0`,
+  `CREATE TABLE IF NOT EXISTS balance_transactions (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL,          -- topup | charge
+    target      TEXT NOT NULL,          -- money | deposit
+    amount      INTEGER NOT NULL,       -- положительное; знак задаёт kind
+    reason      TEXT,
+    booking_id  BIGINT,
+    created_by  BIGINT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_balance_tx_user ON balance_transactions(user_id)`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_url TEXT`,

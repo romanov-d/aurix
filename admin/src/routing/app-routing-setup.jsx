@@ -80,7 +80,7 @@ import {
 } from '@/pages/public-profile';
 import { AllProductsPage, DashboardPage } from '@/pages/store-admin';
 import { BookingsPage } from '@/pages/bookings';
-import { ClientsPage } from '@/pages/clients';
+import { ClientsPage, ClientCardPage } from '@/pages/clients';
 import {
   MyOrdersPage,
   OrderPlacedPage,
@@ -105,6 +105,7 @@ export function AppRoutingSetup() {
           {/* AURIX */}
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/clients/:id" element={<ClientCardPage />} />
           <Route path="/dark-sidebar" element={<Demo1DarkSidebarPage />} />
           <Route
             path="/public-profile/profiles/default/"
