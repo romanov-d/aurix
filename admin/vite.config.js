@@ -17,6 +17,8 @@ export default defineConfig({
     // домене (nginx), поэтому там тоже относительный /api.
     proxy: {
       '/api': { target: 'http://localhost:3001', changeOrigin: true },
+      // Фото машин лежат на бэкенде (dist/cars). В проде тот же домен.
+      '/cars': { target: 'http://localhost:3001', changeOrigin: true },
     },
   },
   build: {
