@@ -1,10 +1,13 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 
-const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
+// Известные бренды нужны только для логотипов и распознавания по имени.
+// Сам СПИСОК брендов в фильтре строится из загруженных машин — новая марка,
+// добавленная через админку, появляется в фильтре автоматически.
+const KNOWN_BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche', 'Bentley', 'Audi', 'Land Rover'];
 const BRAND_LOGOS = {
   Lexus: '/lexus.svg', Mercedes: '/mercedes.svg', Lamborghini: '/lamborghini.svg',
   Ferrari: '/ferrari.svg', BMW: '/bmw.svg', 'Rolls-Royce': '/rolls-royce.svg', Porsche: '/porsche.svg',
@@ -13,11 +16,25 @@ const BODIES = ['Все', 'Купе', 'Купе/Кабриолет', 'Кабри
 
 const pad = (n) => String(n).padStart(2, '0');
 const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+// Бронь день в день разрешена: минимальная дата — сегодня.
+const today = new Date();
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
 
 function getBrand(car) {
-  return BRANDS.find(b => car.name.startsWith(b)) || car.brand || '';
+  return KNOWN_BRANDS.find(b => car.name.startsWith(b)) || car.brand || '';
+}
+
+// Сопоставление типа кузова по токенам: авто «Купе/Кабриолет» попадает и в
+// «Купе», и в «Кабриолет», и в «Купе/Кабриолет». Раньше сравнивались строки
+// целиком, поэтому чип «Кабриолет» не находил ничего, а «Купе» не показывал
+// машины со складной крышей.
+function bodyMatches(carBody, selected) {
+  if (selected === 'Все') return true;
+  if (!carBody) return false;
+  const carTokens = carBody.split('/').map(s => s.trim().toLowerCase());
+  const selTokens = selected.split('/').map(s => s.trim().toLowerCase());
+  return selTokens.some(t => carTokens.includes(t));
 }
 
 // Формат цены с разделением разрядов: 300000 → «300 000»
@@ -81,19 +98,34 @@ export default function Catalog() {
 
   // Sidebar filters (client-side)
   const [body,           setBody]           = useState(BODIES.includes(urlBody) ? urlBody : 'Все');
-  const [selectedBrands, setSelectedBrands] = useState(
-    urlBrand && BRANDS.includes(urlBrand) ? new Set([urlBrand]) : new Set(BRANDS)
-  );
+  // null = «все бренды» (в т.ч. добавленные позже через админку)
+  const [selectedBrands, setSelectedBrands] = useState(urlBrand ? new Set([urlBrand]) : null);
   const [textSearch, setTextSearch] = useState(urlQ);
-  const [minPrice,   setMinPrice]   = useState(30000);
-  const [maxPrice,   setMaxPrice]   = useState(200000);
+  // Ценовой диапазон подстраивается под реальный парк (раньше 30–200к прятал
+  // машины дороже/дешевле). Пока пользователь не трогал поля — границы из данных.
+  const [minPrice,   setMinPrice]   = useState(0);
+  const [maxPrice,   setMaxPrice]   = useState(1000000);
+  const [priceTouched, setPriceTouched] = useState(false);
   const [sort,       setSort]       = useState('Рекомендуемые');
   const [brandsOpen, setBrandsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
+  // Список брендов — из загруженных машин
+  const brands = useMemo(
+    () => [...new Set(FLEET.map(getBrand).filter(Boolean))],
+    [FLEET]
+  );
+
+  // Верхняя граница цены — из парка (округляем вверх до 5к, чтобы поле выглядело аккуратно)
+  useEffect(() => {
+    if (priceTouched || !FLEET.length) return;
+    const top = Math.max(...FLEET.map(c => c.price_per_day || c.price || 0));
+    if (top > 0) setMaxPrice(Math.ceil(top / 5000) * 5000);
+  }, [FLEET, priceTouched]);
+
   function toggleBrand(brand) {
     setSelectedBrands(prev => {
-      const next = new Set(prev);
+      const next = new Set(prev ?? brands); // старт «все выбраны»
       next.has(brand) ? next.delete(brand) : next.add(brand);
       return next;
     });
@@ -101,9 +133,9 @@ export default function Catalog() {
 
   function resetFilters() {
     setBody('Все');
-    setSelectedBrands(new Set(BRANDS));
-    setMinPrice(30000);
-    setMaxPrice(200000);
+    setSelectedBrands(null);
+    setPriceTouched(false);
+    setMinPrice(0);
     setSort('Рекомендуемые');
     setTextSearch('');
     setDatesActive(false);
@@ -113,8 +145,8 @@ export default function Catalog() {
     const q = textSearch.trim().toLowerCase();
     let list = FLEET.filter(car => {
       const price = car.price_per_day || car.price || 0;
-      if (body !== 'Все' && car.body !== body) return false;
-      if (!selectedBrands.has(getBrand(car))) return false;
+      if (!bodyMatches(car.body, body)) return false;
+      if (selectedBrands && !selectedBrands.has(getBrand(car))) return false;
       if (price < minPrice || price > maxPrice) return false;
       if (q && !car.name.toLowerCase().includes(q)) return false;
       return true;
@@ -170,7 +202,7 @@ export default function Catalog() {
             <DateRangePicker
               from={datesActive ? fromDate : null}
               to={datesActive ? toDate : null}
-              minDate={toDateStr(tomorrow)}
+              minDate={toDateStr(today)}
               variant="sidebar"
               onChange={({ from, to }) => {
                 if (from) { setFromDate(from); setDatesActive(true); }
@@ -205,7 +237,7 @@ export default function Catalog() {
             >
               Марка
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 400 }}>
-                {selectedBrands.size < BRANDS.length && <span style={{ color: 'var(--gold)' }}>{selectedBrands.size}/{BRANDS.length}</span>}
+                {selectedBrands && selectedBrands.size < brands.length && <span style={{ color: 'var(--gold)' }}>{selectedBrands.size}/{brands.length}</span>}
                 <i className={`ph ph-caret-${brandsOpen ? 'up' : 'down'}`} style={{ fontSize: 13, color: '#888' }} />
               </span>
             </h5>
@@ -215,21 +247,24 @@ export default function Catalog() {
                 <div className="brand-popup">
                   <div className="brand-popup-head">
                     <span>Выберите марки</span>
-                    <button onClick={() => setSelectedBrands(new Set(BRANDS))}>Все</button>
+                    <button onClick={() => setSelectedBrands(null)}>Все</button>
                   </div>
-                  {BRANDS.map(brand => (
-                    <div
-                      key={brand}
-                      className={`brand-option${selectedBrands.has(brand) ? ' selected' : ''}`}
-                      onClick={() => toggleBrand(brand)}
-                    >
-                      <span className="brand-check">
-                        {selectedBrands.has(brand) && <i className="ph-fill ph-check" />}
-                      </span>
-                      <img className="brand-logo" src={BRAND_LOGOS[brand]} alt="" loading="lazy" />
-                      {brand}
-                    </div>
-                  ))}
+                  {brands.map(brand => {
+                    const checked = !selectedBrands || selectedBrands.has(brand);
+                    return (
+                      <div
+                        key={brand}
+                        className={`brand-option${checked ? ' selected' : ''}`}
+                        onClick={() => toggleBrand(brand)}
+                      >
+                        <span className="brand-check">
+                          {checked && <i className="ph-fill ph-check" />}
+                        </span>
+                        {BRAND_LOGOS[brand] && <img className="brand-logo" src={BRAND_LOGOS[brand]} alt="" loading="lazy" />}
+                        {brand}
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
@@ -240,11 +275,11 @@ export default function Catalog() {
             <h5>Цена за сутки, ₽</h5>
             <div className="range">
               <div className="price-input">
-                <input type="text" inputMode="numeric" value={fmtPrice(minPrice)} onChange={e => setMinPrice(parsePrice(e.target.value))} />
+                <input type="text" inputMode="numeric" value={fmtPrice(minPrice)} onChange={e => { setPriceTouched(true); setMinPrice(parsePrice(e.target.value)); }} />
                 <span className="price-cur">₽</span>
               </div>
               <div className="price-input">
-                <input type="text" inputMode="numeric" value={fmtPrice(maxPrice)} onChange={e => setMaxPrice(parsePrice(e.target.value))} />
+                <input type="text" inputMode="numeric" value={fmtPrice(maxPrice)} onChange={e => { setPriceTouched(true); setMaxPrice(parsePrice(e.target.value)); }} />
                 <span className="price-cur">₽</span>
               </div>
             </div>

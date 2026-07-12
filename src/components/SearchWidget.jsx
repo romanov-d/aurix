@@ -5,13 +5,17 @@ import CarCard from './CarCard.jsx';
 
 const SearchCtx = createContext(null);
 
+const pad = (n) => String(n).padStart(2, '0');
+const dstr = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const plusDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return dstr(d); };
+
 export function SearchProvider({ children }) {
   const [city, setCity] = useState('Москва');
   const [returnCity, setReturnCity] = useState('Москва');
   const [roundTrip, setRoundTrip] = useState(true);
-  const [from, setFrom] = useState('2026-05-15');
+  const [from, setFrom] = useState(plusDays(0));   // день в день разрешён
   const [fromT, setFromT] = useState('12:00');
-  const [to, setTo] = useState('2026-05-22');
+  const [to, setTo] = useState(plusDays(7));
   const [toT, setToT] = useState('12:00');
   const [driver, setDriver] = useState('without');
   const [sort, setSort] = useState('rec');

@@ -79,6 +79,8 @@ export default function Car() {
   const pad = (n) => String(n).padStart(2, '0');
   const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 
+  // Бронь день в день разрешена: минимальная дата — сегодня.
+  const today = new Date();
   const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
   const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
 
@@ -136,7 +138,15 @@ export default function Car() {
     </div>
   );
   const isFav = favorites.has(car.id);
-  
+
+  // «Закрыта до даты» — бронь возможна только с даты открытия
+  const closedUntil = car.closed_until ? new Date(car.closed_until) : null;
+  const isClosed = closedUntil && closedUntil > new Date();
+  const closedLabel = isClosed
+    ? closedUntil.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
+    : null;
+  const bookMinDate = isClosed ? toDateStr(closedUntil) : toDateStr(today);
+
   // Calc days
   const d1 = new Date(fromDt);
   const d2 = new Date(toDt);
@@ -164,9 +174,19 @@ export default function Car() {
       setError('Чтобы забронировать, сначала пройдите верификацию: загрузите документы в личном кабинете.');
       return;
     }
+    // Возврат не может быть раньше получения
+    if (new Date(toDt) <= new Date(fromDt)) {
+      setError('Дата возврата должна быть позже даты получения.');
+      return;
+    }
+    // Машина закрыта — не даём отправить бронь с датой раньше открытия
+    if (isClosed && new Date(fromDt) < closedUntil) {
+      setError(`Автомобиль сейчас в аренде — будет доступен с ${closedLabel}. Выберите более позднюю дату начала.`);
+      return;
+    }
     setError('');
     setIsSubmitting(true);
-    
+
     try {
       await api('/bookings', {
         method: 'POST',
@@ -340,15 +360,25 @@ export default function Car() {
             <div className="row"><span>Перекат</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.overmileage_rate || '—'} ₽/км</b></div>
           </div>
 
+          {isClosed && (
+            <div style={{ background: 'rgba(185,28,28,.12)', border: '1px solid rgba(185,28,28,.4)', color: '#fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+              <i className="ph-fill ph-clock" style={{ marginRight: 6 }} />
+              Автомобиль в аренде — будет доступен с <b>{closedLabel}</b>. Бронь возможна с этой даты.
+            </div>
+          )}
           <div className="field" style={{ marginBottom: 12 }}>
             <label>Даты аренды</label>
             <DateRangePicker
               from={fromDate}
               to={toDate}
-              minDate={toDateStr(tomorrow)}
+              minDate={bookMinDate}
               variant="sidebar"
               onChange={({ from, to }) => {
-                if (from) setFromDate(from);
+                if (from) {
+                  setFromDate(from);
+                  // не оставляем перевёрнутый диапазон, пока не выбрана новая дата возврата
+                  if (!to && from > toDate) setToDate(from);
+                }
                 if (to) setToDate(to);
               }}
             />

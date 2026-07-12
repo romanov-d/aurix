@@ -78,6 +78,8 @@ router.get('/', async (req, res, next) => {
         WHERE status IN ('pending','active')
           AND NOT (to_dt <= $${pFrom} OR from_dt >= $${pTo})
       )`);
+      // Машина «закрыта до даты» недоступна, если аренда начинается раньше открытия
+      where.push(`(closed_until IS NULL OR closed_until <= $${pFrom}::timestamptz)`);
     }
 
     let order = 'sort_order ASC, created_at DESC, id';

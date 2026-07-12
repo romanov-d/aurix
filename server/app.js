@@ -15,6 +15,9 @@ import blogRouter from './routes/blog.js';
 import { clientRouter as chatRouter, adminRouter as chatAdminRouter } from './routes/chat.js';
 
 export const app = express();
+// За nginx: без trust proxy req.ip = 127.0.0.1 для всех, и rate limit по IP
+// душил бы всех посетителей одним общим лимитом.
+app.set('trust proxy', 1);
 app.use(express.json({ limit: '5mb' })); // allows base64 avatar + document uploads (до ~2 МБ файлы)
 app.use(cookieParser());
 app.use(cors({
@@ -87,7 +90,9 @@ if (distDir) {
 
 app.use((err, _req, res, _next) => {
   console.error('[api error]', err);
-  res.status(500).json({ error: err.message || 'Internal error' });
+  // В проде не светим внутренности (тексты ошибок Postgres и т.п.) — только в лог
+  const message = process.env.NODE_ENV === 'production' ? 'Внутренняя ошибка сервера' : (err.message || 'Internal error');
+  res.status(500).json({ error: message });
 });
 
 export default app;

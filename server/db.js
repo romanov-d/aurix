@@ -102,6 +102,7 @@ export function init() {
       // поэтому он не должен блокировать ответ. Не доедет — самовосстановится
       // на следующем холодном старте (проверка confupdtype).
       migrateForeignKeys().catch((e) => console.warn('[db] FK migration skipped:', e.message));
+      migrateBookingOverlapGuard().catch((e) => console.warn('[db] overlap guard skipped:', e.message));
       backfillCashback().catch((e) => console.warn('[db] cashback backfill skipped:', e.message));
     })().catch((e) => {
       console.error('[db] init failed:', e);
@@ -170,6 +171,9 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS photo_rate INTEGER DEFAULT 0`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_6_12 INTEGER`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS price_30 INTEGER`,
+  // «Закрыта до даты»: машина видна на сайте с плашкой «В аренде», но брони,
+  // начинающиеся раньше этой даты, невозможны. NULL — машина открыта.
+  `ALTER TABLE cars ADD COLUMN IF NOT EXISTS closed_until TIMESTAMPTZ`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS is_verified BOOLEAN NOT NULL DEFAULT FALSE`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_token TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS verify_expires TIMESTAMPTZ`,
@@ -178,6 +182,7 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_expires TIMESTAMPTZ`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_purpose TEXT`,
+  `ALTER TABLE users ADD COLUMN IF NOT EXISTS auth_code_attempts INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_url TEXT`,
@@ -329,6 +334,22 @@ export async function migrateForeignKeys() {
   console.log('[db] FK ON UPDATE CASCADE applied');
 }
 
+// Защита от двойного бронирования на уровне БД. Проверка «occupied?» + INSERT —
+// два запроса без транзакции, под гонкой оба проходят. EXCLUDE-констрейнт
+// делает пересечение невозможным атомарно: второй INSERT падает с 23P01,
+// роуты переводят это в понятную 400 «Автомобиль занят».
+export async function migrateBookingOverlapGuard() {
+  const done = await one(`SELECT 1 FROM pg_constraint WHERE conname = 'bookings_no_overlap'`);
+  if (done) return; // уже применено
+  await pool.query(`CREATE EXTENSION IF NOT EXISTS btree_gist`);
+  await pool.query(
+    `ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
+       EXCLUDE USING gist (car_id WITH =, tstzrange(from_dt, to_dt) WITH &&)
+       WHERE (status IN ('pending','active'))`
+  );
+  console.log('[db] bookings_no_overlap EXCLUDE constraint applied');
+}
+
 export async function ensureSchema() {
   // ВНИМАНИЕ: только pool.query() (HTTP). pool.connect()/сессии в драйвере
   // @neondatabase/serverless требуют WebSocket и зависают в этом рантайме.
@@ -339,6 +360,17 @@ export async function ensureSchema() {
 }
 
 export async function seedIfEmpty() {
+  // Сеем эталонный автопарк ТОЛЬКО в пустую таблицу. Если машины уже есть —
+  // источник правды это база/админка (правки менеджера по фото, ценам, году,
+  // кузову и т.п.). Раньше здесь был безусловный UPSERT, который на каждом
+  // рестарте затирал правки обратно на дефолты из fleet.js — отсюда «слетали»
+  // фото и правки Сергея. Пропуск непустой таблицы также не воскрешает
+  // удалённые из админки машины.
+  const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM cars');
+  if ((rows[0]?.c ?? 0) > 0) {
+    console.log(`[db] cars table not empty (${rows[0].c}) — seed skipped`);
+    return;
+  }
   for (let idx = 0; idx < FLEET.length; idx++) {
     const i = FLEET[idx];
     await pool.query(
@@ -348,27 +380,7 @@ export async function seedIfEmpty() {
          deposit, mileage_limit, overmileage_rate, photo_rate, price_6_12, price_30, color, description, sort_order
        )
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,'published',$13,$14,$15,$16,$17,$18,$19,$20,$21)
-       ON CONFLICT (id) DO UPDATE SET
-         name            = EXCLUDED.name,
-         brand           = EXCLUDED.brand,
-         year            = EXCLUDED.year,
-         body            = EXCLUDED.body,
-         fuel            = EXCLUDED.fuel,
-         engine          = EXCLUDED.engine,
-         power_hp        = EXCLUDED.power_hp,
-         drive           = EXCLUDED.drive,
-         price_per_day   = EXCLUDED.price_per_day,
-         badge           = EXCLUDED.badge,
-         image_url       = EXCLUDED.image_url,
-         deposit         = EXCLUDED.deposit,
-         mileage_limit   = EXCLUDED.mileage_limit,
-         overmileage_rate= EXCLUDED.overmileage_rate,
-         photo_rate      = EXCLUDED.photo_rate,
-         price_6_12      = EXCLUDED.price_6_12,
-         price_30        = EXCLUDED.price_30,
-         color           = EXCLUDED.color,
-         description     = EXCLUDED.description,
-         sort_order      = COALESCE(NULLIF(cars.sort_order, 0), EXCLUDED.sort_order)`,
+       ON CONFLICT (id) DO NOTHING`,
       [
         i.id,
         i.name,
@@ -394,18 +406,25 @@ export async function seedIfEmpty() {
       ]
     );
   }
-  console.log(`[db] upserted ${FLEET.length} cars`);
+  console.log(`[db] seeded ${FLEET.length} cars into empty table`);
 }
 
 export async function seedAdmin() {
   const result = await pool.query('SELECT id FROM users WHERE email = $1', ['admin@aurix.local']);
   if (result.rows.length > 0) return;
-  const hash = bcrypt.hashSync('admin123', 10);
+  // Пароль сид-админа — только из env. Захардкоженный admin123 в публичном
+  // коде = открытая дверь в админку (плюс для этого email отключена 2FA).
+  const pwd = process.env.ADMIN_SEED_PASSWORD;
+  if (!pwd) {
+    console.warn('[db] ADMIN_SEED_PASSWORD не задан — сид-админ не создаётся');
+    return;
+  }
+  const hash = bcrypt.hashSync(pwd, 10);
   await pool.query(
     'INSERT INTO users (email, name, password_hash, role) VALUES ($1,$2,$3,$4)',
     ['admin@aurix.local', 'Администратор', hash, 'admin']
   );
-  console.log('[db] seeded admin: admin@aurix.local / admin123');
+  console.log('[db] seeded admin: admin@aurix.local (пароль из ADMIN_SEED_PASSWORD)');
 }
 
 export async function seedFaq() {

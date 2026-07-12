@@ -173,6 +173,8 @@ router.patch('/bookings/:id', async (req, res, next) => {
     res.json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
+    // EXCLUDE-констрейнт: перенос дат наехал на другую бронь этой машины
+    if (e && e.code === '23P01') return res.status(400).json({ error: 'Даты пересекаются с другой бронью этого автомобиля' });
     next(e);
   }
 });
@@ -232,6 +234,7 @@ router.post('/bookings', async (req, res, next) => {
     res.status(201).json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
+    if (e && e.code === '23P01') return res.status(400).json({ error: 'Автомобиль занят на выбранные даты (пересечение с другой бронью)' });
     next(e);
   }
 });
@@ -269,6 +272,11 @@ const updateCarSchema = z.object({
   description: z.string().optional().nullable(),
   color: z.string().optional().nullable(),
   badge: z.string().optional().nullable(),
+  // «Закрыта до даты»: YYYY-MM-DD (или ISO), пустая строка/null — открыть машину
+  closed_until: z.preprocess(
+    (v) => (v === '' ? null : v),
+    z.string().regex(/^\d{4}-\d{2}-\d{2}/, 'Дата в формате ГГГГ-ММ-ДД').nullable().optional()
+  ),
   status: z.enum(['published', 'hidden', 'pending', 'rejected']).optional()
 });
 

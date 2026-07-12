@@ -3,10 +3,18 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 import { sendCodeEmail, resendConfigured } from '../email.js';
 import { pushToSalebot } from '../salebot.js';
 
 const router = Router();
+
+// Анти-брутфорс: пароль и 6-значные коды нельзя перебирать без ограничений.
+// Ключ — IP + email, чтобы атакующий не выбирал лимит жертве с другого IP.
+const ipEmailKey = (req) => `${req.ip}|${(req.body?.email || '').toLowerCase()}`;
+const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, keyFn: ipEmailKey });
+const codeLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 8, keyFn: ipEmailKey });
+const registerLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5 });
 
 const SEED_ADMIN_EMAIL = 'admin@aurix.local'; // встроенный админ — без 2FA (почта не настоящая)
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -17,16 +25,30 @@ const genCode = () => String(Math.floor(100000 + Math.random() * 900000));
 async function issueCode(userId, email, purpose) {
   const code = genCode();
   const expires = new Date(Date.now() + CODE_TTL_MS);
-  await q(`UPDATE users SET auth_code=$1, auth_code_expires=$2, auth_code_purpose=$3 WHERE id=$4`,
+  await q(`UPDATE users SET auth_code=$1, auth_code_expires=$2, auth_code_purpose=$3, auth_code_attempts=0 WHERE id=$4`,
     [code, expires, purpose, userId]);
   try { await sendCodeEmail(email, code, purpose); return true; }
   catch (e) { console.error('[auth] не удалось отправить код:', e.message); return false; }
 }
 
+const MAX_CODE_ATTEMPTS = 5;
+
 function checkCode(user, code, purpose) {
   return user.auth_code && user.auth_code === String(code).trim()
     && user.auth_code_purpose === purpose
-    && user.auth_code_expires && new Date(user.auth_code_expires) > new Date();
+    && user.auth_code_expires && new Date(user.auth_code_expires) > new Date()
+    && (user.auth_code_attempts ?? 0) < MAX_CODE_ATTEMPTS;
+}
+
+// Неверная попытка: инкрементируем счётчик; после MAX_CODE_ATTEMPTS код сгорает —
+// перебор 6-значного кода становится бессмысленным даже с ротацией IP.
+async function registerFailedAttempt(userId) {
+  await q(
+    `UPDATE users SET auth_code_attempts = auth_code_attempts + 1,
+       auth_code = CASE WHEN auth_code_attempts + 1 >= ${MAX_CODE_ATTEMPTS} THEN NULL ELSE auth_code END
+     WHERE id = $1`,
+    [userId]
+  );
 }
 
 const registerSchema = z.object({
@@ -57,7 +79,7 @@ function publicUser(u) {
   };
 }
 
-router.post('/register', async (req, res, next) => {
+router.post('/register', registerLimiter, async (req, res, next) => {
   try {
     let body;
     try { body = registerSchema.parse(req.body); }
@@ -90,12 +112,15 @@ router.post('/register', async (req, res, next) => {
 });
 
 // POST /api/auth/verify-code — подтвердить email кодом (залогиненный пользователь)
-router.post('/verify-code', requireAuth, async (req, res, next) => {
+router.post('/verify-code', requireAuth, codeLimiter, async (req, res, next) => {
   try {
     const { code } = z.object({ code: z.string().min(4) }).parse(req.body);
     const user = await one('SELECT * FROM users WHERE id = $1', [req.user.id]);
     if (user.email_verified) return res.json({ ok: true, user: publicUser(user) });
-    if (!checkCode(user, code, 'verify')) return res.status(400).json({ error: 'Неверный или истёкший код' });
+    if (!checkCode(user, code, 'verify')) {
+      await registerFailedAttempt(user.id);
+      return res.status(400).json({ error: 'Неверный или истёкший код' });
+    }
 
     const updated = await one(
       `UPDATE users SET email_verified = true, auth_code = NULL, auth_code_expires = NULL, auth_code_purpose = NULL
@@ -118,7 +143,7 @@ router.post('/resend-code', requireAuth, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-router.post('/login', async (req, res, next) => {
+router.post('/login', loginLimiter, async (req, res, next) => {
   try {
     let body;
     try { body = loginSchema.parse(req.body); }
@@ -143,11 +168,12 @@ router.post('/login', async (req, res, next) => {
 });
 
 // POST /api/auth/login-verify — завершить вход кодом из письма
-router.post('/login-verify', async (req, res, next) => {
+router.post('/login-verify', codeLimiter, async (req, res, next) => {
   try {
     const { email, code } = z.object({ email: z.string().email(), code: z.string().min(4) }).parse(req.body);
     const user = await one('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
     if (!user || !checkCode(user, code, 'login')) {
+      if (user) await registerFailedAttempt(user.id);
       return res.status(400).json({ error: 'Неверный или истёкший код' });
     }
     await q(`UPDATE users SET auth_code = NULL, auth_code_expires = NULL, auth_code_purpose = NULL WHERE id = $1`, [user.id]);

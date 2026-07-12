@@ -18,6 +18,7 @@ const Contacts = lazy(() => import('./pages/Contacts.jsx'));
 const Account = lazy(() => import('./pages/Account.jsx'));
 const RentOut = lazy(() => import('./pages/RentOut.jsx'));
 const Tariffs = lazy(() => import('./pages/Tariffs.jsx'));
+const PhotoRental = lazy(() => import('./pages/PhotoRental.jsx'));
 const Login = lazy(() => import('./pages/Login.jsx'));
 const Register = lazy(() => import('./pages/Register.jsx'));
 const Admin = lazy(() => import('./pages/Admin.jsx'));
@@ -77,6 +78,7 @@ export default function App() {
         <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
         <Route path="/rent-out" element={<RentOut />} />
         <Route path="/tariffs" element={<Tariffs />} />
+        <Route path="/photo" element={<PhotoRental />} />
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
       </Routes>

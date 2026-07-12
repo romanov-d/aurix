@@ -26,6 +26,7 @@ function normalize(row) {
     image_url: row.image_url,
     description: row.description,
     photos: Array.isArray(row.photos) ? row.photos : [],
+    closed_until: row.closed_until ?? null, // «закрыта до даты» — плашка «В аренде»
   };
 }
 

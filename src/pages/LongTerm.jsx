@@ -8,7 +8,7 @@ export default function LongTerm() {
           <div className="breadcrumbs">
             <Link to="/">Главная</Link><span className="sep">/</span><span>Долгосрочная аренда</span>
           </div>
-          <h1>Премиальный автомобиль <em>в долгую</em></h1>
+          <h1>Премиальное авто <em>в долгосрочную аренду</em></h1>
           <p style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
             Подписка AURIX MOTORS от 1 месяца с фиксированным ежемесячным платежом. Свежий автомобиль премиум-класса, полное обслуживание, страховка, сезонная резина и подменное авто — всё включено в один платёж. Меняйте модель, когда захотите, без забот о покупке и содержании.
           </p>
@@ -30,7 +30,7 @@ export default function LongTerm() {
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-wrench" /></div><h3>Сервис включён</h3><p>ТО, замена жидкостей, шиномонтаж и сезонная резина — всё за наш счёт.</p></div>
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-shield-check" /></div><h3>Полная страховка</h3><p>КАСКО + ОСАГО + страхование жизни. Без франшизы при стандартных рисках.</p></div>
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-arrows-left-right" /></div><h3>Замена авто</h3><p>Каждые 6 месяцев можно сменить модель. Подменный автомобиль на время сервиса.</p></div>
-            <div className="service"><div className="ico-wrap"><i className="ph-fill ph-star" /></div><h3>Без первого взноса</h3><p>Никаких залогов от 3 месяцев аренды для проверенных клиентов и резидентов клуба.</p></div>
+            <div className="service"><div className="ico-wrap"><i className="ph-fill ph-lock" /></div><h3>Залог обязателен</h3><p>Залог оформляется всегда и возвращается после сдачи автомобиля — гарантия сохранности премиального авто.</p></div>
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-map-pin" /></div><h3>Подача и возврат</h3><p>Машину привезут и заберут в удобное место. Бесплатно в пределах Москвы.</p></div>
           </div>
         </div>

@@ -257,12 +257,24 @@ export default function Admin() {
     catch (e) { alert(e.message); }
   };
 
+  // ISO (UTC) → значение для <input type="datetime-local"> в ЛОКАЛЬНОМ времени.
+  // Раньше здесь был slice(0,16): в инпут попадало UTC-время, а при сохранении
+  // оно трактовалось как локальное — каждое открытие+сохранение карточки
+  // сдвигало бронь на −3 часа (МСК).
+  const isoToLocalInput = (iso) => {
+    if (!iso) return undefined;
+    const d = new Date(iso);
+    if (isNaN(d)) return undefined;
+    const p = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+  };
+
   // Карточка брони (изменить сумму / даты / менеджера / примечания)
   const openBookingCard = (b) => setBookingCard({
     id: b.id, total: b.total, manager: b.manager || '', notes: b.notes || '',
     pickup_city: b.pickup_city || '', stage: b.stage || 'new', status: b.status,
     car: b.car, user: b.user,
-    from_dt: b.from_dt?.slice(0, 16), to_dt: b.to_dt?.slice(0, 16),
+    from_dt: isoToLocalInput(b.from_dt), to_dt: isoToLocalInput(b.to_dt),
   });
   const [bookingSaving, setBookingSaving] = useState(false);
   const saveBookingCard = async (e) => {
@@ -304,19 +316,28 @@ export default function Admin() {
     catch (e) { alert(e.message); }
   };
 
-  // Загрузка фото файлом (base64)
-  const uploadPhotoFile = async (carId, e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой (макс 2 МБ).'); return; }
+  // Загрузка фото файлами (base64) — можно выбрать сразу несколько
+  const readFileAsDataURL = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onloadend = async () => {
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+
+  const uploadPhotoFile = async (carId, e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = ''; // сброс, чтобы можно было выбрать те же файлы повторно
+    if (!files.length) return;
+    const tooBig = files.find(f => f.size > 2 * 1024 * 1024);
+    if (tooBig) { alert(`Файл «${tooBig.name}» слишком большой (макс 2 МБ).`); return; }
+    // Грузим последовательно, чтобы сохранить порядок и не терять фото при гонках.
+    for (const file of files) {
       try {
-        const photo = await api(`/admin/cars/${carId}/photos`, { method: 'POST', body: { url: reader.result } });
+        const dataUrl = await readFileAsDataURL(file);
+        const photo = await api(`/admin/cars/${carId}/photos`, { method: 'POST', body: { url: dataUrl } });
         setCarPhotos(p => ({ ...p, [carId]: [...(p[carId] || []), photo] }));
       } catch (err) { alert(err.message); }
-    };
-    reader.readAsDataURL(file);
+    }
   };
 
   // Единый тариф — сохранить одно поле цены по конкретной машине
@@ -479,6 +500,17 @@ export default function Admin() {
       const badge = badgeEdit[id] ?? '';
       const updated = await api(`/admin/cars/${id}`, { method: 'PATCH', body: { badge: badge || null } });
       setCars(cars.map(c => c.id === id ? { ...c, badge: updated.badge } : c));
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+
+  // «Занята до»: на сайте машина показывается с плашкой «В аренде до …»,
+  // брони раньше этой даты блокируются. Пустая дата — машина открыта.
+  const saveClosedUntil = async (id, value) => {
+    try {
+      const updated = await api(`/admin/cars/${id}`, { method: 'PATCH', body: { closed_until: value || null } });
+      setCars(cs => cs.map(c => c.id === id ? { ...c, closed_until: updated.closed_until } : c));
     } catch (e) {
       alert(e.message);
     }
@@ -1081,6 +1113,30 @@ export default function Admin() {
                                 )}
                               </div>
                             </div>
+                            {/* Занята до даты (реклама/поставка) */}
+                            <div style={{ marginBottom: 18 }}>
+                              <div style={{ fontSize: 12, color: '#888', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.06em' }}>
+                                Занята до даты
+                                {c.closed_until && new Date(c.closed_until) > new Date() && (
+                                  <span style={{ color: '#fb7185', marginLeft: 8, textTransform: 'none', letterSpacing: 'normal' }}>
+                                    сейчас закрыта — на сайте «В аренде до {new Date(c.closed_until).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}»
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                                <input
+                                  type="date"
+                                  defaultValue={c.closed_until ? String(c.closed_until).slice(0, 10) : ''}
+                                  key={`${c.id}-${c.closed_until || 'open'}`}
+                                  onChange={e => saveClosedUntil(c.id, e.target.value)}
+                                  style={{ background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: '#fff', padding: '8px 12px', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', colorScheme: 'dark' }}
+                                />
+                                {c.closed_until && (
+                                  <button className="btn btn-sm btn-ghost" onClick={() => saveClosedUntil(c.id, null)}>Открыть сейчас</button>
+                                )}
+                                <span style={{ fontSize: 12, color: '#666' }}>Клиенты увидят «В аренде до …», бронь — только с этой даты</span>
+                              </div>
+                            </div>
                             {/* Photos */}
                             <div>
                               <div style={{ fontSize: 12, color: '#888', marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.06em' }}>Фотографии</div>
@@ -1105,8 +1161,8 @@ export default function Admin() {
                                 />
                                 <button className="btn btn-sm" onClick={() => addPhoto(c.id)}>Добавить по ссылке</button>
                                 <label className="btn btn-sm btn-ghost" style={{ cursor: 'pointer' }}>
-                                  <i className="ph ph-upload-simple" /> Загрузить файл
-                                  <input type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => uploadPhotoFile(c.id, e)} />
+                                  <i className="ph ph-upload-simple" /> Загрузить файлы
+                                  <input type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={(e) => uploadPhotoFile(c.id, e)} />
                                 </label>
                               </div>
                             </div>

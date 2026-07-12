@@ -45,9 +45,11 @@ export default function Footer() {
             </ul>
           </div>
           <div className="ft-col">
-            <h5>Города</h5>
+            <h5>Услуги</h5>
             <ul>
-              <li><a href="#">Москва</a></li>
+              <li><Link to="/catalog">Аренда авто</Link></li>
+              <li><Link to="/long-term">Подписка</Link></li>
+              <li><Link to="/photo">Аренда для фото</Link></li>
             </ul>
           </div>
           <div className="ft-col">

@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { SearchProvider } from '../components/SearchWidget.jsx';
 import { useCars } from '../api/useCars.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 import CarCard from '../components/CarCard.jsx';
@@ -22,6 +21,8 @@ const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Roy
 
 const pad = (n) => String(n).padStart(2, '0');
 const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+// Бронь день в день разрешена: минимальная дата — сегодня.
+const today = new Date();
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
 
@@ -64,8 +65,7 @@ export default function Home() {
   const hot = allCars.slice(0, 6);
   return (
     <>
-      <SearchProvider>
-        <section className="first-screen">
+      <section className="first-screen">
           <div className="fs-hero">
             <div className="fs-bg" />
             <div className="fs-hero-grid">
@@ -86,7 +86,7 @@ export default function Home() {
                 <DateRangePicker
                   from={fromDate}
                   to={toDate}
-                  minDate={toDateStr(tomorrow)}
+                  minDate={toDateStr(today)}
                   variant="hero"
                   onChange={({ from, to }) => { setFromDate(from || toDateStr(tomorrow)); setToDate(to || toDateStr(dayAfter4)); }}
                 />
@@ -181,8 +181,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-      </SearchProvider>
 
       <section className="exp reveal">
         <div className="exp-wrap">
@@ -321,7 +319,7 @@ export default function Home() {
                 <div>
                   <h4>Доставка</h4>
                   <ul className="dl-list">
-                    <li><strong>Бесплатная доставка по Москве.</strong> Доставим выбранный авто в любую точку города — отель, дом, офис — 24/7, без доплат и залога.</li>
+                    <li><strong>Бесплатная доставка по Москве.</strong> Доставим выбранный авто в любую точку города — отель, дом, офис — 24/7, без доплат.</li>
                     <li><strong>Доставка по области.</strong> Подача в Подмосковье и соседние регионы. Стоимость зависит от расстояния, но скорость и качество — на уровне.</li>
                   </ul>
                 </div>

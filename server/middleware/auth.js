@@ -1,6 +1,11 @@
 import jwt from 'jsonwebtoken';
 import { one } from '../db.js';
 
+// В проде без настоящего секрета работать нельзя: с известным дефолтом любой
+// может подписать себе токен с ролью admin. Падаем сразу и громко.
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('[auth] JWT_SECRET не задан — в production это обязательно');
+}
 export const JWT_SECRET = process.env.JWT_SECRET || 'aurix-dev-secret-change-me';
 export const COOKIE_NAME = 'aurix_token';
 export const COOKIE_OPTS = {

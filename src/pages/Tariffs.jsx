@@ -2,20 +2,17 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 
-const VAT = 1.22;
-
 function fmt(n) {
   if (n === null || n === undefined) return '—';
   return n.toLocaleString('ru-RU') + ' ₽';
 }
 
-function price(n, vat) {
+function price(n) {
   if (n === null || n === undefined) return 'договорная';
-  return fmt(vat ? Math.round(n * VAT) : n);
+  return fmt(n);
 }
 
 export default function Tariffs() {
-  const [legal, setLegal] = useState(false);
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -49,51 +46,13 @@ export default function Tariffs() {
           </div>
           <h1>Тарифы <em>и цены</em></h1>
           <p style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
-            Прозрачное ценообразование без скрытых платежей. Стоимость зависит от модели и срока аренды.
+            Прозрачное ценообразование без скрытых платежей. Стоимость зависит от модели и срока аренды. Цена включает НДС 22%.
           </p>
         </div>
       </div>
 
       <section>
         <div className="container">
-
-          {/* Tab switcher */}
-          <div style={{ display: 'flex', gap: 2, marginBottom: 32, background: 'var(--bg-2)', borderRadius: 12, overflow: 'hidden', width: 'fit-content' }}>
-            <button
-              onClick={() => setLegal(false)}
-              style={{
-                padding: '12px 28px',
-                fontSize: 13,
-                letterSpacing: 'normal', lineHeight: 1.25,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                border: 'none',
-                background: !legal ? 'var(--gold)' : 'var(--bg-2)',
-                color: !legal ? '#000' : '#bdbdbd',
-                fontWeight: !legal ? 700 : 400,
-                transition: 'all .2s',
-              }}
-            >
-              Физические лица
-            </button>
-            <button
-              onClick={() => setLegal(true)}
-              style={{
-                padding: '12px 28px',
-                fontSize: 13,
-                letterSpacing: 'normal', lineHeight: 1.25,
-                fontFamily: 'inherit',
-                cursor: 'pointer',
-                border: 'none',
-                background: legal ? 'var(--gold)' : 'var(--bg-2)',
-                color: legal ? '#000' : '#bdbdbd',
-                fontWeight: legal ? 700 : 400,
-                transition: 'all .2s',
-              }}
-            >
-              Юридические лица (НДС 22%)
-            </button>
-          </div>
 
           {loading ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: '#bdbdbd' }}>
@@ -135,14 +94,14 @@ export default function Tariffs() {
                       <td style={{ padding: '14px 16px', color: '#fff', fontWeight: 500 }}>
                         <Link to={`/car/${car.id}`} style={{ color: 'inherit', textDecoration: 'none' }}>{car.name}</Link>
                       </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_per_day, legal)}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_6_12, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_per_day)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_6_12)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#bdbdbd', fontStyle: 'italic', fontSize: 12 }}>договорная</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_30, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_30)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{fmt(car.deposit)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{car.mileage_limit} км</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{car.overmileage_rate} ₽/км</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.photo_rate, legal)}</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.photo_rate)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -150,11 +109,9 @@ export default function Tariffs() {
             </div>
           )}
 
-          {legal && (
-            <p className="muted" style={{ fontSize: 12, marginTop: 12, letterSpacing: '.06em' }}>
-              * Цены для юридических лиц включают НДС 22%. Счёт с НДС предоставляется по запросу.
-            </p>
-          )}
+          <p className="muted" style={{ fontSize: 12, marginTop: 12, letterSpacing: '.06em' }}>
+            Цена включает НДС 22%. Залог обязателен по всем автомобилям и возвращается после сдачи авто.
+          </p>
 
           <div className="divider-h"></div>
 
@@ -163,7 +120,7 @@ export default function Tariffs() {
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
               <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Аренда для фотосессий</h3>
               <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
-                Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО. Уточняйте наличие и условия у менеджера.
+                Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО. <Link to="/photo" style={{ color: 'var(--gold)' }}>Подробнее об аренде для фото →</Link>
               </p>
             </div>
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
@@ -189,4 +146,3 @@ export default function Tariffs() {
     </>
   );
 }
-
