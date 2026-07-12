@@ -82,6 +82,10 @@ import { AllProductsPage, DashboardPage } from '@/pages/store-admin';
 import { BookingsPage } from '@/pages/bookings';
 import { ClientsPage, ClientCardPage } from '@/pages/clients';
 import { AurixDashboardPage } from '@/pages/dashboard';
+import { SettingsPage } from '@/pages/settings';
+import { TariffsPage } from '@/pages/tariffs';
+import { FaqPage } from '@/pages/faq';
+import { BlogPage as AurixBlogPage } from '@/pages/blog';
 import {
   MyOrdersPage,
   OrderPlacedPage,
@@ -108,6 +112,10 @@ export function AppRoutingSetup() {
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientCardPage />} />
+          <Route path="/tariffs" element={<TariffsPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/blog" element={<AurixBlogPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/dark-sidebar" element={<Demo1DarkSidebarPage />} />
           <Route
             path="/public-profile/profiles/default/"

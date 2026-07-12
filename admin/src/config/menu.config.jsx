@@ -1,4 +1,5 @@
 import {
+  Newspaper,
   AlertCircle,
   Award,
   Badge,
@@ -76,6 +77,22 @@ export const MENU_SIDEBAR = [
     icon: Users,
     children: [
       { title: 'Все клиенты', path: '/clients' },
+    ],
+  },
+  {
+    title: 'Контент',
+    icon: Newspaper,
+    children: [
+      { title: 'Тарифы', path: '/tariffs' },
+      { title: 'FAQ', path: '/faq' },
+      { title: 'Блог', path: '/blog' },
+    ],
+  },
+  {
+    title: 'Настройки',
+    icon: Settings,
+    children: [
+      { title: 'Общие', path: '/settings' },
     ],
   },
   {
