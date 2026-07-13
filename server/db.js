@@ -214,6 +214,19 @@ const SCHEMA_STATEMENTS = [
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_rental_charges_booking ON rental_charges(booking_id)`,
+  // Блок 3: журнал аудита действий
+  `CREATE TABLE IF NOT EXISTS audit_log (
+    id           BIGSERIAL PRIMARY KEY,
+    entity_type  TEXT,
+    entity_id    TEXT,
+    action       TEXT,
+    actor_id     BIGINT,
+    actor_name   TEXT,
+    actor_role   TEXT,
+    changes      JSONB,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_audit_created ON audit_log(created_at DESC)`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_url TEXT`,

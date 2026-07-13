@@ -3,6 +3,7 @@ import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { many, q, one, getCashbackPercent } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
+import { logAudit } from '../audit.js';
 
 const router = Router();
 router.use(requireRole('admin'));
@@ -177,6 +178,7 @@ router.post('/bookings/:id/charges', async (req, res, next) => {
       `INSERT INTO rental_charges (booking_id, type, amount, note, photo_url, created_by)
        VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, type, amount, note, photo_url, created_at`,
       [req.params.id, body.type || null, body.amount, body.note || null, body.photo_url || null, req.user.id]);
+    logAudit(req, 'booking', req.params.id, 'charge_add', { type: body.type, amount: body.amount });
     res.status(201).json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
@@ -216,6 +218,7 @@ router.patch('/bookings/:id', async (req, res, next) => {
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
 
     await awardCashbackIfNeeded(rows[0]);
+    logAudit(req, 'booking', req.params.id, 'update', body);
     res.json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
@@ -357,6 +360,7 @@ router.patch('/cars/:id', async (req, res, next) => {
       vals
     );
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    logAudit(req, 'car', req.params.id, 'update', body);
     res.json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -562,6 +566,7 @@ router.patch('/users/:id', async (req, res, next) => {
     vals.push(req.params.id);
     const { rows } = await q(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING ${USER_LIST_COLS}`, vals);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
+    logAudit(req, 'user', req.params.id, 'update', body);
     res.json(rows[0]);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
@@ -587,6 +592,7 @@ router.post('/users/:id/points', async (req, res, next) => {
     await q(`UPDATE users SET points = COALESCE(points,0) + $1 WHERE id = $2`, [amount, req.params.id]);
     await q(`INSERT INTO user_points (user_id, amount, reason) VALUES ($1,$2,$3)`, [req.params.id, amount, reason]);
     const fresh = await one(`SELECT ${USER_LIST_COLS} FROM users WHERE id = $1`, [req.params.id]);
+    logAudit(req, 'user', req.params.id, 'points', { amount, reason });
     res.json(fresh);
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
@@ -660,11 +666,26 @@ router.post('/users/:id/balance', async (req, res, next) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, kind, target, amount, reason, booking_id, created_at`,
       [req.params.id, body.kind, body.target, body.amount, body.reason || null, body.booking_id || null, req.user.id]
     );
+    logAudit(req, 'user', req.params.id, 'balance', { kind: body.kind, target: body.target, amount: body.amount, reason: body.reason });
     res.status(201).json({ ...updated, transaction: rows[0] });
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
     next(e);
   }
+});
+
+// ── Журнал аудита (Блок 3) ──
+router.get('/audit', async (req, res, next) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit, 10) || 100, 500);
+    const entity = req.query.entity;
+    const where = entity ? `WHERE entity_type = $2` : '';
+    const params = entity ? [limit, entity] : [limit];
+    const rows = await many(
+      `SELECT id, entity_type, entity_id, action, actor_id, actor_name, actor_role, changes, created_at
+       FROM audit_log ${where} ORDER BY created_at DESC LIMIT $1`, params);
+    res.json(rows);
+  } catch (e) { next(e); }
 });
 
 // ── Настройки (кэшбэк %) ──

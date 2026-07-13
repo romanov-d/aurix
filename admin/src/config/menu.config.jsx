@@ -102,6 +102,7 @@ export const MENU_SIDEBAR = [
     icon: Settings,
     children: [
       { title: 'Общие', path: '/settings' },
+      { title: 'Журнал действий', path: '/audit' },
     ],
   },
   {
