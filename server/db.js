@@ -199,6 +199,21 @@ const SCHEMA_STATEMENTS = [
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_balance_tx_user ON balance_transactions(user_id)`,
+  // Блок 1: залог и удержания по аренде
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_amount   INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_returned INTEGER NOT NULL DEFAULT 0`,
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_status   TEXT`, /* held | partial | returned */
+  `CREATE TABLE IF NOT EXISTS rental_charges (
+    id          BIGSERIAL PRIMARY KEY,
+    booking_id  BIGINT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    type        TEXT,                  -- мойка/химчистка/царапина/перепробег/ремонт/штраф
+    amount      INTEGER NOT NULL,
+    note        TEXT,
+    photo_url   TEXT,
+    created_by  BIGINT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_rental_charges_booking ON rental_charges(booking_id)`,
   `ALTER TABLE cars ADD COLUMN IF NOT EXISTS color TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS points INTEGER DEFAULT 0`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_url TEXT`,

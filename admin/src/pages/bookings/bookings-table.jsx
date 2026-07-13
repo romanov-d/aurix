@@ -77,6 +77,8 @@ export function BookingsTable() {
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [charges, setCharges] = useState([]);
+  const [newCharge, setNewCharge] = useState({ type: '', amount: '', note: '', photo_url: '' });
 
   // Ручное создание брони
   const [cars, setCars] = useState([]);
@@ -141,8 +143,43 @@ export function BookingsTable() {
       pickup_city: b.pickup_city || '', notes: b.notes || '',
       from_dt: isoToLocalInput(b.from_dt), to_dt: isoToLocalInput(b.to_dt),
       car: b.car, user: b.user,
+      deposit_amount: b.deposit_amount ?? 0, deposit_returned: b.deposit_returned ?? 0, deposit_status: b.deposit_status || '',
     });
+    setCharges([]);
+    setNewCharge({ type: '', amount: '', note: '', photo_url: '' });
     setEditOpen(true);
+    // подтягиваем удержания + актуальные поля залога
+    api.get(`/admin/bookings/${b.id}`).then((d) => {
+      setCharges(d?.charges || []);
+      setEditForm((f) => f && String(f.id) === String(b.id) ? {
+        ...f,
+        deposit_amount: d.booking?.deposit_amount ?? f.deposit_amount,
+        deposit_returned: d.booking?.deposit_returned ?? f.deposit_returned,
+        deposit_status: d.booking?.deposit_status || f.deposit_status,
+      } : f);
+    }).catch(() => {});
+  };
+
+  const addCharge = async () => {
+    const amt = parseInt(newCharge.amount, 10);
+    if (!amt) return;
+    try {
+      const c = await api.post(`/admin/bookings/${editForm.id}/charges`, {
+        type: newCharge.type || null, amount: amt, note: newCharge.note || null, photo_url: newCharge.photo_url || null,
+      });
+      setCharges((cs) => [c, ...cs]);
+      setNewCharge({ type: '', amount: '', note: '', photo_url: '' });
+    } catch (e) { alert(e.message); }
+  };
+  const delCharge = async (cid) => {
+    try { await api.del(`/admin/bookings/${editForm.id}/charges/${cid}`); setCharges((cs) => cs.filter((c) => c.id !== cid)); }
+    catch (e) { alert(e.message); }
+  };
+  const uploadChargePhoto = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file || file.size > 2 * 1024 * 1024) { if (file) alert('Файл больше 2 МБ'); return; }
+    const url = await new Promise((res) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file); });
+    setNewCharge((n) => ({ ...n, photo_url: url }));
   };
 
   const saveEdit = async () => {
@@ -156,6 +193,9 @@ export function BookingsTable() {
         notes: editForm.notes || null,
         from_dt: localInputToIso(editForm.from_dt),
         to_dt: localInputToIso(editForm.to_dt),
+        deposit_amount: parseInt(editForm.deposit_amount, 10) || 0,
+        deposit_returned: parseInt(editForm.deposit_returned, 10) || 0,
+        deposit_status: editForm.deposit_status || null,
       });
       setEditOpen(false);
     } catch (e) {
@@ -403,6 +443,65 @@ export function BookingsTable() {
               <div>
                 <div className={fieldLabel}>Примечание</div>
                 <textarea className={`${selectCls} min-h-[60px] py-2 resize-y`} value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+              </div>
+
+              {/* Блок 1: Залог и расчёт */}
+              <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                <div className="text-sm font-medium text-mono">Залог и расчёт</div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div><div className={fieldLabel}>Залог, ₽</div><Input type="number" value={editForm.deposit_amount} onChange={(e) => setEditForm({ ...editForm, deposit_amount: e.target.value })} /></div>
+                  <div><div className={fieldLabel}>Возвращено, ₽</div><Input type="number" value={editForm.deposit_returned} onChange={(e) => setEditForm({ ...editForm, deposit_returned: e.target.value })} /></div>
+                  <div>
+                    <div className={fieldLabel}>Статус залога</div>
+                    <select className={selectCls} value={editForm.deposit_status || ''} onChange={(e) => setEditForm({ ...editForm, deposit_status: e.target.value })}>
+                      <option value="">—</option>
+                      <option value="held">Удержан</option>
+                      <option value="partial">Возврат 50%</option>
+                      <option value="returned">Возвращён</option>
+                    </select>
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" className="self-start" onClick={() => setEditForm({ ...editForm, deposit_returned: Math.round((parseInt(editForm.deposit_amount, 10) || 0) / 2), deposit_status: 'partial' })}>
+                  Вернуть 50%
+                </Button>
+
+                {/* Удержания */}
+                <div className="text-xs text-muted-foreground uppercase mt-1">Удержания / штрафы</div>
+                {charges.length > 0 && (
+                  <div className="divide-y divide-border border-y border-border">
+                    {charges.map((c) => (
+                      <div key={c.id} className="flex items-center justify-between py-2 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          {c.photo_url && <img src={c.photo_url} alt="" className="h-8 w-10 rounded object-cover" />}
+                          <div className="min-w-0">
+                            <div className="text-sm truncate">{c.type || 'Удержание'}{c.note ? ` — ${c.note}` : ''}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-destructive">−{Number(c.amount).toLocaleString('ru-RU')} ₽</span>
+                          <Button size="sm" mode="icon" variant="ghost" onClick={() => delCharge(c.id)}><X className="size-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                    <div className="flex items-center justify-between py-2 text-sm font-semibold">
+                      <span>Итого удержано</span>
+                      <span className="text-destructive">−{charges.reduce((s, c) => s + (c.amount || 0), 0).toLocaleString('ru-RU')} ₽</span>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <Input placeholder="Тип (мойка, царапина…)" value={newCharge.type} onChange={(e) => setNewCharge({ ...newCharge, type: e.target.value })} />
+                  <Input type="number" placeholder="Сумма, ₽" value={newCharge.amount} onChange={(e) => setNewCharge({ ...newCharge, amount: e.target.value })} />
+                  <Input placeholder="Пояснение" value={newCharge.note} onChange={(e) => setNewCharge({ ...newCharge, note: e.target.value })} className="col-span-2" />
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="inline-flex cursor-pointer">
+                    <input type="file" accept="image/*" className="hidden" onChange={uploadChargePhoto} />
+                    <span className="inline-flex items-center h-9 px-3 rounded-md border border-input text-sm">Фото</span>
+                  </label>
+                  {newCharge.photo_url && <img src={newCharge.photo_url} alt="" className="h-9 w-12 rounded object-cover" />}
+                  <Button size="sm" onClick={addCharge} disabled={!newCharge.amount}>Добавить удержание</Button>
+                </div>
               </div>
             </DialogBody>
           )}

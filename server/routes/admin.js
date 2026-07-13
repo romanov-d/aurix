@@ -142,6 +142,52 @@ const patchBookingSchema = z.object({
   with_delivery: z.boolean().optional(),
   from_dt: z.string().datetime().optional(),
   to_dt: z.string().datetime().optional(),
+  deposit_amount: z.coerce.number().int().min(0).optional(),
+  deposit_returned: z.coerce.number().int().min(0).optional(),
+  deposit_status: z.enum(['held', 'partial', 'returned']).optional().nullable(),
+});
+
+// Детали брони + удержания (для карточки брони, Блок 1)
+router.get('/bookings/:id', async (req, res, next) => {
+  try {
+    const booking = await one(
+      `SELECT b.*, json_build_object('id', c.id, 'name', c.name, 'image_url', c.image_url) AS car,
+              json_build_object('id', u.id, 'name', u.name, 'email', u.email, 'phone', u.phone, 'is_verified', u.is_verified) AS "user"
+       FROM bookings b JOIN cars c ON b.car_id = c.id JOIN users u ON b.user_id = u.id
+       WHERE b.id = $1`, [req.params.id]);
+    if (!booking) return res.status(404).json({ error: 'Бронь не найдена' });
+    const charges = await many(
+      `SELECT id, type, amount, note, photo_url, created_at FROM rental_charges WHERE booking_id = $1 ORDER BY created_at DESC`,
+      [req.params.id]);
+    res.json({ booking, charges });
+  } catch (e) { next(e); }
+});
+
+// Добавить удержание/штраф по аренде
+const chargeSchema = z.object({
+  type: z.string().max(80).optional().nullable(),
+  amount: z.coerce.number().int(),
+  note: z.string().max(500).optional().nullable(),
+  photo_url: z.string().optional().nullable(),
+});
+router.post('/bookings/:id/charges', async (req, res, next) => {
+  try {
+    const body = chargeSchema.parse(req.body);
+    const { rows } = await q(
+      `INSERT INTO rental_charges (booking_id, type, amount, note, photo_url, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, type, amount, note, photo_url, created_at`,
+      [req.params.id, body.type || null, body.amount, body.note || null, body.photo_url || null, req.user.id]);
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
+    next(e);
+  }
+});
+router.delete('/bookings/:id/charges/:chargeId', async (req, res, next) => {
+  try {
+    await q(`DELETE FROM rental_charges WHERE id = $1 AND booking_id = $2`, [req.params.chargeId, req.params.id]);
+    res.json({ ok: true });
+  } catch (e) { next(e); }
 });
 
 router.patch('/bookings/:id', async (req, res, next) => {
