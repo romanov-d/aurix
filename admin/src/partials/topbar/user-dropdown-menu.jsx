@@ -1,5 +1,5 @@
 import { useAuth } from '@/auth/context/auth-context';
-import { Moon, Settings, ShieldCheck, UserCircle } from 'lucide-react';
+import { GearSix, Moon, ShieldCheck, UserCircle } from '@phosphor-icons/react';
 import { useTheme } from 'next-themes';
 import { Link } from 'react-router';
 import { avatarUrl } from '@/lib/avatar';
@@ -63,7 +63,7 @@ export function UserDropdownMenu({ trigger }) {
           <>
             <DropdownMenuItem asChild>
               <Link to="/settings" className="flex items-center gap-2">
-                <Settings />
+                <GearSix />
                 Настройки
               </Link>
             </DropdownMenuItem>

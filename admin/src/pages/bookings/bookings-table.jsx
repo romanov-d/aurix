@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { Search, X, Pencil } from 'lucide-react';
+import { MagnifyingGlass, X, PencilSimple } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -339,7 +339,7 @@ export function BookingsTable() {
           const b = row.original;
           return (
             <div className="flex items-center gap-1.5 justify-end">
-              <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(b)}><Pencil className="size-4" /></Button>
+              <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(b)}><PencilSimple className="size-4" /></Button>
               {b.status === 'pending' && (
                 <Button size="sm" variant="outline" onClick={() => patchBooking(b.id, { status: 'active' })}>Выдать</Button>
               )}
@@ -399,7 +399,7 @@ export function BookingsTable() {
             </select>
             <Button onClick={openAdd}>Добавить бронь</Button>
             <div className="relative">
-              <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
+              <MagnifyingGlass className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
               <Input
                 placeholder="Поиск: клиент, телефон, авто"
                 value={searchQuery}
@@ -476,7 +476,7 @@ export function BookingsTable() {
               </div>
 
               {/* Блок 1: Залог и расчёт */}
-              <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+              <div className="rounded-lg bg-zinc-800/40 p-4 flex flex-col gap-3">
                 <div className="text-sm font-medium text-mono">Залог и расчёт</div>
                 <div className="grid grid-cols-3 gap-3">
                   <div><div className={fieldLabel}>Залог, ₽</div><Input type="number" value={editForm.deposit_amount} onChange={(e) => setEditForm({ ...editForm, deposit_amount: e.target.value })} /></div>
@@ -535,7 +535,7 @@ export function BookingsTable() {
               </div>
 
               {/* Блок 1: Внутренний календарь возвратов/удержаний залога */}
-              <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+              <div className="rounded-lg bg-zinc-800/40 p-4 flex flex-col gap-3">
                 <div className="text-sm font-medium text-mono">Календарь возвратов залога</div>
                 {movements.length > 0 ? (
                   <div className="divide-y divide-border border-y border-border">

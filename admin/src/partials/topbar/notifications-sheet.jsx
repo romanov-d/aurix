@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarCheck, CarFront, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CalendarCheck, Car, CheckCircle, XCircle, Clock } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -12,7 +12,7 @@ import {
 
 const EVENT = {
   pending: { text: 'оставил заявку на', icon: Clock, color: 'text-yellow-400', bg: 'bg-yellow-400/15' },
-  active: { text: 'арендовал', icon: CarFront, color: 'text-green-500', bg: 'bg-green-500/15' },
+  active: { text: 'арендовал', icon: Car, color: 'text-green-500', bg: 'bg-green-500/15' },
   completed: { text: 'завершил аренду', icon: CheckCircle, color: 'text-primary', bg: 'bg-primary/15' },
   cancelled: { text: 'отменил бронь', icon: XCircle, color: 'text-destructive', bg: 'bg-destructive/15' },
 };

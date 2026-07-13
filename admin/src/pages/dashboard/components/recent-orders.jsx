@@ -8,7 +8,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { Search, X } from 'lucide-react';
+import { MagnifyingGlass, X } from '@phosphor-icons/react';
 import { Link } from 'react-router';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { Badge } from '@/components/ui/badge';

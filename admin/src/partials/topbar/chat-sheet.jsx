@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessagesSquare } from 'lucide-react';
+import { ChatsCircle } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +67,7 @@ export function ChatSheet({ trigger }) {
         </SheetBody>
         <SheetFooter className="border-t border-border p-3">
           <Button variant="outline" className="w-full" asChild>
-            <Link to="/chat" onClick={() => setOpen(false)}><MessagesSquare className="size-4" /> Открыть чат</Link>
+            <Link to="/chat" onClick={() => setOpen(false)}><ChatsCircle className="size-4" /> Открыть чат</Link>
           </Button>
         </SheetFooter>
       </SheetContent>

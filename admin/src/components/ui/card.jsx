@@ -25,8 +25,9 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-card border border-border shadow-xs black/5',
-        accent: 'bg-muted shadow-xs p-1',
+        // AURIX: без обводок и теней — карточки единым тёмно-серым тоном
+        default: 'bg-card',
+        accent: 'bg-muted p-1',
       },
     },
     defaultVariants: {

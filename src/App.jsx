@@ -25,6 +25,13 @@ const Admin = lazy(() => import('./pages/Admin.jsx'));
 import RequireAuth from './components/RequireAuth.jsx';
 import { AuthProvider } from './contexts/AuthContext.jsx';
 
+// Жёсткий переход в новую панель (/admin — отдельный бандл, отдаёт Express).
+// Обычный <Navigate> не подходит: остались бы внутри SPA основного сайта.
+function RedirectToPanel() {
+  useEffect(() => { window.location.replace('/admin/'); }, []);
+  return <div style={{ minHeight: '70vh' }} />;
+}
+
 export default function App() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
@@ -53,8 +60,8 @@ export default function App() {
     return () => io.disconnect();
   }, [pathname]);
 
-  const noHeader = isAuth || pathname === '/admin' || pathname === '/account';
-  const noFooter = isAuth || pathname === '/admin' || pathname === '/account';
+  const noHeader = isAuth || pathname.startsWith('/admin') || pathname === '/account';
+  const noFooter = isAuth || pathname.startsWith('/admin') || pathname === '/account';
 
   return (
     <AuthProvider>
@@ -75,7 +82,12 @@ export default function App() {
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/contacts" element={<Contacts />} />
         <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
-        <Route path="/admin" element={<RequireAuth><Admin /></RequireAuth>} />
+        {/* Старая встроенная админка выведена из оборота: /admin — всегда новая панель
+            (отдельный бандл admin/dist, Express). Жёсткий переход мимо SPA-роутера,
+            иначе клиентская навигация рендерит старый Admin.jsx без запроса к серверу.
+            Старая остаётся на /admin-legacy как аварийный запасной вход. */}
+        <Route path="/admin" element={<RedirectToPanel />} />
+        <Route path="/admin-legacy" element={<RequireAuth><Admin /></RequireAuth>} />
         <Route path="/rent-out" element={<RentOut />} />
         <Route path="/tariffs" element={<Tariffs />} />
         <Route path="/photo" element={<PhotoRental />} />

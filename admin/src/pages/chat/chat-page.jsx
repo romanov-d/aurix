@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, Send, Paperclip } from 'lucide-react';
+import { MagnifyingGlass, PaperPlaneTilt, Paperclip } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import {
   Toolbar, ToolbarDescription, ToolbarHeading, ToolbarPageTitle,
@@ -118,7 +118,7 @@ export function ChatPage() {
                 ))}
               </div>
               <div className="relative">
-                <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
+                <MagnifyingGlass className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
                 <Input placeholder="Поиск" value={search} onChange={(e) => setSearch(e.target.value)} className="ps-9" />
               </div>
             </div>
@@ -193,7 +193,7 @@ export function ChatPage() {
                         onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }}
                         className="flex-1"
                       />
-                      <Button mode="icon" onClick={send} disabled={sending}><Send className="size-4" /></Button>
+                      <Button mode="icon" onClick={send} disabled={sending}><PaperPlaneTilt className="size-4" /></Button>
                     </Fragment>
                   )}
                 </div>

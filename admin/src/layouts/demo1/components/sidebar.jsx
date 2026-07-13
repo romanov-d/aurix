@@ -18,9 +18,18 @@ export function Sidebar() {
       )}
     >
       <SidebarHeader />
-      <div className="overflow-hidden">
-        <div className="w-(--sidebar-default-width)">
+      <div className="overflow-hidden grow flex flex-col">
+        <div className="w-(--sidebar-default-width) grow overflow-y-auto">
           <SidebarMenu />
+        </div>
+        {/* Жёсткая ссылка на главную сайта (вне SPA панели) */}
+        <div className="w-(--sidebar-default-width) shrink-0 p-4 pt-2">
+          <a
+            href="/"
+            className="flex items-center gap-2 justify-center h-9 rounded-md border border-input text-sm text-secondary-foreground hover:text-primary hover:border-primary/50 transition-colors"
+          >
+            ← Вернуться на сайт
+          </a>
         </div>
       </div>
     </div>

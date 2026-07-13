@@ -1,4 +1,4 @@
-import { ChevronFirst } from 'lucide-react';
+import { CaretLineLeft } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
@@ -41,7 +41,7 @@ export function SidebarHeader() {
             : 'rtl:rotate-180',
         )}
       >
-        <ChevronFirst className="size-4!" />
+        <CaretLineLeft className="size-4!" />
       </Button>
     </div>
   );

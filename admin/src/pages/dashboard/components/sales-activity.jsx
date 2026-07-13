@@ -1,5 +1,5 @@
 import { Fragment } from 'react';
-import { Clock, CarFront, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, Car, CheckCircle, XCircle } from '@phosphor-icons/react';
 import { Link } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,7 +9,7 @@ export function SalesActivity() {
   const d = useDashboardData();
   const items = [
     { totalColor: 'text-yellow-400', total: String(d.bookings_pending ?? 0), label: 'заявки', description: 'ожидают', icon: Clock },
-    { totalColor: 'text-green-500', total: String(d.bookings_active ?? 0), label: 'авто', description: 'в аренде', icon: CarFront },
+    { totalColor: 'text-green-500', total: String(d.bookings_active ?? 0), label: 'авто', description: 'в аренде', icon: Car },
     { totalColor: 'text-primary', total: String(d.bookings_completed ?? 0), label: 'аренд', description: 'завершено', icon: CheckCircle },
     { totalColor: 'text-destructive', total: String(d.bookings_cancelled ?? 0), label: 'аренд', description: 'отменено', icon: XCircle },
   ];

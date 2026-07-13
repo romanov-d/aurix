@@ -1,6 +1,13 @@
 import {
-  MessagesSquare,
+  SquaresFour,
+  CalendarCheck as PhCalendarCheck,
+  Users as PhUsers,
+  ChatsCircle,
   Newspaper,
+  GearSix,
+  UserCircle as PhUserCircle,
+} from '@phosphor-icons/react';
+import {
   AlertCircle,
   Award,
   Badge,
@@ -60,21 +67,21 @@ import {
 // Меню клиента (role user) — только личный кабинет
 export const MENU_CLIENT = [
   { heading: 'AURIX' },
-  { title: 'Личный кабинет', icon: UserCircle, children: [{ title: 'Мой кабинет', path: '/me' }] },
+  { title: 'Личный кабинет', icon: PhUserCircle, children: [{ title: 'Мой кабинет', path: '/me' }] },
 ];
 
 export const MENU_SIDEBAR = [
   { heading: 'AURIX' },
   {
     title: 'Дашборд',
-    icon: LayoutGrid,
+    icon: SquaresFour,
     children: [
       { title: 'Обзор', path: '/aurix' },
     ],
   },
   {
     title: 'Прокат',
-    icon: CalendarCheck,
+    icon: PhCalendarCheck,
     children: [
       { title: 'Брони', path: '/bookings' },
       { title: 'Автопарк', path: '/fleet' },
@@ -82,14 +89,14 @@ export const MENU_SIDEBAR = [
   },
   {
     title: 'Клиенты',
-    icon: Users,
+    icon: PhUsers,
     children: [
       { title: 'Все клиенты', path: '/clients' },
     ],
   },
   {
     title: 'Чат',
-    icon: MessagesSquare,
+    icon: ChatsCircle,
     children: [
       { title: 'Диалоги', path: '/chat' },
     ],
@@ -105,7 +112,7 @@ export const MENU_SIDEBAR = [
   },
   {
     title: 'Настройки',
-    icon: Settings,
+    icon: GearSix,
     children: [
       { title: 'Общие', path: '/settings' },
       { title: 'Журнал действий', path: '/audit' },

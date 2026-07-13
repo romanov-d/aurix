@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable,
 } from '@tanstack/react-table';
-import { Search, X, Plus, Pencil, Trash2, Upload } from 'lucide-react';
+import { MagnifyingGlass, X, Plus, PencilSimple, Trash, UploadSimple } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/aurix-api';
 import {
@@ -184,10 +184,10 @@ export function CarsPage() {
         const c = row.original;
         return (
           <div className="flex items-center gap-1.5 justify-end">
-            <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(c)}><Pencil className="size-4" /></Button>
+            <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(c)}><PencilSimple className="size-4" /></Button>
             {c.status === 'published' && <Button size="sm" variant="ghost" onClick={() => setStatus(c, 'hidden')}>Скрыть</Button>}
             {c.status === 'hidden' && <Button size="sm" variant="outline" onClick={() => setStatus(c, 'published')}>Опубл.</Button>}
-            <Button size="sm" mode="icon" variant="outline" onClick={() => del(c)}><Trash2 className="size-4 text-destructive" /></Button>
+            <Button size="sm" mode="icon" variant="outline" onClick={() => del(c)}><Trash className="size-4 text-destructive" /></Button>
           </div>
         );
       }, size: 220,
@@ -221,7 +221,7 @@ export function CarsPage() {
               <CardHeading><CardTitle>Автомобили {!loading && `(${rows.length})`}</CardTitle></CardHeading>
               <CardToolbar>
                 <div className="relative">
-                  <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
+                  <MagnifyingGlass className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
                   <Input placeholder="Поиск: название, бренд, id" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="ps-9 w-64" />
                   {searchQuery && <Button mode="icon" variant="ghost" className="absolute end-1.5 top-1/2 -translate-y-1/2 h-6 w-6" onClick={() => setSearchQuery('')}><X /></Button>}
                 </div>
@@ -282,7 +282,7 @@ export function CarsPage() {
                   <Button size="sm" variant="outline" onClick={addPhotoUrl}>По ссылке</Button>
                   <label className="inline-flex">
                     <input type="file" accept="image/*" multiple className="hidden" onChange={uploadPhotos} />
-                    <span className="inline-flex items-center gap-1 h-9 px-3 rounded-md border border-input text-sm cursor-pointer"><Upload className="size-4" /> Загрузить файлы</span>
+                    <span className="inline-flex items-center gap-1 h-9 px-3 rounded-md border border-input text-sm cursor-pointer"><UploadSimple className="size-4" /> Загрузить файлы</span>
                   </label>
                 </div>
               </div>

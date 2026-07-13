@@ -20,6 +20,7 @@
     "@formatjs/intl-relativetimeformat": "^11.4.11",
     "@hookform/resolvers": "^5.2.1",
     "@paper-design/shaders-react": "^0.0.76",
+    "@phosphor-icons/react": "^2.1.10",
     "@remixicon/react": "^4.6.0",
     "@supabase/supabase-js": "^2.56.0",
     "@tailwindcss/vite": "^4.1.17",

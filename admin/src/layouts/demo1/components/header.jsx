@@ -7,12 +7,10 @@ import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
 import {
   Bell,
-  LayoutGrid,
-  Menu,
-  MessageCircleMore,
-  Search,
-  SquareChevronRight,
-} from 'lucide-react';
+  CaretCircleRight,
+  ChatCircleDots,
+  List,
+} from '@phosphor-icons/react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/context/auth-context';
@@ -77,7 +75,7 @@ export function Header() {
               >
                 <SheetTrigger asChild>
                   <Button variant="ghost" mode="icon">
-                    <Menu className="text-muted-foreground/70" />
+                    <List className="text-muted-foreground/70" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent
@@ -99,7 +97,7 @@ export function Header() {
               >
                 <SheetTrigger asChild>
                   <Button variant="ghost" mode="icon">
-                    <SquareChevronRight className="text-muted-foreground/70" />
+                    <CaretCircleRight className="text-muted-foreground/70" />
                   </Button>
                 </SheetTrigger>
                 <SheetContent
@@ -147,7 +145,7 @@ export function Header() {
                     shape="circle"
                     className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
                   >
-                    <MessageCircleMore className="size-4.5!" />
+                    <ChatCircleDots className="size-4.5!" />
                   </Button>
                 }
               />

@@ -16,6 +16,11 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState('overview');
   const [sideOpen, setSideOpen] = useState(false);
 
+  // Админ/сотрудник в старом ЛК не работает — его место в новой панели.
+  useEffect(() => {
+    if (user?.role === 'admin') window.location.replace('/admin/');
+  }, [user]);
+
   // Открыть нужную вкладку по хешу URL (напр. /account#documents)
   useEffect(() => {
     const tab = location.hash.replace('#', '');

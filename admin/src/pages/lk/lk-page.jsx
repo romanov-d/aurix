@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, Mail, ShieldCheck, ExternalLink, Send, Paperclip } from 'lucide-react';
+import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
@@ -114,7 +114,7 @@ export function LkPage() {
         name={user.name || 'Клиент'} image={heroImage}
         info={[
           { label: user.phone || 'телефон не указан', icon: Phone },
-          { email: user.email, icon: Mail },
+          { email: user.email, icon: EnvelopeSimple },
           { label: user.is_verified ? 'Верификация пройдена' : 'Не верифицирован', icon: ShieldCheck },
         ]}
       />
@@ -157,7 +157,7 @@ export function LkPage() {
               {favCars.length === 0 ? <div className="text-sm text-muted-foreground">Список пуст</div> : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {favCars.map((c) => (
-                    <div key={c.id} className="rounded-lg border border-border overflow-hidden">
+                    <div key={c.id} className="rounded-lg bg-zinc-800/40 overflow-hidden">
                       <img src={c.image_url} alt="" className="h-28 w-full object-cover" />
                       <div className="p-2"><div className="text-sm font-medium">{c.name}</div><div className="text-xs text-primary">{fmtMoney(c.price_per_day)}/сут</div></div>
                     </div>
@@ -184,7 +184,7 @@ export function LkPage() {
             <Card><CardHeader><CardHeading><CardTitle>Залоги и возвраты</CardTitle></CardHeading></CardHeader>
               <CardContent className="p-6 flex flex-col gap-4">
                 {finances?.deposits?.length ? finances.deposits.map((d) => (
-                  <div key={d.booking_id} className="rounded-lg border border-border p-4">
+                  <div key={d.booking_id} className="rounded-lg bg-zinc-800/40 p-4">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium">{d.car_name}</div>
                       <Badge size="sm" variant={d.deposit_status === 'returned' ? 'success' : d.deposit_status === 'partial' ? 'warning' : 'outline'}>
@@ -219,7 +219,7 @@ export function LkPage() {
             <Card><CardHeader><CardHeading><CardTitle>Удержания и штрафы</CardTitle></CardHeading></CardHeader>
               <CardContent className="p-6 flex flex-col gap-3">
                 {finances?.charges?.length ? finances.charges.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg bg-zinc-800/40 p-3">
                     <div className="flex items-center gap-3 min-w-0">
                       {c.photo_url && <img src={c.photo_url} alt="" className="h-12 w-16 rounded object-cover cursor-pointer" onClick={() => window.open(c.photo_url, '_blank')} />}
                       <div className="min-w-0">
@@ -273,13 +273,13 @@ export function LkPage() {
           <Card><CardHeader><CardHeading><CardTitle>Документы</CardTitle></CardHeading></CardHeader>
             <CardContent className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
               {DOCS.map(([f, name]) => (
-                <div key={f} className="rounded-lg border border-border p-4 flex items-center justify-between">
+                <div key={f} className="rounded-lg bg-zinc-800/40 p-4 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">{name}</div>
                     <div className={`text-xs ${user[f] ? 'text-green-500' : 'text-muted-foreground'}`}>{user[f] ? '✓ Загружено' : 'Требуется загрузить'}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {user[f] && <Button size="sm" variant="outline" onClick={() => window.open(user[f], '_blank')}><ExternalLink className="size-4" /></Button>}
+                    {user[f] && <Button size="sm" variant="outline" onClick={() => window.open(user[f], '_blank')}><ArrowSquareOut className="size-4" /></Button>}
                     {!user.is_verified && (
                       <label className="inline-flex cursor-pointer">
                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => uploadDoc(f, e)} />
@@ -441,7 +441,7 @@ function LkChat() {
           </label>
           {attach && <span className="text-xs text-muted-foreground truncate max-w-24">{attach.name}</span>}
           <Input placeholder="Сообщение…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }} className="flex-1" />
-          <Button mode="icon" onClick={send}><Send className="size-4" /></Button>
+          <Button mode="icon" onClick={send}><PaperPlaneTilt className="size-4" /></Button>
         </div>
       </CardContent>
     </Card>

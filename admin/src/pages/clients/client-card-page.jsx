@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Phone, Mail, UserCog, ShieldCheck, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Phone, EnvelopeSimple, UserGear, ShieldCheck, ArrowSquareOut, Warning } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
@@ -136,8 +136,8 @@ export function ClientCardPage() {
 
   const heroInfo = [
     { label: u.phone || 'телефон не указан', icon: Phone },
-    { email: u.email, icon: Mail },
-    { label: `Менеджер: ${u.manager || '—'}`, icon: UserCog },
+    { email: u.email, icon: EnvelopeSimple },
+    { label: `Менеджер: ${u.manager || '—'}`, icon: UserGear },
     { label: u.is_verified ? 'Проверен' : 'Не проверен', icon: ShieldCheck },
   ];
 
@@ -238,7 +238,7 @@ export function ClientCardPage() {
                       {DOCS.map(([f, name]) =>
                         u[f] ? (
                           <Button key={f} size="sm" variant="outline" onClick={() => viewDoc(u[f])}>
-                            {name} <ExternalLink className="size-3.5 ms-1" />
+                            {name} <ArrowSquareOut className="size-3.5 ms-1" />
                           </Button>
                         ) : (
                           <Badge key={f} size="sm" variant="secondary" appearance="light">{name}: нет</Badge>
@@ -298,7 +298,7 @@ export function ClientCardPage() {
                     <Input placeholder="Пояснение (за что)" value={reason} onChange={(e) => setReason(e.target.value)} />
                     {formError && (
                       <div className="flex items-center gap-2 text-sm text-destructive">
-                        <AlertTriangle className="size-4" /> {formError}
+                        <Warning className="size-4" /> {formError}
                       </div>
                     )}
                     <Button type="submit" disabled={saving}>

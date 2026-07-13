@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useState } from 'react';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { PencilSimple, Trash, Plus } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import {
   Toolbar,
@@ -142,8 +142,8 @@ export function BlogPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center gap-1.5 justify-end">
-                        <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(p)}><Pencil className="size-4" /></Button>
-                        <Button size="sm" mode="icon" variant="outline" onClick={() => del(p.id)}><Trash2 className="size-4 text-destructive" /></Button>
+                        <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(p)}><PencilSimple className="size-4" /></Button>
+                        <Button size="sm" mode="icon" variant="outline" onClick={() => del(p.id)}><Trash className="size-4 text-destructive" /></Button>
                       </div>
                     </TableCell>
                   </TableRow>
