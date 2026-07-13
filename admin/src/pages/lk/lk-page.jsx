@@ -299,7 +299,7 @@ function LkChat() {
 
   const loadMessages = useCallback(() => {
     if (!activeId) return;
-    api.get(`/chat/threads/${activeId}/messages`).then((d) => setMessages(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+    api.get(`/chat/threads/${activeId}/messages`).then((d) => setMessages(d?.messages || (Array.isArray(d) ? d : []))).catch(() => {});
   }, [activeId]);
   useEffect(() => { if (!activeId) return; loadMessages(); api.post(`/chat/threads/${activeId}/read`).catch(() => {}); const t = setInterval(loadMessages, 6000); return () => clearInterval(t); }, [activeId, loadMessages]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);

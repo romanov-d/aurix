@@ -47,7 +47,8 @@ export function ChatPage() {
 
   const loadMessages = useCallback(() => {
     if (!activeId) return;
-    api.get(`/admin/chat/threads/${activeId}/messages`).then((d) => setMessages(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+    // Ответ: { thread, messages } — берём messages
+    api.get(`/admin/chat/threads/${activeId}/messages`).then((d) => setMessages(d?.messages || (Array.isArray(d) ? d : []))).catch(() => {});
   }, [activeId]);
 
   useEffect(() => {
