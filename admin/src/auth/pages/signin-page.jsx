@@ -156,49 +156,10 @@ export function SignInPage() {
         className="block w-full space-y-5"
       >
         <div className="text-center space-y-1 pb-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Sign In</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Вход</h1>
           <p className="text-sm text-muted-foreground">
-            Welcome back! Log in with your credentials.
+            AURIX MOTORS — панель управления
           </p>
-        </div>
-
-        <Alert appearance="light" size="sm" close={false}>
-          <AlertIcon>
-            <AlertCircle className="text-primary" />
-          </AlertIcon>
-          <AlertTitle className="text-accent-foreground">
-            Use <strong>demo@kt.com</strong> username and {` `}
-            <strong>demo123</strong> password for demo access.
-          </AlertTitle>
-        </Alert>
-
-        <div className="flex flex-col gap-3.5">
-          <Button
-            variant="outline"
-            type="button"
-            onClick={handleGoogleSignIn}
-            disabled={isGoogleLoading}
-          >
-            {isGoogleLoading ? (
-              <span className="flex items-center gap-2">
-                <LoaderCircleIcon className="size-4! animate-spin" /> Signing in
-                with Google...
-              </span>
-            ) : (
-              <>
-                <Icons.googleColorful className="size-5!" /> Sign in with Google
-              </>
-            )}
-          </Button>
-        </div>
-
-        <div className="relative py-1.5">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">or</span>
-          </div>
         </div>
 
         {error && (
@@ -230,7 +191,7 @@ export function SignInPage() {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="Your email" {...field} />
+                <Input placeholder="Ваш email" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -243,11 +204,11 @@ export function SignInPage() {
           render={({ field }) => (
             <FormItem>
               <div className="flex justify-between items-center gap-2.5">
-                <FormLabel>Password</FormLabel>
+                <FormLabel>Пароль</FormLabel>
               </div>
               <div className="relative">
                 <Input
-                  placeholder="Your password"
+                  placeholder="Ваш пароль"
                   type={passwordVisible ? 'text' : 'password'} // Toggle input type
                   {...field}
                 />
@@ -285,14 +246,14 @@ export function SignInPage() {
                     />
                   </FormControl>
                   <FormLabel className="text-sm font-normal cursor-pointer">
-                    Remember me
+                    Запомнить меня
                   </FormLabel>
                 </div>
                 <Link
                   to="/auth/reset-password"
                   className="text-sm font-semibold text-foreground hover:text-primary"
                 >
-                  Forgot Password?
+                  Забыли пароль?
                 </Link>
               </div>
             </FormItem>
@@ -302,20 +263,20 @@ export function SignInPage() {
         <Button type="submit" className="w-full" disabled={isProcessing}>
           {isProcessing ? (
             <span className="flex items-center gap-2">
-              <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Loading...
+              <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Вход…
             </span>
           ) : (
-            'Sign In'
+            'Войти'
           )}
         </Button>
 
         <div className="text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
+          Нет аккаунта?{' '}
           <Link
             to="/auth/signup"
             className="text-sm font-semibold text-foreground hover:text-primary"
           >
-            Sign Up
+            Регистрация
           </Link>
         </div>
       </form>

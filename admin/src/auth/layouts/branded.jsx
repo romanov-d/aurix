@@ -36,16 +36,15 @@ export function BrandedLayout() {
 
             <div className="flex flex-col gap-3">
               <h3 className="text-2xl font-semibold text-mono">
-                Secure Dashboard Access
+                AURIX MOTORS
               </h3>
               <div className="text-base font-medium text-secondary-foreground">
-                A robust authentication gateway ensuring
-                <br /> secure&nbsp;
+                Панель управления прокатом премиум-авто.
+                <br /> Вход для&nbsp;
                 <span className="text-mono font-semibold">
-                  efficient user access
+                  сотрудников и клиентов
                 </span>
-                &nbsp;to the Metronic
-                <br /> Dashboard interface.
+                &nbsp;AURIX.
               </div>
             </div>
           </div>
