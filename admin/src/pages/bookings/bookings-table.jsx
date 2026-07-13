@@ -8,10 +8,11 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import { Search, X } from 'lucide-react';
+import { Search, X, Pencil } from 'lucide-react';
 import { api } from '@/lib/aurix-api';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Card,
   CardFooter,
@@ -46,6 +47,25 @@ const fmtDate = (iso) => {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' });
 };
 
+// Этапы воронки (как в старой админке)
+const STAGES = [
+  ['new', 'Новая заявка'], ['docs', 'Проверка документов'], ['prepay', 'Оплата бронирования'],
+  ['manager', 'Назначен менеджер'], ['issued', 'Выдан / в аренде'], ['completed', 'Завершена'], ['cancelled', 'Отменена'],
+];
+
+// ISO(UTC) → значение для datetime-local в ЛОКАЛЬНОМ времени (фикс сдвига −3ч МСК)
+const isoToLocalInput = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const localInputToIso = (v) => (v ? new Date(v).toISOString() : undefined);
+
+const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
+const selectCls = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
+
 export function BookingsTable() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,6 +74,9 @@ export function BookingsTable() {
   const [sorting, setSorting] = useState([{ id: 'id', desc: true }]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Смена статуса брони (Выдать/Завершить/Отменить) → PATCH + обновление строки
   const patchBooking = async (id, body) => {
@@ -63,6 +86,34 @@ export function BookingsTable() {
     } catch (e) {
       alert(e.message || 'Не удалось изменить бронь');
     }
+  };
+
+  const openEdit = (b) => {
+    setEditForm({
+      id: b.id, total: b.total ?? 0, stage: b.stage || 'new', manager: b.manager || '',
+      pickup_city: b.pickup_city || '', notes: b.notes || '',
+      from_dt: isoToLocalInput(b.from_dt), to_dt: isoToLocalInput(b.to_dt),
+      car: b.car, user: b.user,
+    });
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      await patchBooking(editForm.id, {
+        total: parseInt(editForm.total, 10) || 0,
+        stage: editForm.stage,
+        manager: editForm.manager || null,
+        pickup_city: editForm.pickup_city || null,
+        notes: editForm.notes || null,
+        from_dt: localInputToIso(editForm.from_dt),
+        to_dt: localInputToIso(editForm.to_dt),
+      });
+      setEditOpen(false);
+    } catch (e) {
+      alert(e.message);
+    } finally { setSavingEdit(false); }
   };
 
   useEffect(() => {
@@ -171,6 +222,7 @@ export function BookingsTable() {
           const b = row.original;
           return (
             <div className="flex items-center gap-1.5 justify-end">
+              <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(b)}><Pencil className="size-4" /></Button>
               {b.status === 'pending' && (
                 <Button size="sm" variant="outline" onClick={() => patchBooking(b.id, { status: 'active' })}>Выдать</Button>
               )}
@@ -263,6 +315,55 @@ export function BookingsTable() {
           <DataGridPagination />
         </CardFooter>
       </Card>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Бронь #{editForm?.id}</DialogTitle></DialogHeader>
+          {editForm && (
+            <DialogBody className="flex flex-col gap-4">
+              <div className="text-sm text-secondary-foreground">
+                {editForm.car?.name} · {editForm.user?.name}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className={fieldLabel}>Сумма, ₽</div>
+                  <Input type="number" value={editForm.total} onChange={(e) => setEditForm({ ...editForm, total: e.target.value })} />
+                </div>
+                <div>
+                  <div className={fieldLabel}>Этап воронки</div>
+                  <select className={selectCls} value={editForm.stage} onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}>
+                    {STAGES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <div className={fieldLabel}>Начало аренды</div>
+                  <Input type="datetime-local" value={editForm.from_dt} onChange={(e) => setEditForm({ ...editForm, from_dt: e.target.value })} />
+                </div>
+                <div>
+                  <div className={fieldLabel}>Конец аренды</div>
+                  <Input type="datetime-local" value={editForm.to_dt} onChange={(e) => setEditForm({ ...editForm, to_dt: e.target.value })} />
+                </div>
+                <div>
+                  <div className={fieldLabel}>Менеджер</div>
+                  <Input value={editForm.manager} onChange={(e) => setEditForm({ ...editForm, manager: e.target.value })} />
+                </div>
+                <div>
+                  <div className={fieldLabel}>Адрес подачи</div>
+                  <Input value={editForm.pickup_city} onChange={(e) => setEditForm({ ...editForm, pickup_city: e.target.value })} />
+                </div>
+              </div>
+              <div>
+                <div className={fieldLabel}>Примечание</div>
+                <textarea className={`${selectCls} min-h-[60px] py-2 resize-y`} value={editForm.notes} onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })} />
+              </div>
+            </DialogBody>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Отмена</Button>
+            <Button onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Сохранение…' : 'Сохранить'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DataGrid>
   );
 }
