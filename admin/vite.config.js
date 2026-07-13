@@ -3,9 +3,10 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react(), tailwindcss()],
-  base: '/',
+  // В проде админка живёт на пути /admin (nginx), в dev — в корне 5190.
+  base: command === 'build' ? '/admin/' : '/',
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -24,4 +25,4 @@ export default defineConfig({
   build: {
     chunkSizeWarningLimit: 3000,
   },
-});
+}));
