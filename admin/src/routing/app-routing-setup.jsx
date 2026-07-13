@@ -88,6 +88,7 @@ import { FaqPage } from '@/pages/faq';
 import { BlogPage as AurixBlogPage } from '@/pages/blog';
 import { CarsPage } from '@/pages/cars';
 import { ChatPage } from '@/pages/chat';
+import { LkPage, RoleLanding } from '@/pages/lk';
 import {
   MyOrdersPage,
   OrderPlacedPage,
@@ -108,9 +109,11 @@ export function AppRoutingSetup() {
     <Routes>
       <Route element={<RequireAuth />}>
         <Route element={<Demo1Layout />}>
-          <Route path="/" element={<DefaultPage />} />
+          <Route path="/" element={<RoleLanding />} />
+          <Route path="/demo-dashboard" element={<DefaultPage />} />
           {/* AURIX */}
           <Route path="/aurix" element={<AurixDashboardPage />} />
+          <Route path="/me" element={<LkPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/fleet" element={<CarsPage />} />
           <Route path="/clients" element={<ClientsPage />} />

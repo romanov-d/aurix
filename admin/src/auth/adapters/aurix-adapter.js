@@ -44,9 +44,10 @@ export const AurixAdapter = {
   async getCurrentUser() {
     const res = await api.get('/auth/me'); // 401 → бросит → провайдер очистит сессию
     const user = mapUser(res?.user);
-    if (!user || !user.is_admin) {
-      throw new Error('Доступ только для администраторов');
-    }
+    if (!user) throw new Error('Не авторизован');
+    // Пускаем любого авторизованного: админ → админка, клиент → личный кабинет
+    // (роутинг по роли, см. is_admin). raw хранит все поля нашего юзера для ЛК.
+    user.raw = res.user;
     return user;
   },
 
