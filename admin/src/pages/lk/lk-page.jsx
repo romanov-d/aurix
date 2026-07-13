@@ -285,6 +285,7 @@ function LkChat() {
   const [activeId, setActiveId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
+  const [attach, setAttach] = useState(null);
   const endRef = useRef(null);
 
   const loadThreads = useCallback(() => {
@@ -303,13 +304,20 @@ function LkChat() {
   useEffect(() => { if (!activeId) return; loadMessages(); api.post(`/chat/threads/${activeId}/read`).catch(() => {}); const t = setInterval(loadMessages, 6000); return () => clearInterval(t); }, [activeId, loadMessages]);
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+  const onFile = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file || file.size > 2 * 1024 * 1024) { if (file) alert('Файл больше 2 МБ'); return; }
+    const url = await new Promise((res) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file); });
+    setAttach({ url, name: file.name, type: file.type, size: file.size });
+  };
+
   const send = async () => {
-    if (!text.trim()) return;
+    if (!text.trim() && !attach) return;
     let tid = activeId;
     try {
       if (!tid) { const th = await api.post('/chat/threads', {}); tid = th.id; setActiveId(tid); }
-      await api.post(`/chat/threads/${tid}/messages`, { body: text.trim() });
-      setText(''); loadMessages(); loadThreads();
+      await api.post(`/chat/threads/${tid}/messages`, { body: text.trim() || null, attachment: attach });
+      setText(''); setAttach(null); loadMessages(); loadThreads();
     } catch (e) { alert(e.message); }
   };
 
@@ -324,6 +332,11 @@ function LkChat() {
             return (
               <div key={m.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[70%] rounded-lg px-3 py-2 ${mine ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                  {m.attachment_url && (
+                    m.attachment_type?.startsWith('image/')
+                      ? <img src={m.attachment_url} alt="" className="rounded mb-1 max-h-48" />
+                      : <a href={m.attachment_url} target="_blank" rel="noreferrer" className="underline text-sm">{m.attachment_name || 'файл'}</a>
+                  )}
                   {m.body && <div className="text-sm whitespace-pre-wrap">{m.body}</div>}
                   <div className={`text-[11px] mt-1 ${mine ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>{fmtTime(m.created_at)}</div>
                 </div>
@@ -333,6 +346,11 @@ function LkChat() {
           <div ref={endRef} />
         </div>
         <div className="p-3 border-t border-border flex items-center gap-2">
+          <label className="inline-flex cursor-pointer">
+            <input type="file" accept="image/*,.pdf" className="hidden" onChange={onFile} />
+            <span className="inline-flex items-center justify-center size-9 rounded-md border border-input"><Paperclip className="size-4" /></span>
+          </label>
+          {attach && <span className="text-xs text-muted-foreground truncate max-w-24">{attach.name}</span>}
           <Input placeholder="Сообщение…" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); send(); } }} className="flex-1" />
           <Button mode="icon" onClick={send}><Send className="size-4" /></Button>
         </div>

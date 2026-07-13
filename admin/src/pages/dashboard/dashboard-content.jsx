@@ -3,6 +3,7 @@ import { Inventory } from './components/inventory';
 import { InventorySummary } from './components/inventory-summary';
 import { Orders } from './components/orders';
 import { SalesActivity } from './components/sales-activity';
+import { BookingCalendar } from './components/booking-calendar';
 import { BookingsTable } from '@/pages/bookings';
 
 export function DashboardContent() {
@@ -23,6 +24,8 @@ export function DashboardContent() {
           <InventorySummary />
         </div>
       </div>
+
+      <BookingCalendar />
 
       <div className="grid lg:grid-cols-1">
         <div className="lg:col-span-1">
