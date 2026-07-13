@@ -14,6 +14,7 @@ import { Card, CardHeader, CardHeading, CardTitle, CardTable, CardToolbar } from
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const textareaCls =
@@ -90,7 +91,24 @@ export function FaqPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((f) => (
+                {loading ? (
+                  <TableRow>
+                    <TableCell colSpan={3} className="p-0">
+                      <div className="flex flex-col gap-3 p-4">
+                        {Array.from({ length: 6 }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-3">
+                            <Skeleton className="size-9 rounded-md shrink-0" />
+                            <div className="flex flex-col gap-2 grow">
+                              <Skeleton className="h-4 w-2/3" />
+                              <Skeleton className="h-3 w-1/3" />
+                            </div>
+                            <Skeleton className="h-8 w-16 rounded-md shrink-0" />
+                          </div>
+                        ))}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : items.map((f) => (
                   <TableRow key={f.id}>
                     <TableCell className="text-muted-foreground">{f.sort_order}</TableCell>
                     <TableCell>

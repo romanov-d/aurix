@@ -11,6 +11,7 @@ import {
 import { Container } from '@/components/common/container';
 import { Card, CardContent, CardHeader, CardHeading, CardTitle, CardTable } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 // Поля тарифа (nullable — price_6_12/price_30 можно очистить)
@@ -73,7 +74,24 @@ export function TariffsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {cars.map((car) => (
+                  {loading ? (
+                    <TableRow>
+                      <TableCell colSpan={FIELDS.length + 1} className="p-0">
+                        <div className="flex flex-col gap-3 p-4">
+                          {Array.from({ length: 6 }).map((_, i) => (
+                            <div key={i} className="flex items-center gap-3">
+                              <Skeleton className="size-9 rounded-md shrink-0" />
+                              <div className="flex flex-col gap-2 grow">
+                                <Skeleton className="h-4 w-2/3" />
+                                <Skeleton className="h-3 w-1/3" />
+                              </div>
+                              <Skeleton className="h-8 w-16 rounded-md shrink-0" />
+                            </div>
+                          ))}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : cars.map((car) => (
                     <TableRow key={car.id}>
                       <TableCell className="font-medium text-mono">{car.name}</TableCell>
                       {FIELDS.map((f) => (

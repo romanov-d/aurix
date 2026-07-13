@@ -7,6 +7,7 @@ import { api } from '@/lib/aurix-api';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
 import { Container } from '@/components/common/container';
+import { HeroDetailSkeleton } from '@/components/common/aurix-skeletons';
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -118,7 +119,7 @@ export function ClientCardPage() {
   };
 
   if (loading && !data) {
-    return <Container><div className="py-16 text-center text-muted-foreground">Загрузка…</div></Container>;
+    return <Container><HeroDetailSkeleton /></Container>;
   }
   if (error || !data) {
     return <Container><div className="py-16 text-center text-destructive">{error || 'Клиент не найден'}</div></Container>;

@@ -8,6 +8,7 @@ import {
   Toolbar, ToolbarActions, ToolbarHeading, ToolbarPageTitle,
 } from '@/partials/common/toolbar';
 import { Container } from '@/components/common/container';
+import { HeroDetailSkeleton } from '@/components/common/aurix-skeletons';
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -42,7 +43,7 @@ export function CarDetailPage() {
   }, [id]);
 
   if (error) return <Container><div className="py-16 text-center text-destructive">{error}</div></Container>;
-  if (!data) return <Container><div className="py-16 text-center text-muted-foreground">Загрузка…</div></Container>;
+  if (!data) return <Container><HeroDetailSkeleton /></Container>;
 
   const c = data.car;
   const st = CAR_STATUS[c.status] || { label: c.status, variant: 'secondary' };

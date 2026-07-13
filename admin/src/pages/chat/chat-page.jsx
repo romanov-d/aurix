@@ -8,6 +8,7 @@ import {
   Toolbar, ToolbarDescription, ToolbarHeading, ToolbarPageTitle,
 } from '@/partials/common/toolbar';
 import { Container } from '@/components/common/container';
+import { ChatSkeleton } from '@/components/common/aurix-skeletons';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ const fmtTime = (iso) => {
 
 export function ChatPage() {
   const [threads, setThreads] = useState([]);
+  const [loadingThreads, setLoadingThreads] = useState(true);
   const [statusFilter, setStatusFilter] = useState('open'); // open | closed | all
   const [search, setSearch] = useState('');
   const [activeId, setActiveId] = useState(null);
@@ -34,7 +36,7 @@ export function ChatPage() {
     const qs = new URLSearchParams();
     if (statusFilter !== 'all') qs.set('status', statusFilter);
     if (search.trim()) qs.set('q', search.trim());
-    api.get(`/admin/chat/threads?${qs}`).then((d) => setThreads(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+    api.get(`/admin/chat/threads?${qs}`).then((d) => setThreads(Array.isArray(d) ? d : d?.items || [])).catch(() => {}).finally(() => setLoadingThreads(false));
   }, [statusFilter, search]);
 
   useEffect(() => {
@@ -103,6 +105,9 @@ export function ChatPage() {
         </Toolbar>
       </Container>
       <Container>
+        {loadingThreads && threads.length === 0 ? (
+          <ChatSkeleton />
+        ) : (
         <Card className="grid grid-cols-1 lg:grid-cols-[320px_1fr] overflow-hidden" style={{ height: 'calc(100vh - 220px)' }}>
           {/* Список диалогов */}
           <div className="border-e border-border flex flex-col min-h-0">
@@ -196,6 +201,7 @@ export function ChatPage() {
             )}
           </div>
         </Card>
+        )}
       </Container>
     </Fragment>
   );

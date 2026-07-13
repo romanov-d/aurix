@@ -9,6 +9,7 @@ import {
   ToolbarPageTitle,
 } from '@/partials/common/toolbar';
 import { Container } from '@/components/common/container';
+import { StatCardsSkeleton, BlockSkeleton } from '@/components/common/aurix-skeletons';
 import { DashboardContent } from './dashboard-content';
 import { DashboardDataContext } from './dashboard-data';
 
@@ -39,7 +40,15 @@ export function DashboardPage() {
         {error ? (
           <div className="py-10 text-center text-destructive">{error}</div>
         ) : !data ? (
-          <div className="py-10 text-center text-muted-foreground">Загрузка…</div>
+          <div className="flex flex-col gap-5">
+            <StatCardsSkeleton count={4} />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <BlockSkeleton className="h-72" />
+              <BlockSkeleton className="h-72" />
+              <BlockSkeleton className="h-72" />
+            </div>
+            <BlockSkeleton className="h-64" />
+          </div>
         ) : (
           <DashboardDataContext.Provider value={data}>
             <DashboardContent />

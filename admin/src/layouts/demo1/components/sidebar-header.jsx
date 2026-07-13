@@ -20,12 +20,12 @@ export function SidebarHeader() {
       <Link to="/">
         <img
           src={toAbsoluteUrl('/media/app/aurix-logo.png')}
-          className="default-logo h-9 max-w-none"
+          className="default-logo h-14 max-w-none"
           alt="AURIX"
         />
         <img
           src={toAbsoluteUrl('/media/app/aurix-logo.png')}
-          className="small-logo h-8 max-w-none"
+          className="small-logo h-11 max-w-none"
           alt="AURIX"
         />
       </Link>

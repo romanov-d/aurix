@@ -5,6 +5,7 @@ import { cva } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useDataGrid } from '@/components/ui/data-grid';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const headerCellSpacingVariants = cva('', {
   variants: {
@@ -473,7 +474,9 @@ function DataGridTable() {
                     column={column}
                     key={colIndex}
                   >
-                    {column.columnDef.meta?.skeleton}
+                    {column.columnDef.meta?.skeleton ?? (
+                      <Skeleton className="h-4 w-full max-w-[140px]" />
+                    )}
                   </DataGridTableBodyRowSkeletonCell>
                 );
               })}

@@ -8,6 +8,7 @@ import {
 import { Container } from '@/components/common/container';
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const ENTITY_RU = { booking: 'Бронь', user: 'Клиент', car: 'Авто' };
 const ACTION_RU = {
@@ -57,7 +58,17 @@ export function AuditPage() {
           </CardHeader>
           <CardContent className="p-0">
             {loading ? (
-              <div className="p-6 text-sm text-muted-foreground">Загрузка…</div>
+              <div className="divide-y divide-border">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 px-6 py-3">
+                    <Skeleton className="size-9 rounded-md" />
+                    <div className="flex flex-col gap-2 grow">
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-3 w-1/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : rows.length === 0 ? (
               <div className="p-6 text-sm text-muted-foreground">Записей нет</div>
             ) : (

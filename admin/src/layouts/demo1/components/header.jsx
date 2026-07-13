@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useLocation } from 'react-router';
 import { Link } from 'react-router-dom';
+import { useAuth } from '@/auth/context/auth-context';
+import { avatarUrl } from '@/lib/avatar';
 import { toAbsoluteUrl } from '@/lib/helpers';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -34,6 +36,7 @@ import { MegaMenuMobile } from './mega-menu-mobile';
 import { SidebarMenu } from './sidebar-menu';
 
 export function Header() {
+  const { user } = useAuth();
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
 
@@ -152,9 +155,9 @@ export function Header() {
               <UserDropdownMenu
                 trigger={
                   <img
-                    className="size-9 rounded-full border-2 border-green-500 shrink-0 cursor-pointer"
-                    src={toAbsoluteUrl('/media/avatars/300-2.png')}
-                    alt="User Avatar"
+                    className="size-9 rounded-full border-2 border-primary shrink-0 cursor-pointer object-cover"
+                    src={avatarUrl(user?.raw || user)}
+                    alt="Аватар"
                   />
                 }
               />
