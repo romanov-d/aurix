@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MENU_SIDEBAR } from '@/config/menu.config';
+import { MENU_SIDEBAR, MENU_CLIENT } from '@/config/menu.config';
+import { useAuth } from '@/auth/context/auth-context';
 import { cn } from '@/lib/utils';
 import {
   AccordionMenu,
@@ -17,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 
 export function SidebarMenu() {
   const { pathname } = useLocation();
+  const { isAdmin } = useAuth();
+  const menu = isAdmin ? MENU_SIDEBAR : MENU_CLIENT;
 
   // Memoize matchPath to prevent unnecessary re-renders
   const matchPath = useCallback(
@@ -202,7 +205,7 @@ export function SidebarMenu() {
         collapsible
         classNames={classNames}
       >
-        {buildMenu(MENU_SIDEBAR)}
+        {buildMenu(menu)}
       </AccordionMenu>
     </div>
   );

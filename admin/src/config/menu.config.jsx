@@ -57,6 +57,12 @@ import {
   Zap,
 } from 'lucide-react';
 
+// Меню клиента (role user) — только личный кабинет
+export const MENU_CLIENT = [
+  { heading: 'AURIX' },
+  { title: 'Личный кабинет', icon: UserCircle, children: [{ title: 'Мой кабинет', path: '/me' }] },
+];
+
 export const MENU_SIDEBAR = [
   { heading: 'AURIX' },
   {
