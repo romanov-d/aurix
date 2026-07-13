@@ -78,6 +78,48 @@ export function BookingsTable() {
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
 
+  // Ручное создание брони
+  const [cars, setCars] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [addOpen, setAddOpen] = useState(false);
+  const [addForm, setAddForm] = useState(null);
+  const [savingAdd, setSavingAdd] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  const reload = () => {
+    api.get('/admin/bookings').then((d) => setRows(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+  };
+
+  const openAdd = () => {
+    setAddError('');
+    setAddForm({
+      car_id: cars[0]?.id || '', clientMode: 'existing', user_id: users[0]?.id || '',
+      client_name: '', client_email: '', client_phone: '',
+      from_dt: '', to_dt: '', total: '', pickup_city: '', with_delivery: false, manager: '', notes: '', stage: 'new',
+    });
+    setAddOpen(true);
+  };
+
+  const createBooking = async () => {
+    setAddError(''); setSavingAdd(true);
+    try {
+      const f = addForm;
+      const payload = {
+        car_id: f.car_id,
+        from_dt: localInputToIso(f.from_dt), to_dt: localInputToIso(f.to_dt),
+        total: parseInt(f.total, 10) || 0,
+        pickup_city: f.pickup_city || null, with_delivery: f.with_delivery,
+        manager: f.manager || null, notes: f.notes || null, stage: f.stage,
+      };
+      if (f.clientMode === 'existing') payload.user_id = f.user_id;
+      else { payload.client_name = f.client_name; payload.client_email = f.client_email; payload.client_phone = f.client_phone; }
+      await api.post('/admin/bookings', payload);
+      setAddOpen(false); reload();
+    } catch (e) {
+      setAddError(e.message || 'Ошибка создания');
+    } finally { setSavingAdd(false); }
+  };
+
   // Смена статуса брони (Выдать/Завершить/Отменить) → PATCH + обновление строки
   const patchBooking = async (id, body) => {
     try {
@@ -87,6 +129,11 @@ export function BookingsTable() {
       alert(e.message || 'Не удалось изменить бронь');
     }
   };
+
+  useEffect(() => {
+    api.get('/admin/cars').then((d) => setCars(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+    api.get('/admin/users').then((d) => setUsers(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
+  }, []);
 
   const openEdit = (b) => {
     setEditForm({
@@ -280,6 +327,7 @@ export function BookingsTable() {
               <option value="completed">Завершённые</option>
               <option value="cancelled">Отменённые</option>
             </select>
+            <Button onClick={openAdd}>Добавить бронь</Button>
             <div className="relative">
               <Search className="size-4 text-muted-foreground absolute start-3 top-1/2 -translate-y-1/2" />
               <Input
@@ -361,6 +409,63 @@ export function BookingsTable() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditOpen(false)}>Отмена</Button>
             <Button onClick={saveEdit} disabled={savingEdit}>{savingEdit ? 'Сохранение…' : 'Сохранить'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={addOpen} onOpenChange={setAddOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Новая бронь (вручную)</DialogTitle></DialogHeader>
+          {addForm && (
+            <DialogBody className="flex flex-col gap-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <div className={fieldLabel}>Автомобиль</div>
+                <select className={selectCls} value={addForm.car_id} onChange={(e) => setAddForm({ ...addForm, car_id: e.target.value })}>
+                  {cars.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <div className={fieldLabel}>Клиент</div>
+                <div className="flex gap-2 mb-2">
+                  <Button size="sm" variant={addForm.clientMode === 'existing' ? 'primary' : 'outline'} onClick={() => setAddForm({ ...addForm, clientMode: 'existing' })}>Существующий</Button>
+                  <Button size="sm" variant={addForm.clientMode === 'new' ? 'primary' : 'outline'} onClick={() => setAddForm({ ...addForm, clientMode: 'new' })}>Новый</Button>
+                </div>
+                {addForm.clientMode === 'existing' ? (
+                  <select className={selectCls} value={addForm.user_id} onChange={(e) => setAddForm({ ...addForm, user_id: e.target.value })}>
+                    {users.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.phone || u.email}</option>)}
+                  </select>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    <Input placeholder="ФИО" value={addForm.client_name} onChange={(e) => setAddForm({ ...addForm, client_name: e.target.value })} />
+                    <Input placeholder="Email" value={addForm.client_email} onChange={(e) => setAddForm({ ...addForm, client_email: e.target.value })} />
+                    <Input placeholder="Телефон" value={addForm.client_phone} onChange={(e) => setAddForm({ ...addForm, client_phone: e.target.value })} />
+                  </div>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><div className={fieldLabel}>Начало</div><Input type="datetime-local" value={addForm.from_dt} onChange={(e) => setAddForm({ ...addForm, from_dt: e.target.value })} /></div>
+                <div><div className={fieldLabel}>Конец</div><Input type="datetime-local" value={addForm.to_dt} onChange={(e) => setAddForm({ ...addForm, to_dt: e.target.value })} /></div>
+                <div><div className={fieldLabel}>Сумма, ₽</div><Input type="number" value={addForm.total} onChange={(e) => setAddForm({ ...addForm, total: e.target.value })} /></div>
+                <div>
+                  <div className={fieldLabel}>Этап</div>
+                  <select className={selectCls} value={addForm.stage} onChange={(e) => setAddForm({ ...addForm, stage: e.target.value })}>
+                    {STAGES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  </select>
+                </div>
+                <div><div className={fieldLabel}>Менеджер</div><Input value={addForm.manager} onChange={(e) => setAddForm({ ...addForm, manager: e.target.value })} /></div>
+                <div><div className={fieldLabel}>Адрес подачи</div><Input value={addForm.pickup_city} onChange={(e) => setAddForm({ ...addForm, pickup_city: e.target.value })} /></div>
+              </div>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={addForm.with_delivery} onChange={(e) => setAddForm({ ...addForm, with_delivery: e.target.checked })} />
+                Нужна доставка
+              </label>
+              <div><div className={fieldLabel}>Примечание</div><textarea className={`${selectCls} min-h-[60px] py-2 resize-y`} value={addForm.notes} onChange={(e) => setAddForm({ ...addForm, notes: e.target.value })} /></div>
+              {addError && <div className="text-sm text-destructive">{addError}</div>}
+            </DialogBody>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Отмена</Button>
+            <Button onClick={createBooking} disabled={savingAdd}>{savingAdd ? 'Создание…' : 'Создать бронь'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
