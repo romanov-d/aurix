@@ -8,10 +8,7 @@ export function BrandedLayout() {
       <style>
         {`
           .branded-bg {
-            background-image: url('${toAbsoluteUrl('/media/images/2600x1600/1.png')}');
-          }
-          .dark .branded-bg {
-            background-image: url('${toAbsoluteUrl('/media/images/2600x1600/1-dark.png')}');
+            background-image: radial-gradient(120% 120% at 80% 10%, rgba(212,175,55,0.18) 0%, rgba(212,175,55,0) 45%), linear-gradient(160deg, #0e0e10 0%, #050505 100%);
           }
         `}
       </style>
