@@ -86,6 +86,7 @@ import { SettingsPage } from '@/pages/settings';
 import { TariffsPage } from '@/pages/tariffs';
 import { FaqPage } from '@/pages/faq';
 import { BlogPage as AurixBlogPage } from '@/pages/blog';
+import { CarsPage } from '@/pages/cars';
 import {
   MyOrdersPage,
   OrderPlacedPage,
@@ -110,6 +111,7 @@ export function AppRoutingSetup() {
           {/* AURIX */}
           <Route path="/aurix" element={<AurixDashboardPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
+          <Route path="/fleet" element={<CarsPage />} />
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientCardPage />} />
           <Route path="/tariffs" element={<TariffsPage />} />

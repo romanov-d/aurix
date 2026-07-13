@@ -70,6 +70,7 @@ export const MENU_SIDEBAR = [
     icon: CalendarCheck,
     children: [
       { title: 'Брони', path: '/bookings' },
+      { title: 'Автопарк', path: '/fleet' },
     ],
   },
   {
