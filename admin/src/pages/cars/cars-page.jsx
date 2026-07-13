@@ -5,6 +5,7 @@ import {
   getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable,
 } from '@tanstack/react-table';
 import { Search, X, Plus, Pencil, Trash2, Upload } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { api } from '@/lib/aurix-api';
 import {
   Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle,
@@ -151,7 +152,7 @@ export function CarsPage() {
             ? <img src={row.original.image_url} alt="" className="h-10 w-14 rounded object-cover" />
             : <div className="h-10 w-14 rounded bg-muted" />}
           <div className="flex flex-col">
-            <span className="font-medium text-mono">{row.original.name}</span>
+            <Link to={`/fleet/${row.original.id}`} className="font-medium text-mono hover:text-primary">{row.original.name}</Link>
             <span className="text-xs text-muted-foreground">{row.original.id}</span>
           </div>
         </div>

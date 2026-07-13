@@ -86,7 +86,7 @@ import { SettingsPage } from '@/pages/settings';
 import { TariffsPage } from '@/pages/tariffs';
 import { FaqPage } from '@/pages/faq';
 import { BlogPage as AurixBlogPage } from '@/pages/blog';
-import { CarsPage } from '@/pages/cars';
+import { CarsPage, CarDetailPage } from '@/pages/cars';
 import { ChatPage } from '@/pages/chat';
 import { LkPage, RoleLanding } from '@/pages/lk';
 import { AuditPage } from '@/pages/audit';
@@ -117,6 +117,7 @@ export function AppRoutingSetup() {
           <Route path="/me" element={<LkPage />} />
           <Route path="/bookings" element={<BookingsPage />} />
           <Route path="/fleet" element={<CarsPage />} />
+          <Route path="/fleet/:id" element={<CarDetailPage />} />
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/clients/:id" element={<ClientCardPage />} />
           <Route path="/chat" element={<ChatPage />} />

@@ -288,6 +288,21 @@ router.post('/bookings', async (req, res, next) => {
   }
 });
 
+// Детали авто + его брони (для карточки авто)
+router.get('/cars/:id/detail', async (req, res, next) => {
+  try {
+    const car = await one(`SELECT * FROM cars WHERE id = $1`, [req.params.id]);
+    if (!car) return res.status(404).json({ error: 'Авто не найдено' });
+    const bookings = await many(
+      `SELECT b.id, b.status, b.stage, b.from_dt, b.to_dt, b.total, b.with_delivery, b.notes, b.created_at,
+              json_build_object('id', u.id, 'name', u.name) AS "user"
+       FROM bookings b JOIN users u ON b.user_id = u.id
+       WHERE b.car_id = $1 ORDER BY b.from_dt DESC`, [req.params.id]);
+    const revenue = bookings.filter((b) => b.status === 'completed').reduce((s, b) => s + (b.total || 0), 0);
+    res.json({ car, bookings, revenue });
+  } catch (e) { next(e); }
+});
+
 // Cars
 router.get('/cars', async (req, res, next) => {
   try {
