@@ -90,9 +90,9 @@ export function SignUpPage() {
         className="block w-full space-y-5"
       >
         <div className="text-center space-y-1 pb-3">
-          <h1 className="text-2xl font-semibold tracking-tight">Sign Up</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Регистрация</h1>
           <p className="text-sm text-muted-foreground">
-            Create your account to get started
+            AURIX MOTORS — создание аккаунта
           </p>
         </div>
 
@@ -123,9 +123,9 @@ export function SignUpPage() {
           name="firstName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>First Name</FormLabel>
+              <FormLabel>Имя</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your first name" {...field} />
+                <Input placeholder="Имя" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -137,9 +137,9 @@ export function SignUpPage() {
           name="lastName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Last Name</FormLabel>
+              <FormLabel>Фамилия</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your last name" {...field} />
+                <Input placeholder="Фамилия" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -154,7 +154,7 @@ export function SignUpPage() {
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="Your email address"
+                  placeholder="Ваш email"
                   type="email"
                   {...field}
                 />
@@ -169,10 +169,10 @@ export function SignUpPage() {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel>Пароль</FormLabel>
               <div className="relative">
                 <Input
-                  placeholder="Create a password"
+                  placeholder="Пароль"
                   type={passwordVisible ? 'text' : 'password'}
                   {...field}
                 />
@@ -201,10 +201,10 @@ export function SignUpPage() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Confirm Password</FormLabel>
+              <FormLabel>Повторите пароль</FormLabel>
               <div className="relative">
                 <Input
-                  placeholder="Confirm your password"
+                  placeholder="Повторите пароль"
                   type={confirmPasswordVisible ? 'text' : 'password'}
                   {...field}
                 />
@@ -260,21 +260,21 @@ export function SignUpPage() {
         <Button type="submit" className="w-full" disabled={isProcessing}>
           {isProcessing ? (
             <span className="flex items-center gap-2">
-              <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Creating
+              <LoaderCircleIcon className="h-4 w-4 animate-spin" /> Создание…
               account...
             </span>
           ) : (
-            'Create Account'
+            'Создать аккаунт'
           )}
         </Button>
 
         <div className="text-center text-sm text-muted-foreground">
-          Already have an account?{' '}
+          Уже есть аккаунт?{' '}
           <Link
             to="/auth/signin"
             className="text-sm font-semibold text-foreground hover:text-primary"
           >
-            Sign In
+            Войти
           </Link>
         </div>
       </form>
