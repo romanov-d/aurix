@@ -1,4 +1,5 @@
 import {
+  MessagesSquare,
   Newspaper,
   AlertCircle,
   Award,
@@ -78,6 +79,13 @@ export const MENU_SIDEBAR = [
     icon: Users,
     children: [
       { title: 'Все клиенты', path: '/clients' },
+    ],
+  },
+  {
+    title: 'Чат',
+    icon: MessagesSquare,
+    children: [
+      { title: 'Диалоги', path: '/chat' },
     ],
   },
   {
