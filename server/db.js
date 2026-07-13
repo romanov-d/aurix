@@ -214,6 +214,21 @@ const SCHEMA_STATEMENTS = [
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_rental_charges_booking ON rental_charges(booking_id)`,
+  // Блок 1: внутренний календарь возвратов/удержаний залога.
+  // kind: return (возврат клиенту) | hold (удержание). status: planned | done.
+  `CREATE TABLE IF NOT EXISTS deposit_movements (
+    id          BIGSERIAL PRIMARY KEY,
+    booking_id  BIGINT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+    kind        TEXT NOT NULL,          -- return | hold
+    amount      INTEGER NOT NULL,
+    note        TEXT,
+    due_date    DATE,                   -- когда запланировано (возврат 50% в течение суток и т.п.)
+    status      TEXT NOT NULL DEFAULT 'planned',  -- planned | done
+    done_at     TIMESTAMPTZ,
+    created_by  BIGINT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_deposit_mv_booking ON deposit_movements(booking_id)`,
   // Блок 3: журнал аудита действий
   `CREATE TABLE IF NOT EXISTS audit_log (
     id           BIGSERIAL PRIMARY KEY,

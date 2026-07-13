@@ -160,7 +160,11 @@ router.get('/bookings/:id', async (req, res, next) => {
     const charges = await many(
       `SELECT id, type, amount, note, photo_url, created_at FROM rental_charges WHERE booking_id = $1 ORDER BY created_at DESC`,
       [req.params.id]);
-    res.json({ booking, charges });
+    const movements = await many(
+      `SELECT id, kind, amount, note, to_char(due_date, 'YYYY-MM-DD') AS due_date, status, done_at, created_at
+       FROM deposit_movements WHERE booking_id = $1 ORDER BY due_date NULLS LAST, created_at`,
+      [req.params.id]);
+    res.json({ booking, charges, movements });
   } catch (e) { next(e); }
 });
 
@@ -188,6 +192,55 @@ router.post('/bookings/:id/charges', async (req, res, next) => {
 router.delete('/bookings/:id/charges/:chargeId', async (req, res, next) => {
   try {
     await q(`DELETE FROM rental_charges WHERE id = $1 AND booking_id = $2`, [req.params.chargeId, req.params.id]);
+    logAudit(req, 'booking', req.params.id, 'charge_del', { charge_id: req.params.chargeId });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// Календарь возвратов/удержаний залога (Блок 1)
+const movementSchema = z.object({
+  kind: z.enum(['return', 'hold']),
+  amount: z.coerce.number().int().min(0),
+  note: z.string().max(500).optional().nullable(),
+  due_date: z.string().optional().nullable(),
+  status: z.enum(['planned', 'done']).optional(),
+});
+router.post('/bookings/:id/movements', async (req, res, next) => {
+  try {
+    const body = movementSchema.parse(req.body);
+    const { rows } = await q(
+      `INSERT INTO deposit_movements (booking_id, kind, amount, note, due_date, status, done_at, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       RETURNING id, kind, amount, note, to_char(due_date, 'YYYY-MM-DD') AS due_date, status, done_at, created_at`,
+      [req.params.id, body.kind, body.amount, body.note || null, body.due_date || null,
+       body.status || 'planned', body.status === 'done' ? new Date() : null, req.user.id]);
+    logAudit(req, 'booking', req.params.id, 'deposit_movement_add', { kind: body.kind, amount: body.amount });
+    res.status(201).json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля', detail: e.errors });
+    next(e);
+  }
+});
+router.patch('/bookings/:id/movements/:mvId', async (req, res, next) => {
+  try {
+    const status = z.enum(['planned', 'done']).parse(req.body.status);
+    const { rows } = await q(
+      `UPDATE deposit_movements SET status = $1, done_at = $2
+       WHERE id = $3 AND booking_id = $4
+       RETURNING id, kind, amount, note, to_char(due_date, 'YYYY-MM-DD') AS due_date, status, done_at, created_at`,
+      [status, status === 'done' ? new Date() : null, req.params.mvId, req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: 'Не найдено' });
+    logAudit(req, 'booking', req.params.id, 'deposit_movement_status', { id: req.params.mvId, status });
+    res.json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверный статус' });
+    next(e);
+  }
+});
+router.delete('/bookings/:id/movements/:mvId', async (req, res, next) => {
+  try {
+    await q(`DELETE FROM deposit_movements WHERE id = $1 AND booking_id = $2`, [req.params.mvId, req.params.id]);
+    logAudit(req, 'booking', req.params.id, 'deposit_movement_del', { id: req.params.mvId });
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

@@ -79,6 +79,8 @@ export function BookingsTable() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [charges, setCharges] = useState([]);
   const [newCharge, setNewCharge] = useState({ type: '', amount: '', note: '', photo_url: '' });
+  const [movements, setMovements] = useState([]);
+  const [newMovement, setNewMovement] = useState({ kind: 'return', amount: '', note: '', due_date: '' });
 
   // Ручное создание брони
   const [cars, setCars] = useState([]);
@@ -146,11 +148,14 @@ export function BookingsTable() {
       deposit_amount: b.deposit_amount ?? 0, deposit_returned: b.deposit_returned ?? 0, deposit_status: b.deposit_status || '',
     });
     setCharges([]);
+    setMovements([]);
     setNewCharge({ type: '', amount: '', note: '', photo_url: '' });
+    setNewMovement({ kind: 'return', amount: '', note: '', due_date: '' });
     setEditOpen(true);
-    // подтягиваем удержания + актуальные поля залога
+    // подтягиваем удержания + календарь + актуальные поля залога
     api.get(`/admin/bookings/${b.id}`).then((d) => {
       setCharges(d?.charges || []);
+      setMovements(d?.movements || []);
       setEditForm((f) => f && String(f.id) === String(b.id) ? {
         ...f,
         deposit_amount: d.booking?.deposit_amount ?? f.deposit_amount,
@@ -158,6 +163,31 @@ export function BookingsTable() {
         deposit_status: d.booking?.deposit_status || f.deposit_status,
       } : f);
     }).catch(() => {});
+  };
+
+  const addMovement = async (preset) => {
+    const src = preset || newMovement;
+    const amt = parseInt(src.amount, 10);
+    if (!amt) return;
+    try {
+      const m = await api.post(`/admin/bookings/${editForm.id}/movements`, {
+        kind: src.kind, amount: amt, note: src.note || null, due_date: src.due_date || null,
+      });
+      setMovements((ms) => [...ms, m]);
+      setNewMovement({ kind: 'return', amount: '', note: '', due_date: '' });
+    } catch (e) { alert(e.message); }
+  };
+  const toggleMovement = async (m) => {
+    try {
+      const upd = await api.patch(`/admin/bookings/${editForm.id}/movements/${m.id}`, {
+        status: m.status === 'done' ? 'planned' : 'done',
+      });
+      setMovements((ms) => ms.map((x) => (x.id === m.id ? upd : x)));
+    } catch (e) { alert(e.message); }
+  };
+  const delMovement = async (mid) => {
+    try { await api.del(`/admin/bookings/${editForm.id}/movements/${mid}`); setMovements((ms) => ms.filter((x) => x.id !== mid)); }
+    catch (e) { alert(e.message); }
   };
 
   const addCharge = async () => {
@@ -501,6 +531,54 @@ export function BookingsTable() {
                   </label>
                   {newCharge.photo_url && <img src={newCharge.photo_url} alt="" className="h-9 w-12 rounded object-cover" />}
                   <Button size="sm" onClick={addCharge} disabled={!newCharge.amount}>Добавить удержание</Button>
+                </div>
+              </div>
+
+              {/* Блок 1: Внутренний календарь возвратов/удержаний залога */}
+              <div className="rounded-lg border border-border p-4 flex flex-col gap-3">
+                <div className="text-sm font-medium text-mono">Календарь возвратов залога</div>
+                {movements.length > 0 ? (
+                  <div className="divide-y divide-border border-y border-border">
+                    {movements.map((m) => (
+                      <div key={m.id} className="flex items-center justify-between py-2 gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <input type="checkbox" checked={m.status === 'done'} onChange={() => toggleMovement(m)} className="size-4 accent-primary" />
+                          <div className="min-w-0">
+                            <div className={`text-sm truncate ${m.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>
+                              {m.kind === 'return' ? 'Возврат клиенту' : 'Удержание'}{m.note ? ` — ${m.note}` : ''}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {m.due_date ? `к ${new Date(m.due_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' })}` : 'без срока'}
+                              {m.status === 'done' ? ' · выполнено' : ' · запланировано'}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${m.kind === 'return' ? 'text-green-500' : 'text-destructive'}`}>
+                            {m.kind === 'return' ? '+' : '−'}{Number(m.amount).toLocaleString('ru-RU')} ₽
+                          </span>
+                          <Button size="sm" mode="icon" variant="ghost" onClick={() => delMovement(m.id)}><X className="size-3.5" /></Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">Плановых движений нет.</div>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <select className={selectCls} value={newMovement.kind} onChange={(e) => setNewMovement({ ...newMovement, kind: e.target.value })}>
+                    <option value="return">Возврат клиенту</option>
+                    <option value="hold">Удержание</option>
+                  </select>
+                  <Input type="number" placeholder="Сумма, ₽" value={newMovement.amount} onChange={(e) => setNewMovement({ ...newMovement, amount: e.target.value })} />
+                  <Input type="date" value={newMovement.due_date} onChange={(e) => setNewMovement({ ...newMovement, due_date: e.target.value })} />
+                  <Input placeholder="Пояснение" value={newMovement.note} onChange={(e) => setNewMovement({ ...newMovement, note: e.target.value })} />
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Button size="sm" onClick={() => addMovement()} disabled={!newMovement.amount}>Добавить в календарь</Button>
+                  <Button size="sm" variant="outline" onClick={() => addMovement({ kind: 'return', amount: Math.round((parseInt(editForm.deposit_amount, 10) || 0) / 2), note: 'Возврат 50% залога (в течение суток)', due_date: '' })} disabled={!editForm.deposit_amount}>
+                    + возврат 50% залога
+                  </Button>
                 </div>
               </div>
             </DialogBody>

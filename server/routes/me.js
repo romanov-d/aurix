@@ -171,4 +171,47 @@ router.get('/points', async (req, res, next) => {
   }
 });
 
+// Финансовая витрина клиента (Блок 1+2): балансы, движения по счёту,
+// штрафы/удержания и календарь возврата залога по всем его арендам.
+router.get('/finances', async (req, res, next) => {
+  try {
+    const [me] = await many(
+      `SELECT money_balance, deposit_balance FROM users WHERE id = $1`, [req.user.id]);
+    const transactions = await many(
+      `SELECT id, kind, target, amount, reason, booking_id, created_at
+       FROM balance_transactions WHERE user_id = $1 ORDER BY created_at DESC`,
+      [req.user.id]);
+    const charges = await many(
+      `SELECT rc.id, rc.type, rc.amount, rc.note, rc.photo_url, rc.created_at,
+              rc.booking_id, c.name AS car_name
+       FROM rental_charges rc
+       JOIN bookings b ON rc.booking_id = b.id
+       JOIN cars c ON b.car_id = c.id
+       WHERE b.user_id = $1 ORDER BY rc.created_at DESC`,
+      [req.user.id]);
+    const deposits = await many(
+      `SELECT b.id AS booking_id, c.name AS car_name, b.deposit_amount,
+              b.deposit_returned, b.deposit_status
+       FROM bookings b JOIN cars c ON b.car_id = c.id
+       WHERE b.user_id = $1 AND b.deposit_amount > 0
+       ORDER BY b.created_at DESC`,
+      [req.user.id]);
+    const movements = await many(
+      `SELECT dm.id, dm.booking_id, c.name AS car_name, dm.kind, dm.amount,
+              dm.note, to_char(dm.due_date, 'YYYY-MM-DD') AS due_date, dm.status, dm.done_at
+       FROM deposit_movements dm
+       JOIN bookings b ON dm.booking_id = b.id
+       JOIN cars c ON b.car_id = c.id
+       WHERE b.user_id = $1 ORDER BY dm.due_date NULLS LAST, dm.created_at`,
+      [req.user.id]);
+    res.json({
+      money_balance: me?.money_balance || 0,
+      deposit_balance: me?.deposit_balance || 0,
+      transactions, charges, deposits, movements,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;

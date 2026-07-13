@@ -33,9 +33,10 @@ const DOCS = [
 ];
 const TABS = [
   ['overview', 'Обзор'], ['bookings', 'Бронирования'], ['history', 'История'],
-  ['favorites', 'Избранное'], ['bonuses', 'Бонусы'], ['documents', 'Документы'],
-  ['profile', 'Профиль'], ['chat', 'Чат'],
+  ['finances', 'Финансы'], ['favorites', 'Избранное'], ['bonuses', 'Бонусы'],
+  ['documents', 'Документы'], ['profile', 'Профиль'], ['chat', 'Чат'],
 ];
+const CHARGE_LABEL = { return: 'Возврат клиенту', hold: 'Удержание' };
 const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
 
 function readFile(file) {
@@ -49,6 +50,7 @@ export function LkPage() {
   const [favIds, setFavIds] = useState([]);
   const [cars, setCars] = useState([]);
   const [points, setPoints] = useState([]);
+  const [finances, setFinances] = useState(null);
   const [msg, setMsg] = useState('');
 
   const loadUser = useCallback(() => {
@@ -60,6 +62,7 @@ export function LkPage() {
     api.get('/me/bookings').then((d) => setBookings(Array.isArray(d) ? d : d?.items || [])).catch(() => {});
     api.get('/me/favorites').then((d) => setFavIds(Array.isArray(d) ? d : [])).catch(() => {});
     api.get('/me/points').then((d) => setPoints(Array.isArray(d) ? d : [])).catch(() => {});
+    api.get('/me/finances').then((d) => setFinances(d || null)).catch(() => {});
     api.get('/cars?limit=100').then((d) => setCars(d?.items || [])).catch(() => {});
   }, [loadUser]);
 
@@ -162,6 +165,92 @@ export function LkPage() {
                 </div>
               )}
             </CardContent></Card>
+        )}
+        {tab === 'finances' && (
+          <div className="flex flex-col gap-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+              <Card><CardContent className="p-6">
+                <div className={fieldLabel}>Денежный баланс (карта)</div>
+                <div className="text-3xl font-semibold text-primary">{fmtMoney(finances?.money_balance)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Предоплата для оформления аренд.</div>
+              </CardContent></Card>
+              <Card><CardContent className="p-6">
+                <div className={fieldLabel}>Депозитный баланс</div>
+                <div className="text-3xl font-semibold">{fmtMoney(finances?.deposit_balance)}</div>
+                <div className="text-xs text-muted-foreground mt-1">Залоговые средства на вашем счёте.</div>
+              </CardContent></Card>
+            </div>
+
+            <Card><CardHeader><CardHeading><CardTitle>Залоги и возвраты</CardTitle></CardHeading></CardHeader>
+              <CardContent className="p-6 flex flex-col gap-4">
+                {finances?.deposits?.length ? finances.deposits.map((d) => (
+                  <div key={d.booking_id} className="rounded-lg border border-border p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-sm font-medium">{d.car_name}</div>
+                      <Badge size="sm" variant={d.deposit_status === 'returned' ? 'success' : d.deposit_status === 'partial' ? 'warning' : 'outline'}>
+                        {d.deposit_status === 'returned' ? 'Возвращён' : d.deposit_status === 'partial' ? 'Возврат 50%' : 'Удерживается'}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-secondary-foreground mt-1">
+                      Залог {fmtMoney(d.deposit_amount)} · возвращено {fmtMoney(d.deposit_returned)}
+                    </div>
+                  </div>
+                )) : <div className="text-sm text-muted-foreground">Залогов пока нет.</div>}
+
+                {finances?.movements?.length > 0 && (
+                  <div className="divide-y divide-border border-t border-border">
+                    {finances.movements.map((m) => (
+                      <div key={m.id} className="flex items-center justify-between py-2">
+                        <div>
+                          <div className="text-sm">{CHARGE_LABEL[m.kind] || m.kind}{m.note ? ` — ${m.note}` : ''}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {m.car_name} · {m.due_date ? `к ${fmtDate(m.due_date)}` : 'без срока'} · {m.status === 'done' ? 'выполнено' : 'запланировано'}
+                          </div>
+                        </div>
+                        <span className={`text-sm font-semibold ${m.kind === 'return' ? 'text-green-500' : 'text-destructive'}`}>
+                          {m.kind === 'return' ? '+' : '−'}{Number(m.amount).toLocaleString('ru-RU')} ₽
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent></Card>
+
+            <Card><CardHeader><CardHeading><CardTitle>Удержания и штрафы</CardTitle></CardHeading></CardHeader>
+              <CardContent className="p-6 flex flex-col gap-3">
+                {finances?.charges?.length ? finances.charges.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border border-border p-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {c.photo_url && <img src={c.photo_url} alt="" className="h-12 w-16 rounded object-cover cursor-pointer" onClick={() => window.open(c.photo_url, '_blank')} />}
+                      <div className="min-w-0">
+                        <div className="text-sm truncate">{c.type || 'Удержание'}{c.note ? ` — ${c.note}` : ''}</div>
+                        <div className="text-xs text-muted-foreground">{c.car_name} · {fmtDate(c.created_at)}</div>
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold text-destructive shrink-0">−{Number(c.amount).toLocaleString('ru-RU')} ₽</span>
+                  </div>
+                )) : <div className="text-sm text-muted-foreground">Удержаний нет.</div>}
+              </CardContent></Card>
+
+            <Card><CardHeader><CardHeading><CardTitle>История движений по счёту</CardTitle></CardHeading></CardHeader>
+              <CardContent className="p-6">
+                {finances?.transactions?.length ? (
+                  <div className="divide-y divide-border">
+                    {finances.transactions.map((t) => (
+                      <div key={t.id} className="flex items-center justify-between py-2">
+                        <div>
+                          <div className="text-sm">{t.reason || (t.kind === 'topup' ? 'Пополнение' : 'Списание')}</div>
+                          <div className="text-xs text-muted-foreground">{t.target === 'money' ? 'Денежный' : 'Депозитный'} · {fmtTime(t.created_at)}</div>
+                        </div>
+                        <span className={`text-sm font-semibold ${t.kind === 'topup' ? 'text-green-500' : 'text-destructive'}`}>
+                          {t.kind === 'topup' ? '+' : '−'}{Number(t.amount).toLocaleString('ru-RU')} ₽
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : <div className="text-sm text-muted-foreground">Движений по счёту пока нет.</div>}
+              </CardContent></Card>
+          </div>
         )}
         {tab === 'bonuses' && (
           <Card><CardHeader><CardHeading><CardTitle>Бонусы</CardTitle></CardHeading></CardHeader>
