@@ -57,6 +57,24 @@ if (distDir) {
   }));
 }
 
+// ── Админ-панель / ЛК клиента (Metronic, base: '/admin/') ──
+// Отдельный бандл в admin/dist. Статика раздаётся под /admin, SPA-fallback ниже.
+const adminDistDir = process.env.VERCEL
+  ? null
+  : path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../admin/dist');
+if (adminDistDir) {
+  app.use('/admin', express.static(adminDistDir, {
+    index: false,
+    setHeaders(res, filePath) {
+      if (filePath.includes(`${path.sep}assets${path.sep}`)) {
+        res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      } else {
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+      }
+    },
+  }));
+}
+
 app.use(loadUser);
 app.use('/api/cars', carsRouter);
 app.use('/api/auth', authRouter);
@@ -71,6 +89,16 @@ app.use('/api/blog', blogRouter);
 
 // Неизвестные /api/* → JSON 404 (а не отдача index.html)
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
+
+// SPA-fallback админки (ДО основного) — /admin/* → admin/dist/index.html.
+if (adminDistDir) {
+  app.get(/^\/admin(\/.*)?$/, (req, res) => {
+    // Отсутствующий ассет админки — честный 404, не подменяем на HTML.
+    if (req.path.startsWith('/admin/assets/')) return res.status(404).end();
+    res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(adminDistDir, 'index.html'));
+  });
+}
 
 // ── Самохостинг (VPS / Node-хостинг): SPA-fallback на index.html ──
 // Сами файлы статики уже раздаются выше (до loadUser). Здесь — только отдача
