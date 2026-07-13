@@ -16,14 +16,21 @@ export function AuthProvider({ children }) {
   }, [currentUser]);
 
   const verify = async () => {
-    if (auth) {
-      try {
-        const user = await getUser();
-        setCurrentUser(user || undefined);
-      } catch {
+    // Всегда проверяем сессию по httpOnly-куке (общий вход с основным сайтом):
+    // если пользователь уже вошёл на aurixmotors.ru/login и переброшен в панель,
+    // localStorage-токена тут ещё нет — авторизуемся по куке через /api/auth/me.
+    try {
+      const user = await getUser();
+      if (user) {
+        setCurrentUser(user);
+        if (!auth) saveAuth({ access_token: 'session' });
+      } else {
         saveAuth(undefined);
         setCurrentUser(undefined);
       }
+    } catch {
+      saveAuth(undefined);
+      setCurrentUser(undefined);
     }
   };
 

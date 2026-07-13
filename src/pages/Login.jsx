@@ -14,7 +14,12 @@ export default function Login() {
   const [step, setStep] = useState('login'); // 'login' | 'code'
   const [code, setCode] = useState('');
 
-  const goNext = () => nav(loc.state?.from?.pathname || '/account', { replace: true });
+  // Админ/сотрудник → новая панель (/admin, отдельный бандл — полная навигация),
+  // клиент → его кабинет. Кука сессии общая, повторный вход в панели не нужен.
+  const goNext = (user) => {
+    if (user?.role === 'admin') { window.location.assign('/admin/'); return; }
+    nav(loc.state?.from?.pathname || '/account', { replace: true });
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -23,7 +28,7 @@ export default function Login() {
     try {
       const res = await login({ email, password });
       if (res.needsCode) { setStep('code'); }
-      else { goNext(); }
+      else { goNext(res.user); }
     } catch (err) {
       setError(err.message || 'Ошибка входа');
     } finally {
@@ -36,8 +41,8 @@ export default function Login() {
     setError('');
     setSubmitting(true);
     try {
-      await loginVerify({ email, code: code.trim() });
-      goNext();
+      const user = await loginVerify({ email, code: code.trim() });
+      goNext(user);
     } catch (err) {
       setError(err.message || 'Неверный код');
     } finally {
