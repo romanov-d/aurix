@@ -141,6 +141,14 @@ export function CarsPage() {
     try { await api.del(`/admin/cars/${form.id}/photos/${pid}`); setPhotos((ps) => ps.filter((p) => p.id !== pid)); }
     catch (e) { alert(e.message); }
   };
+  // Замена основного фото файлом: кладём dataURL в form.image_url, в БД уйдёт по «Сохранить»
+  const replaceMainPhoto = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert('Файл больше 2 МБ'); return; }
+    const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+    setForm((f) => ({ ...f, image_url: dataUrl }));
+  };
 
   const columns = useMemo(() => [
     {
@@ -266,14 +274,37 @@ export function CarsPage() {
                 value={form.description || ''} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
 
+            {/* Основное фото: превью текущего + замена файлом (URL-поле выше остаётся) */}
+            <div>
+              <div className={fieldLabel}>Основное фото (обложка в каталоге)</div>
+              <div className="flex items-center gap-3 flex-wrap">
+                {form.image_url
+                  ? <img src={form.image_url} alt="" className="h-20 w-32 rounded object-cover bg-muted" />
+                  : <div className="h-20 w-32 rounded bg-muted flex items-center justify-center text-xs text-muted-foreground">нет фото</div>}
+                <label className="inline-flex">
+                  <input type="file" accept="image/*" className="hidden" onChange={replaceMainPhoto} />
+                  <span className="inline-flex items-center gap-1 h-9 px-3 rounded-md border border-input text-sm cursor-pointer"><UploadSimple className="size-4" /> Заменить файлом</span>
+                </label>
+                {form.image_url && (
+                  <Button size="sm" variant="outline" onClick={() => setForm({ ...form, image_url: '' })}>Убрать</Button>
+                )}
+                <span className="text-xs text-muted-foreground">Применится после «Сохранить»</span>
+              </div>
+            </div>
+
             {editing && (
               <div>
                 <div className={fieldLabel}>Фотографии</div>
                 <div className="flex flex-wrap gap-2 mb-2">
                   {photos.map((p) => (
-                    <div key={p.id} className="relative h-16 w-24 rounded overflow-hidden bg-muted">
+                    <div key={p.id} className="relative h-16 w-24 rounded overflow-hidden bg-muted group">
                       <img src={p.url} alt="" className="h-full w-full object-cover" />
                       <button onClick={() => delPhoto(p.id)} className="absolute top-1 right-1 bg-black/70 text-white rounded-full size-5 flex items-center justify-center text-xs">×</button>
+                      <button onClick={() => setForm({ ...form, image_url: p.url })}
+                        title="Сделать основным"
+                        className="absolute bottom-0 inset-x-0 bg-black/70 text-white text-[10px] py-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        Сделать основным
+                      </button>
                     </div>
                   ))}
                 </div>
