@@ -34,12 +34,15 @@ import { MegaMenuMobile } from './mega-menu-mobile';
 import { SidebarMenu } from './sidebar-menu';
 
 export function Header() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
   const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
 
   const { pathname } = useLocation();
   const mobileMode = useIsMobile();
+  // Колокольчик/чат-инбокс — админские виджеты (/api/admin/*): клиенту не
+  // показываем вовсе, админу скрываем в режиме ЛК (/me — вид глазами клиента).
+  const showAdminWidgets = isAdmin && !pathname.startsWith('/me');
 
   const scrollPosition = useScrollPosition();
   const headerSticky = scrollPosition > 0;
@@ -124,31 +127,35 @@ export function Header() {
             <StoreClientTopbar />
           ) : (
             <>
-              <NotificationsSheet
-                trigger={
-                  <Button
-                    variant="ghost"
-                    mode="icon"
-                    shape="circle"
-                    className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                  >
-                    <Bell className="size-4.5!" />
-                  </Button>
-                }
-              />
+              {showAdminWidgets && (
+                <NotificationsSheet
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      mode="icon"
+                      shape="circle"
+                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                    >
+                      <Bell className="size-4.5!" />
+                    </Button>
+                  }
+                />
+              )}
 
-              <ChatSheet
-                trigger={
-                  <Button
-                    variant="ghost"
-                    mode="icon"
-                    shape="circle"
-                    className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
-                  >
-                    <ChatCircleDots className="size-4.5!" />
-                  </Button>
-                }
-              />
+              {showAdminWidgets && (
+                <ChatSheet
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      mode="icon"
+                      shape="circle"
+                      className="size-9 hover:bg-primary/10 hover:[&_svg]:text-primary"
+                    >
+                      <ChatCircleDots className="size-4.5!" />
+                    </Button>
+                  }
+                />
+              )}
 
               <UserDropdownMenu
                 trigger={

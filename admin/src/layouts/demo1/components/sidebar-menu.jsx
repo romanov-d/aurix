@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { SquaresFour } from '@phosphor-icons/react';
 import { MENU_SIDEBAR, MENU_CLIENT } from '@/config/menu.config';
 import { useAuth } from '@/auth/context/auth-context';
 import { cn } from '@/lib/utils';
@@ -19,7 +20,15 @@ import { Badge } from '@/components/ui/badge';
 export function SidebarMenu() {
   const { pathname } = useLocation();
   const { isAdmin } = useAuth();
-  const menu = isAdmin ? MENU_SIDEBAR : MENU_CLIENT;
+  // ЛК (/me) — всегда клиентское окружение, даже для админа (смотрит глазами
+  // клиента). Админу в этом режиме добавляется пункт возврата в панель.
+  const onLk = pathname.startsWith('/me');
+  const menu =
+    isAdmin && !onLk
+      ? MENU_SIDEBAR
+      : isAdmin && onLk
+        ? [...MENU_CLIENT, { title: 'Панель управления', icon: SquaresFour, path: '/aurix' }]
+        : MENU_CLIENT;
 
   // Memoize matchPath to prevent unnecessary re-renders
   const matchPath = useCallback(
@@ -84,7 +93,7 @@ export function SidebarMenu() {
         >
           <Link
             to={item.path || '#'}
-            className="flex items-center justify-between grow gap-2"
+            className="flex items-center grow gap-2"
           >
             {item.icon && <item.icon data-slot="accordion-menu-icon" />}
             <span data-slot="accordion-menu-title">{item.title}</span>
