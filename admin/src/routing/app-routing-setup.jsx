@@ -1,4 +1,5 @@
 import { AuthRouting } from '@/auth/auth-routing';
+import { RequireAdmin } from '@/auth/require-admin';
 import { RequireAuth } from '@/auth/require-auth';
 import { ErrorRouting } from '@/errors/error-routing';
 import { Demo1Layout } from '@/layouts/demo1/layout';
@@ -112,20 +113,23 @@ export function AppRoutingSetup() {
         <Route element={<Demo1Layout />}>
           <Route path="/" element={<RoleLanding />} />
           <Route path="/demo-dashboard" element={<DefaultPage />} />
-          {/* AURIX */}
-          <Route path="/aurix" element={<AurixDashboardPage />} />
+          {/* AURIX: ЛК доступен всем авторизованным (и админу для просмотра) */}
           <Route path="/me" element={<LkPage />} />
-          <Route path="/bookings" element={<BookingsPage />} />
-          <Route path="/fleet" element={<CarsPage />} />
-          <Route path="/fleet/:id" element={<CarDetailPage />} />
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/clients/:id" element={<ClientCardPage />} />
-          <Route path="/chat" element={<ChatPage />} />
-          <Route path="/tariffs" element={<TariffsPage />} />
-          <Route path="/faq" element={<FaqPage />} />
-          <Route path="/blog" element={<AurixBlogPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/audit" element={<AuditPage />} />
+          {/* AURIX: админ-разделы — клиента молча уводит в /me */}
+          <Route element={<RequireAdmin />}>
+            <Route path="/aurix" element={<AurixDashboardPage />} />
+            <Route path="/bookings" element={<BookingsPage />} />
+            <Route path="/fleet" element={<CarsPage />} />
+            <Route path="/fleet/:id" element={<CarDetailPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/:id" element={<ClientCardPage />} />
+            <Route path="/chat" element={<ChatPage />} />
+            <Route path="/tariffs" element={<TariffsPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/blog" element={<AurixBlogPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/audit" element={<AuditPage />} />
+          </Route>
           <Route path="/dark-sidebar" element={<Demo1DarkSidebarPage />} />
           <Route
             path="/public-profile/profiles/default/"

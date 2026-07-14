@@ -62,6 +62,12 @@ export function UserDropdownMenu({ trigger }) {
         {isAdmin ? (
           <>
             <DropdownMenuItem asChild>
+              <Link to="/me" className="flex items-center gap-2">
+                <UserCircle />
+                Личный кабинет
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
               <Link to="/settings" className="flex items-center gap-2">
                 <GearSix />
                 Настройки

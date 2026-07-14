@@ -16,10 +16,8 @@ export default function Account() {
   const [activeTab, setActiveTab] = useState('overview');
   const [sideOpen, setSideOpen] = useState(false);
 
-  // Админ/сотрудник в старом ЛК не работает — его место в новой панели.
-  useEffect(() => {
-    if (user?.role === 'admin') window.location.replace('/admin/');
-  }, [user]);
+  // Админ тоже может смотреть клиентский кабинет — в панель его НЕ уводим
+  // (в хедере для этого есть отдельная кнопка «Админка»).
 
   // Открыть нужную вкладку по хешу URL (напр. /account#documents)
   useEffect(() => {
