@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip } from '@phosphor-icons/react';
+import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip, Plus } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
@@ -126,12 +126,15 @@ export function LkPage() {
           </div>
         )}
 
-        {/* Аватар */}
-        <div className="mb-4">
+        {/* Забронировать (каталог на основном сайте) + аватар */}
+        <div className="mb-4 flex items-center justify-between gap-3 flex-wrap">
           <label className="inline-flex items-center gap-2 text-sm cursor-pointer text-primary">
             <input type="file" accept="image/*" className="hidden" onChange={uploadAvatar} />
             Сменить аватар
           </label>
+          <Button asChild>
+            <a href="/catalog"><Plus className="size-4" /> Забронировать авто</a>
+          </Button>
         </div>
 
         <Statistics items={statItems} />
@@ -157,10 +160,16 @@ export function LkPage() {
               {favCars.length === 0 ? <div className="text-sm text-muted-foreground">Список пуст</div> : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {favCars.map((c) => (
-                    <div key={c.id} className="rounded-lg bg-zinc-800/40 overflow-hidden">
+                    <a key={c.id} href={`/car/${c.id}`} className="rounded-lg bg-zinc-800/40 overflow-hidden block hover:ring-1 hover:ring-primary/50 transition-shadow">
                       <img src={c.image_url} alt="" className="h-28 w-full object-cover" />
-                      <div className="p-2"><div className="text-sm font-medium">{c.name}</div><div className="text-xs text-primary">{fmtMoney(c.price_per_day)}/сут</div></div>
-                    </div>
+                      <div className="p-2">
+                        <div className="text-sm font-medium">{c.name}</div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs text-primary">{fmtMoney(c.price_per_day)}/сут</span>
+                          <span className="text-xs text-muted-foreground">Забронировать →</span>
+                        </div>
+                      </div>
+                    </a>
                   ))}
                 </div>
               )}
