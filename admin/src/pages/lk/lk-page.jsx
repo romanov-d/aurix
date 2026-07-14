@@ -2,7 +2,7 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip, Plus } from '@phosphor-icons/react';
+import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip, Plus, X } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
@@ -22,6 +22,11 @@ const fmtTime = (iso) => {
   if (!iso) return '';
   const d = new Date(iso);
   return isNaN(d) ? '' : d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+const fmtDateTime = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return isNaN(d) ? '—' : d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
 const STATUS_RU = { pending: 'Ожидает', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
@@ -90,9 +95,15 @@ export function LkPage() {
   };
 
   const cancelBooking = async (id) => {
-    if (!confirm('Отменить бронь?')) return;
+    if (!confirm('Отменить бронирование? Отменённая бронь останется в истории.')) return;
     try { await api.patch(`/bookings/${id}`, { status: 'cancelled' }); api.get('/me/bookings').then((d) => setBookings(Array.isArray(d) ? d : [])); }
     catch (e) { alert(e.message); }
+  };
+
+  const removeFav = async (e, carId) => {
+    e.preventDefault(); e.stopPropagation();
+    try { await api.del(`/me/favorites/${carId}`); setFavIds((ids) => ids.filter((id) => id !== carId)); }
+    catch (err) { alert(err.message || 'Ошибка'); }
   };
 
   if (!user) return <Container><div className="py-16 text-center text-muted-foreground">Загрузка…</div></Container>;
@@ -121,9 +132,15 @@ export function LkPage() {
 
       <Container>
         {!user.is_verified && (
-          <div className="mb-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-500 px-4 py-3 text-sm">
-            Загрузите документы для верификации — без неё бронирование недоступно. Вкладка «Документы».
-          </div>
+          DOCS.some(([f]) => user[f]) ? (
+            <div className="mb-4 rounded-lg border border-blue-500/40 bg-blue-500/10 text-blue-500 px-4 py-3 text-sm">
+              Документы на проверке — ожидайте подтверждения службой безопасности.
+            </div>
+          ) : (
+            <div className="mb-4 rounded-lg border border-yellow-500/40 bg-yellow-500/10 text-yellow-500 px-4 py-3 text-sm">
+              Загрузите документы для верификации — без неё бронирование недоступно. Вкладка «Документы».
+            </div>
+          )
         )}
 
         {/* Забронировать (каталог на основном сайте) + аватар */}
@@ -160,7 +177,15 @@ export function LkPage() {
               {favCars.length === 0 ? <div className="text-sm text-muted-foreground">Список пуст</div> : (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   {favCars.map((c) => (
-                    <a key={c.id} href={`/car/${c.id}`} className="rounded-lg bg-zinc-800/40 overflow-hidden block hover:ring-1 hover:ring-primary/50 transition-shadow">
+                    <a key={c.id} href={`/car/${c.id}`} className="relative rounded-lg bg-zinc-800/40 overflow-hidden block hover:ring-1 hover:ring-primary/50 transition-shadow">
+                      <button
+                        type="button"
+                        onClick={(e) => removeFav(e, c.id)}
+                        title="Убрать из избранного"
+                        className="absolute top-1.5 right-1.5 z-10 inline-flex items-center justify-center size-6 rounded-full bg-black/60 text-white hover:bg-black/80"
+                      >
+                        <X className="size-3.5" />
+                      </button>
                       <img src={c.image_url} alt="" className="h-28 w-full object-cover" />
                       <div className="p-2">
                         <div className="text-sm font-medium">{c.name}</div>
@@ -309,7 +334,7 @@ export function LkPage() {
               <div><div className={fieldLabel}>Имя</div><Input defaultValue={user.name || ''} onBlur={(e) => e.target.value !== (user.name || '') && patchMe({ name: e.target.value }, 'Сохранено')} /></div>
               <div><div className={fieldLabel}>Телефон</div><Input defaultValue={user.phone || ''} onBlur={(e) => e.target.value !== (user.phone || '') && patchMe({ phone: e.target.value }, 'Сохранено')} /></div>
               <div><div className={fieldLabel}>Email</div><Input defaultValue={user.email || ''} onBlur={(e) => e.target.value !== (user.email || '') && patchMe({ email: e.target.value }, 'Сохранено')} /></div>
-              <div><div className={fieldLabel}>Дата рождения</div><Input type="date" defaultValue={(user.dob || '').slice(0, 10)} onBlur={(e) => patchMe({ dob: e.target.value }, 'Сохранено')} /></div>
+              <div><div className={fieldLabel}>Дата рождения</div><Input type="date" defaultValue={(user.dob || '').slice(0, 10)} onBlur={(e) => e.target.value !== (user.dob || '').slice(0, 10) && patchMe({ dob: e.target.value }, 'Сохранено')} /></div>
               <div className="md:col-span-2 text-sm text-secondary-foreground">
                 Верификация СБ: {user.is_verified ? '✓ Пройдена' : 'Не пройдена'}
                 {msg && <span className="ms-3 text-green-500">{msg}</span>}
@@ -335,7 +360,7 @@ function ActiveList({ list, onCancel }) {
                   {b.car?.image_url && <img src={b.car.image_url} alt="" className="h-10 w-14 rounded object-cover" />}
                   <div>
                     <div className="text-sm font-medium text-mono">{b.car?.name || b.car_id}</div>
-                    <div className="text-xs text-secondary-foreground">{fmtDate(b.from_dt)} — {fmtDate(b.to_dt)} · {fmtMoney(b.total)}</div>
+                    <div className="text-xs text-secondary-foreground">{fmtDateTime(b.from_dt)} — {fmtDateTime(b.to_dt)} · {fmtMoney(b.total)}</div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">

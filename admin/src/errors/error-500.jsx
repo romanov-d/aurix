@@ -30,14 +30,14 @@ export function Error500() {
       </h3>
 
       <div className="text-base text-center text-secondary-foreground mb-10">
-        Server error occurred. Please try again later or &nbsp;
+        Произошла ошибка сервера. Попробуйте позже или &nbsp;
         <a
-          href="https://devs.keenthemes.com"
+          href="/"
           className="text-primary font-medium hover:text-primary-active"
         >
-          Contact Us
+          вернитесь на главную
         </a>
-        &nbsp; for assistance.
+        .
       </div>
 
       <Button asChild>

@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import {
   getCoreRowModel, getFilteredRowModel, getPaginationRowModel, getSortedRowModel, useReactTable,
 } from '@tanstack/react-table';
-import { MagnifyingGlass, X, Plus, PencilSimple, Trash, UploadSimple } from '@phosphor-icons/react';
+import { MagnifyingGlass, X, Plus, PencilSimple, Trash, UploadSimple, CaretUp, CaretDown, Check, Prohibit, LockOpen } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/aurix-api';
 import {
@@ -81,6 +81,27 @@ export function CarsPage() {
       const updated = await api.patch(`/admin/cars/${car.id}`, { status });
       setRows((cs) => cs.map((c) => (c.id === car.id ? { ...c, ...updated } : c)));
     } catch (e) { alert(e.message); }
+  };
+
+  // Стрелки ↑/↓ имеют смысл только когда список в «родном» порядке (сортировка по бренду
+  // из бэка, без активной сортировки колонки и без поискового фильтра).
+  const canReorder = sorting.length === 0 && !searchQuery.trim();
+
+  // Двигаем машину на dir (-1 вверх / +1 вниз) в пределах текущего rows и шлём новый порядок.
+  const move = async (car, dir) => {
+    const idx = rows.findIndex((c) => c.id === car.id);
+    const target = idx + dir;
+    if (idx < 0 || target < 0 || target >= rows.length) return;
+    const next = rows.slice();
+    [next[idx], next[target]] = [next[target], next[idx]];
+    setRows(next); // оптимистично
+    try {
+      await api.post('/admin/cars/reorder', { ids: next.map((c) => String(c.id)) });
+      load(); // подтягиваем актуальный sort_order с сервера
+    } catch (e) {
+      alert(e.message);
+      load(); // откат к серверному состоянию
+    }
   };
 
   const del = async (car) => {
@@ -190,17 +211,27 @@ export function CarsPage() {
       id: 'actions', header: '',
       cell: ({ row }) => {
         const c = row.original;
+        const idx = rows.findIndex((x) => x.id === c.id);
+        const isModeration = c.status === 'pending' || c.status === 'rejected';
         return (
           <div className="flex items-center gap-1.5 justify-end">
+            {canReorder && (
+              <div className="flex items-center">
+                <Button size="sm" mode="icon" variant="ghost" title="Выше" disabled={idx <= 0} onClick={() => move(c, -1)}><CaretUp className="size-4" /></Button>
+                <Button size="sm" mode="icon" variant="ghost" title="Ниже" disabled={idx < 0 || idx >= rows.length - 1} onClick={() => move(c, 1)}><CaretDown className="size-4" /></Button>
+              </div>
+            )}
             <Button size="sm" mode="icon" variant="outline" onClick={() => openEdit(c)}><PencilSimple className="size-4" /></Button>
+            {isModeration && <Button size="sm" variant="outline" onClick={() => setStatus(c, 'published')}><Check className="size-4 text-green-600" /> Одобрить</Button>}
+            {isModeration && <Button size="sm" variant="ghost" onClick={() => setStatus(c, 'rejected')}><Prohibit className="size-4 text-destructive" /> Отклонить</Button>}
             {c.status === 'published' && <Button size="sm" variant="ghost" onClick={() => setStatus(c, 'hidden')}>Скрыть</Button>}
             {c.status === 'hidden' && <Button size="sm" variant="outline" onClick={() => setStatus(c, 'published')}>Опубл.</Button>}
             <Button size="sm" mode="icon" variant="outline" onClick={() => del(c)}><Trash className="size-4 text-destructive" /></Button>
           </div>
         );
-      }, size: 220,
+      }, size: 300,
     },
-  ], []);
+  ], [rows, canReorder]);
 
   const table = useReactTable({
     columns, data: filtered, pageCount: Math.ceil((filtered?.length || 0) / pagination.pageSize),
@@ -265,7 +296,19 @@ export function CarsPage() {
               ))}
               <div>
                 <div className={fieldLabel}>Занята до даты</div>
-                <Input type="date" value={form.closed_until || ''} onChange={(e) => setForm({ ...form, closed_until: e.target.value })} />
+                <div className="flex items-center gap-2">
+                  <Input type="date" value={form.closed_until || ''} onChange={(e) => setForm({ ...form, closed_until: e.target.value })} />
+                  {form.closed_until && (
+                    <Button size="sm" variant="outline" onClick={() => setForm({ ...form, closed_until: '' })} title="Сбросить дату — машина откроется сразу">
+                      <LockOpen className="size-4" /> Открыть сейчас
+                    </Button>
+                  )}
+                </div>
+                {form.closed_until && form.closed_until > new Date().toISOString().slice(0, 10) && (
+                  <div className="text-xs text-warning mt-1.5">
+                    Сейчас закрыта — на сайте «В аренде до {new Date(form.closed_until).toLocaleDateString('ru-RU')}»
+                  </div>
+                )}
               </div>
             </div>
             <div>

@@ -335,6 +335,32 @@ export function ClientCardPage() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader><CardHeading><CardTitle>История баллов ({data.points?.length || 0})</CardTitle></CardHeading></CardHeader>
+                <CardContent className="p-0">
+                  {!data.points?.length ? (
+                    <div className="p-5 text-sm text-muted-foreground">Начислений баллов пока нет</div>
+                  ) : (
+                    <div className="divide-y divide-border">
+                      {data.points.map((p) => {
+                        const pos = Number(p.amount) >= 0;
+                        return (
+                          <div key={p.id} className="flex items-center justify-between px-5 py-3">
+                            <div className="flex flex-col">
+                              <span className="text-sm text-mono">{p.reason || (pos ? 'Начисление' : 'Списание')}</span>
+                              <span className="text-xs text-secondary-foreground">{fmtDate(p.created_at)}</span>
+                            </div>
+                            <span className={`text-sm font-semibold ${pos ? 'text-green-500' : 'text-destructive'}`}>
+                              {pos ? '+' : '−'}{fmtMoney(Math.abs(Number(p.amount) || 0))}{pos ? ' баллов' : ''}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>

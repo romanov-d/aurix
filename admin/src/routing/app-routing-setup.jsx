@@ -112,10 +112,10 @@ export function AppRoutingSetup() {
       <Route element={<RequireAuth />}>
         <Route element={<Demo1Layout />}>
           <Route path="/" element={<RoleLanding />} />
-          <Route path="/demo-dashboard" element={<DefaultPage />} />
           {/* AURIX: ЛК доступен всем авторизованным (и админу для просмотра) */}
           <Route path="/me" element={<LkPage />} />
-          {/* AURIX: админ-разделы — клиента молча уводит в /me */}
+          {/* AURIX: админ-разделы + все демо-страницы Metronic (справочник) —
+              под гардом: клиента молча уводит в /me, чужие каркасы ему не видны */}
           <Route element={<RequireAdmin />}>
             <Route path="/aurix" element={<AurixDashboardPage />} />
             <Route path="/bookings" element={<BookingsPage />} />
@@ -129,7 +129,7 @@ export function AppRoutingSetup() {
             <Route path="/blog" element={<AurixBlogPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/audit" element={<AuditPage />} />
-          </Route>
+          <Route path="/demo-dashboard" element={<DefaultPage />} />
           <Route path="/dark-sidebar" element={<Demo1DarkSidebarPage />} />
           <Route
             path="/public-profile/profiles/default/"
@@ -476,6 +476,7 @@ export function AppRoutingSetup() {
           />
 
           <Route path="/auth/get-started" element={<AccountGetStartedPage />} />
+          </Route>
         </Route>
       </Route>
       <Route path="error/*" element={<ErrorRouting />} />

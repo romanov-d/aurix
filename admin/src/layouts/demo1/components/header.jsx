@@ -1,18 +1,10 @@
 import { useEffect, useState } from 'react';
 import { StoreClientTopbar } from '@/pages/store-client/components/common/topbar';
-import { SearchDialog } from '@/partials/dialogs/search/search-dialog';
-import { AppsDropdownMenu } from '@/partials/topbar/apps-dropdown-menu';
 import { ChatSheet } from '@/partials/topbar/chat-sheet';
 import { NotificationsSheet } from '@/partials/topbar/notifications-sheet';
 import { UserDropdownMenu } from '@/partials/topbar/user-dropdown-menu';
-import {
-  Bell,
-  CaretCircleRight,
-  ChatCircleDots,
-  List,
-} from '@phosphor-icons/react';
+import { Bell, ChatCircleDots, List } from '@phosphor-icons/react';
 import { useLocation } from 'react-router';
-import { Link } from 'react-router-dom';
 import { useAuth } from '@/auth/context/auth-context';
 import { avatarUrl } from '@/lib/avatar';
 import { toAbsoluteUrl } from '@/lib/helpers';
@@ -28,15 +20,12 @@ import {
   SheetTrigger,
 } from '@/components/ui/sheet';
 import { Container } from '@/components/common/container';
-import { Breadcrumb } from './breadcrumb';
-import { MegaMenu } from './mega-menu';
-import { MegaMenuMobile } from './mega-menu-mobile';
+import { Link } from 'react-router-dom';
 import { SidebarMenu } from './sidebar-menu';
 
 export function Header() {
   const { user, isAdmin } = useAuth();
   const [isSidebarSheetOpen, setIsSidebarSheetOpen] = useState(false);
-  const [isMegaMenuSheetOpen, setIsMegaMenuSheetOpen] = useState(false);
 
   const { pathname } = useLocation();
   const mobileMode = useIsMobile();
@@ -50,7 +39,6 @@ export function Header() {
   // Close sheet when route changes
   useEffect(() => {
     setIsSidebarSheetOpen(false);
-    setIsMegaMenuSheetOpen(false);
   }, [pathname]);
 
   return (
@@ -89,28 +77,6 @@ export function Header() {
                   <SheetHeader className="p-0 space-y-0" />
                   <SheetBody className="p-0 overflow-y-auto">
                     <SidebarMenu />
-                  </SheetBody>
-                </SheetContent>
-              </Sheet>
-            )}
-            {mobileMode && (
-              <Sheet
-                open={isMegaMenuSheetOpen}
-                onOpenChange={setIsMegaMenuSheetOpen}
-              >
-                <SheetTrigger asChild>
-                  <Button variant="ghost" mode="icon">
-                    <CaretCircleRight className="text-muted-foreground/70" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  className="p-0 gap-0 w-[275px]"
-                  side="left"
-                  close={false}
-                >
-                  <SheetHeader className="p-0 space-y-0" />
-                  <SheetBody className="p-0 overflow-y-auto">
-                    <MegaMenuMobile />
                   </SheetBody>
                 </SheetContent>
               </Sheet>
