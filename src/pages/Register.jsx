@@ -24,7 +24,7 @@ export default function Register() {
     try {
       const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
       if (res.needsEmailVerify) setStep('code'); // аккаунт создан, подтвердим почту кодом
-      else nav('/account', { replace: true });
+      else window.location.assign('/admin/me');
     } catch (err) {
       setError(err.message || 'Ошибка регистрации');
     } finally {
@@ -37,7 +37,7 @@ export default function Register() {
     setError(''); setSubmitting(true);
     try {
       await verifyEmailCode(code.trim());
-      nav('/account', { replace: true });
+      window.location.assign('/admin/me');
     } catch (err) {
       setError(err.message || 'Неверный код');
     } finally {
@@ -124,7 +124,7 @@ export default function Register() {
             </form>
             <div className="auth-foot" style={{ display: 'flex', justifyContent: 'space-between' }}>
               <button type="button" onClick={() => resendEmailCode().then(() => setError('Код отправлен повторно')).catch(() => {})} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>Отправить ещё раз</button>
-              <button type="button" onClick={() => nav('/account', { replace: true })} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer', font: 'inherit' }}>Пропустить</button>
+              <button type="button" onClick={() => window.location.assign('/admin/me')} style={{ background: 'none', border: 0, color: 'var(--muted)', cursor: 'pointer', font: 'inherit' }}>Пропустить</button>
             </div>
           </>
         )}

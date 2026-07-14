@@ -14,11 +14,13 @@ export default function Login() {
   const [step, setStep] = useState('login'); // 'login' | 'code'
   const [code, setCode] = useState('');
 
-  // Админ/сотрудник → новая панель (/admin, отдельный бандл — полная навигация),
-  // клиент → его кабинет. Кука сессии общая, повторный вход в панели не нужен.
+  // Оба — в новую панель (отдельный бандл): админ на дашборд, клиент в свой ЛК.
+  // Кука сессии общая, повторный вход в панели не нужен. Если пользователя
+  // отправили логиниться с защищённой страницы сайта — вернём туда.
   const goNext = (user) => {
-    if (user?.role === 'admin') { window.location.assign('/admin/'); return; }
-    nav(loc.state?.from?.pathname || '/account', { replace: true });
+    const from = loc.state?.from?.pathname;
+    if (from && from !== '/account') { nav(from, { replace: true }); return; }
+    window.location.assign(user?.role === 'admin' ? '/admin/' : '/admin/me');
   };
 
   const onSubmit = async (e) => {

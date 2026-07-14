@@ -32,6 +32,12 @@ function RedirectToPanel() {
   return <div style={{ minHeight: '70vh' }} />;
 }
 
+// ЛК клиента переехал в новую панель (Metronic, /admin → /me).
+function RedirectToLk() {
+  useEffect(() => { window.location.replace('/admin/me'); }, []);
+  return <div style={{ minHeight: '70vh' }} />;
+}
+
 export default function App() {
   const { pathname } = useLocation();
   const isHome = pathname === '/';
@@ -60,8 +66,8 @@ export default function App() {
     return () => io.disconnect();
   }, [pathname]);
 
-  const noHeader = isAuth || pathname.startsWith('/admin') || pathname === '/account';
-  const noFooter = isAuth || pathname.startsWith('/admin') || pathname === '/account';
+  const noHeader = isAuth || pathname.startsWith('/admin') || pathname.startsWith('/account');
+  const noFooter = isAuth || pathname.startsWith('/admin') || pathname.startsWith('/account');
 
   return (
     <AuthProvider>
@@ -81,7 +87,10 @@ export default function App() {
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/contacts" element={<Contacts />} />
-        <Route path="/account" element={<RequireAuth><Account /></RequireAuth>} />
+        {/* ЛК клиента переехал в новую панель (Metronic): /account — редирект,
+            старый кабинет остаётся на /account-legacy как аварийный запасной. */}
+        <Route path="/account" element={<RedirectToLk />} />
+        <Route path="/account-legacy" element={<RequireAuth><Account /></RequireAuth>} />
         {/* Старая встроенная админка выведена из оборота: /admin — всегда новая панель
             (отдельный бандл admin/dist, Express). Жёсткий переход мимо SPA-роутера,
             иначе клиентская навигация рендерит старый Admin.jsx без запроса к серверу.

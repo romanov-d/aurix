@@ -63,12 +63,13 @@ export default function Header() {
                   <span>Админка</span>
                 </Link>
               )}
-              <Link to="/account" className="account-btn hide-sm" title={user.name}>
+              {/* ЛК — в новой панели (отдельный бандл), поэтому жёсткая ссылка */}
+              <a href="/admin/me" className="account-btn hide-sm" title={user.name}>
                 {user.avatar_url
                   ? <img src={user.avatar_url} alt="" className="account-btn-ava" />
                   : <i className="ph-fill ph-user-circle" />}
                 <span>{user.name.split(' ')[0] || 'Кабинет'}</span>
-              </Link>
+              </a>
             </>
           ) : (
             <Link to="/login" className="account-btn hide-sm">
@@ -106,7 +107,7 @@ export default function Header() {
             <a href="mailto:info@aurixmotors.com" className="mm-sub mm-icon"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a>
           </div>
           <div className="mm-foot">
-            <Link to="/account" className="btn" style={{ width: '100%', marginBottom: 10 }} onClick={() => setOpen(false)}><i className="ph-fill ph-user-circle" /> &nbsp;Личный кабинет</Link>
+            <a href="/admin/me" className="btn" style={{ width: '100%', marginBottom: 10 }} onClick={() => setOpen(false)}><i className="ph-fill ph-user-circle" /> &nbsp;Личный кабинет</a>
             <Link to="/catalog" className="btn btn-filled" style={{ width: '100%' }} onClick={() => setOpen(false)}>Забронировать авто</Link>
           </div>
         </div>
