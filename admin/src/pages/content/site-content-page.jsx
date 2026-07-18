@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/aurix-api';
 import {
   Toolbar,
@@ -16,21 +16,104 @@ import { Input } from '@/components/ui/input';
 
 const TEXTAREA_CLASS =
   'w-full min-h-[70px] rounded-md border border-input bg-transparent px-3 py-2 text-sm leading-relaxed';
+const RICH_CLASS =
+  'w-full min-h-[52px] rounded-md border border-input bg-transparent px-3 py-2 text-sm leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring whitespace-pre-wrap [&_.gold]:text-primary';
 
-// Дружелюбный формат вместо сырого HTML:
-//   перенос строки  ↔  <br>
-//   [[золотой текст]]  ↔  <span class="gold">…</span>
-const htmlToEdit = (html) =>
+// Из contenteditable оставляем только <br> и <span class="gold"> — чистый HTML.
+function sanitize(root) {
+  let html = '';
+  const esc = (t) => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const walk = (node) => {
+    node.childNodes.forEach((n) => {
+      if (n.nodeType === 3) html += esc(n.textContent);
+      else if (n.nodeName === 'BR') html += '<br>';
+      else if (n.nodeName === 'SPAN' && n.classList.contains('gold')) {
+        html += '<span class="gold">';
+        walk(n);
+        html += '</span>';
+      } else if (['DIV', 'P'].includes(n.nodeName)) {
+        if (html && !html.endsWith('<br>')) html += '<br>';
+        walk(n);
+      } else walk(n);
+    });
+  };
+  walk(root);
+  return html.replace(/(<br>)+$/g, '');
+}
+
+// Любой акцент (em / span с любым классом) → единый <span class="gold">,
+// чтобы он и отображался золотым в редакторе, и сохранялся единообразно.
+const normalizeIn = (html) =>
   (html || '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    // Любой акцент (span/em, с любым классом) → [[…]]
-    .replace(/<(?:span|em)[^>]*>/gi, '[[')
-    .replace(/<\/(?:span|em)>/gi, ']]');
-const editToHtml = (text) =>
-  (text || '')
-    .replace(/\r?\n/g, '<br>')
-    // Сохраняем единообразно через глобальный класс .gold (золото везде)
-    .replace(/\[\[([\s\S]+?)\]\]/g, '<span class="gold">$1</span>');
+    .replace(/<(?:span|em)[^>]*>/gi, '<span class="gold">')
+    .replace(/<\/(?:span|em)>/gi, '</span>');
+
+// Визуальный редактор заголовка: золотой текст сразу золотой, без скобок и тегов.
+function GoldField({ id, value, onChange }) {
+  const ref = useRef(null);
+  // Начальное значение ставим один раз, чтобы не сбивать курсор при вводе.
+  useEffect(() => {
+    if (ref.current) ref.current.innerHTML = normalizeIn(value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const emit = () => ref.current && onChange(sanitize(ref.current));
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      document.execCommand('insertLineBreak');
+      emit();
+    }
+  };
+
+  // Выделение → золото (или снять золото, если уже внутри акцента).
+  const toggleGold = () => {
+    const el = ref.current;
+    const sel = window.getSelection();
+    if (!el || !sel.rangeCount || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    if (!el.contains(range.commonAncestorContainer)) return;
+    let node = range.commonAncestorContainer;
+    while (node && node !== el && !(node.nodeType === 1 && node.classList?.contains('gold')))
+      node = node.parentNode;
+    if (node && node.classList?.contains('gold')) {
+      const parent = node.parentNode;
+      while (node.firstChild) parent.insertBefore(node.firstChild, node);
+      parent.removeChild(node);
+    } else {
+      const span = document.createElement('span');
+      span.className = 'gold';
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+    }
+    sel.removeAllRanges();
+    emit();
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" onMouseDown={(e) => e.preventDefault()} onClick={toggleGold}
+          title="Выделите слово и нажмите — оно станет золотым (повторно — снимет)">
+          ✦ Золотой акцент
+        </Button>
+      </div>
+      <div
+        id={id}
+        ref={ref}
+        contentEditable
+        suppressContentEditableWarning
+        onInput={emit}
+        onKeyDown={onKeyDown}
+        className={RICH_CLASS}
+      />
+      <div className="text-xs text-muted-foreground">
+        Enter — новая строка · выделите слово и нажмите «Золотой акцент» для цвета
+      </div>
+    </div>
+  );
+}
 
 export function SiteContentPage() {
   const [items, setItems] = useState([]);
@@ -47,14 +130,7 @@ export function SiteContentPage() {
       .then((rows) => {
         const list = Array.isArray(rows) ? rows : [];
         setItems(list);
-        setDraft(
-          Object.fromEntries(
-            list.map((r) => [
-              r.key,
-              r.type === 'html' ? htmlToEdit(r.value) : r.value ?? '',
-            ]),
-          ),
-        );
+        setDraft(Object.fromEntries(list.map((r) => [r.key, r.value ?? ''])));
         setActiveSection(list[0]?.section || null);
       })
       .catch(() => {})
@@ -76,24 +152,8 @@ export function SiteContentPage() {
     [sections, activeSection],
   );
 
-  // Значение для отправки: html-поля собираем обратно в HTML.
-  const toStored = (row) =>
-    row.type === 'html' ? editToHtml(draft[row.key]) : draft[row.key] ?? '';
-
-  // Обернуть выделенный в поле текст в золотой акцент [[…]].
-  const wrapGold = (key) => {
-    const el = document.getElementById(`content-${key}`);
-    if (!el) return;
-    const s = el.selectionStart;
-    const e = el.selectionEnd;
-    const v = draft[key] || '';
-    if (s === e) return; // ничего не выделено
-    const next = `${v.slice(0, s)}[[${v.slice(s, e)}]]${v.slice(e)}`;
-    setDraft((d) => ({ ...d, [key]: next }));
-  };
-
   const save = async (row) => {
-    const value = toStored(row);
+    const value = draft[row.key] ?? '';
     setSavingKey(row.key);
     setErrorKey((er) => ({ ...er, [row.key]: '' }));
     try {
@@ -101,20 +161,10 @@ export function SiteContentPage() {
       setItems((list) =>
         list.map((r) => (r.key === row.key ? { ...r, ...updated } : r)),
       );
-      if (updated && typeof updated.value === 'string') {
-        setDraft((d) => ({
-          ...d,
-          [row.key]:
-            row.type === 'html' ? htmlToEdit(updated.value) : updated.value,
-        }));
-      }
       setSavedKey(row.key);
       setTimeout(() => setSavedKey((k) => (k === row.key ? null : k)), 2000);
     } catch (err) {
-      setErrorKey((er) => ({
-        ...er,
-        [row.key]: err?.message || 'Ошибка сохранения',
-      }));
+      setErrorKey((er) => ({ ...er, [row.key]: err?.message || 'Ошибка сохранения' }));
     } finally {
       setSavingKey((k) => (k === row.key ? null : k));
     }
@@ -145,7 +195,6 @@ export function SiteContentPage() {
           </Card>
         ) : (
           <div className="flex flex-col gap-5">
-            {/* Переключатель страниц */}
             <div className="flex flex-wrap gap-1.5">
               {sections.map(([name]) => (
                 <Button
@@ -159,39 +208,29 @@ export function SiteContentPage() {
               ))}
             </div>
 
-            {/* Блоки активной страницы */}
             <Card>
               <CardContent className="p-6 flex flex-col gap-6">
                 {activeRows.map((row) => {
                   const value = draft[row.key] ?? '';
-                  const dirty = toStored(row) !== (row.value ?? '');
-                  const multiline = row.type === 'textarea' || row.type === 'html';
+                  const dirty = value !== (row.value ?? '');
                   return (
                     <div
                       key={row.key}
                       className="flex flex-col gap-1.5 pb-5 border-b border-border last:border-0 last:pb-0"
                     >
-                      <div className="flex items-center justify-between gap-2">
-                        <label
-                          htmlFor={`content-${row.key}`}
-                          className="text-sm font-medium text-mono"
-                        >
-                          {row.label || row.key}
-                        </label>
-                        {row.type === 'html' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => wrapGold(row.key)}
-                            title="Выделите слово в поле и нажмите — оно станет золотым"
-                          >
-                            ✦ Золотой акцент
-                          </Button>
-                        )}
-                      </div>
-                      {multiline ? (
-                        <textarea
+                      <label className="text-sm font-medium text-mono">
+                        {row.label || row.key}
+                      </label>
+                      {row.type === 'html' ? (
+                        <GoldField
                           id={`content-${row.key}`}
+                          value={row.value ?? ''}
+                          onChange={(html) =>
+                            setDraft((d) => ({ ...d, [row.key]: html }))
+                          }
+                        />
+                      ) : row.type === 'textarea' ? (
+                        <textarea
                           className={TEXTAREA_CLASS}
                           value={value}
                           onChange={(e) =>
@@ -200,18 +239,11 @@ export function SiteContentPage() {
                         />
                       ) : (
                         <Input
-                          id={`content-${row.key}`}
                           value={value}
                           onChange={(e) =>
                             setDraft((d) => ({ ...d, [row.key]: e.target.value }))
                           }
                         />
-                      )}
-                      {row.type === 'html' && (
-                        <div className="text-xs text-muted-foreground">
-                          Enter — новая строка · выделите текст и нажмите «Золотой
-                          акцент», чтобы выделить его цветом
-                        </div>
                       )}
                       {(dirty || savedKey === row.key || errorKey[row.key]) && (
                         <div className="flex items-center gap-3 mt-1">
@@ -225,9 +257,7 @@ export function SiteContentPage() {
                             </Button>
                           )}
                           {savedKey === row.key && !dirty && (
-                            <span className="text-sm text-green-500">
-                              ✓ Сохранено
-                            </span>
+                            <span className="text-sm text-green-500">✓ Сохранено</span>
                           )}
                           {errorKey[row.key] && (
                             <span className="text-sm text-destructive">
