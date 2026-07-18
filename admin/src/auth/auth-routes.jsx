@@ -1,6 +1,14 @@
+import { useEffect } from 'react';
 import { BrandedLayout } from './layouts/branded';
 import { ClassicLayout } from './layouts/classic';
 import { CallbackPage } from './pages/callback-page';
+
+// Единый вход: панель не держит свой экран входа/регистрации — уводим на
+// красивый /login основного сайта (там 2FA-код для клиентов и роутинг по роли).
+function RedirectToSiteLogin() {
+  useEffect(() => { window.location.replace('/login'); }, []);
+  return null;
+}
 import { ChangePasswordPage } from './pages/change-password-page';
 import { CheckEmail } from './pages/extended/check-email';
 import { ResetPasswordChanged } from './pages/extended/reset-password-changed';
@@ -18,11 +26,11 @@ export const authRoutes = [
     children: [
       {
         path: 'signin',
-        element: <SignInPage />,
+        element: <RedirectToSiteLogin />,
       },
       {
         path: 'signup',
-        element: <SignUpPage />,
+        element: <RedirectToSiteLogin />,
       },
       {
         path: 'change-password',
@@ -57,11 +65,11 @@ export const authRoutes = [
     children: [
       {
         path: 'classic/signin',
-        element: <SignInPage />,
+        element: <RedirectToSiteLogin />,
       },
       {
         path: 'classic/signup',
-        element: <SignUpPage />,
+        element: <RedirectToSiteLogin />,
       },
       {
         path: 'classic/change-password',

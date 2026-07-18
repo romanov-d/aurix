@@ -103,6 +103,8 @@ export function AuthProvider({ children }) {
     SupabaseAdapter.logout();
     saveAuth(undefined);
     setCurrentUser(undefined);
+    // Единый вход на сайте (панель не держит свой экран входа для клиентов)
+    window.location.href = '/login';
   };
 
   return (
