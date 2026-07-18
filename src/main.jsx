@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import ErrorBoundary, { reloadOnce } from './components/ErrorBoundary.jsx';
+import { ContentProvider } from './contexts/ContentContext.jsx';
 import '../styles.css';
 
 // После деплоя у Vite меняются хеши чанков. Если браузер держит старую версию
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
       <ErrorBoundary name="app-root">
-        <App />
+        <ContentProvider>
+          <App />
+        </ContentProvider>
       </ErrorBoundary>
     </BrowserRouter>
   </React.StrictMode>

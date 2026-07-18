@@ -108,6 +108,7 @@ export const MENU_SIDEBAR = [
       { title: 'Тарифы', path: '/tariffs' },
       { title: 'FAQ', path: '/faq' },
       { title: 'Блог', path: '/blog' },
+      { title: 'Тексты сайта', path: '/site-texts' },
     ],
   },
   {

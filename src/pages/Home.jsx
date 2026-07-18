@@ -6,6 +6,7 @@ import CarCard from '../components/CarCard.jsx';
 import CircularGallery from '../components/CircularGallery.jsx';
 import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { api } from '../api/client.js';
+import T from '../components/T.jsx';
 
 const AV = (id) => `https://images.unsplash.com/${id}?w=160&h=160&fit=crop&crop=faces&q=80`;
 const REVIEWS = [
@@ -70,8 +71,8 @@ export default function Home() {
             <div className="fs-bg" />
             <div className="fs-hero-grid">
               <div className="fs-hero-left">
-                <h1 className="fs-title">AURIX MOTORS — это не просто аренда.<br /><span className="fs-title-gold">Это стиль жизни.</span></h1>
-                <p className="fs-hero-lead">Круглосуточная подача по Москве. AURIX MOTORS делает аренду премиум-авто простой и быстрой.</p>
+                <T k="home.hero.title" as="h1" className="fs-title" html>AURIX MOTORS — это не просто аренда.<br /><span className="fs-title-gold">Это стиль жизни.</span></T>
+                <T k="home.hero.lead" as="p" className="fs-hero-lead">Круглосуточная подача по Москве. AURIX MOTORS делает аренду премиум-авто простой и быстрой.</T>
               </div>
             </div>
           </div>
@@ -136,7 +137,7 @@ export default function Home() {
         <section className="cats-section reveal">
           <div className="fs-cats">
             <div className="fs-cats-head">
-              <h2>Категории автопарка</h2>
+              <T k="home.categories.title" as="h2">Категории автопарка</T>
               <Link to="/catalog" className="fs-cats-all">Смотреть весь автопарк →</Link>
             </div>
             <div className="fs-cats-grid">
@@ -185,7 +186,7 @@ export default function Home() {
       <section className="exp reveal">
         <div className="exp-wrap">
           <div className="exp-head">
-            <h2 className="exp-title">Мы создаём опыт,<br />который запоминается</h2>
+            <T k="home.experience.title" as="h2" className="exp-title" html>Мы создаём опыт,<br />который запоминается</T>
             <p className="exp-lead">AURIX MOTORS — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</p>
           </div>
           <div className="exp-photos">
@@ -200,7 +201,7 @@ export default function Home() {
       <section className="specials reveal">
         <div className="sp-wrap">
           <div className="sp-head">
-            <h2>Наш автопарк</h2>
+            <T k="home.fleet.title" as="h2">Наш автопарк</T>
             <Link to="/catalog" className="sp-all">Смотреть все</Link>
           </div>
           <div className="catalog-grid" style={{ marginTop: 24 }}>
@@ -293,7 +294,7 @@ export default function Home() {
           </div>
           <div className="pt-panel">
             <img src="/letter.svg" alt="A" className="pt-mark-letter" />
-            <h2 className="pt-title"><span className="pt-title-accent">Сдаёте</span> авто<br />в аренду?</h2>
+            <T k="home.partner.title" as="h2" className="pt-title" html><span className="pt-title-accent">Сдаёте</span> авто<br />в аренду?</T>
             <p className="pt-desc">Покажите свой автопарк премиум-клиентам. Получайте брони. Полный контроль.</p>
             <Link to="/rent-out" className="pt-cta">Разместить авто</Link>
           </div>
@@ -304,7 +305,7 @@ export default function Home() {
       <section className="delivery reveal">
         <div className="dl-grid">
           <div className="dl-left">
-            <h2 className="dl-title">Доставка и получение<br/>автомобиля</h2>
+            <T k="home.delivery.title" as="h2" className="dl-title" html>Доставка и получение<br/>автомобиля</T>
             <p className="dl-lead">AURIX MOTORS предлагает гибкие варианты получения и доставки авто, чтобы подстроиться под ваш график. Заберите авто в офисе или закажите доставку — быстро, удобно, по всей Москве.</p>
             <div className="dl-cards">
               <div className="dl-card">
@@ -348,7 +349,7 @@ export default function Home() {
 
       <section className="why reveal">
         <div className="why-wrap">
-          <h2 className="why-title">Почему выбирают нас?</h2>
+          <T k="home.why.title" as="h2" className="why-title">Почему выбирают нас?</T>
           <div className="why-grid">
             <div className="why-card why-yellow">
               <div className="why-num">01</div>
@@ -405,7 +406,7 @@ function Faq() {
     <section className="faq reveal">
       <div className="faq-wrap">
         <div className="faq-left">
-          <h2>Часто задаваемые<br/>вопросы</h2>
+          <T k="home.faq.title" as="h2" html>Часто задаваемые<br/>вопросы</T>
           <p>Собрали ответы на самые популярные вопросы об аренде премиум-авто в AURIX MOTORS, чтобы вы могли спокойно планировать поездку без сомнений.</p>
         </div>
         <div className="faq-right">

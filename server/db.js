@@ -104,6 +104,7 @@ export function init() {
       migrateForeignKeys().catch((e) => console.warn('[db] FK migration skipped:', e.message));
       migrateBookingOverlapGuard().catch((e) => console.warn('[db] overlap guard skipped:', e.message));
       backfillCashback().catch((e) => console.warn('[db] cashback backfill skipped:', e.message));
+      seedContent().catch((e) => console.warn('[db] content seed skipped:', e.message));
     })().catch((e) => {
       console.error('[db] init failed:', e);
       initPromise = null;
@@ -360,6 +361,17 @@ const SCHEMA_STATEMENTS = [
     reader_role          TEXT NOT NULL,
     last_read_message_id BIGINT,
     PRIMARY KEY (thread_id, reader_role)
+  )`,
+  // ── Редактируемые тексты лендинга (мини-CMS) ──
+  `CREATE TABLE IF NOT EXISTS site_content (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL DEFAULT '',
+    section    TEXT,        -- страница/группа для редактора
+    label      TEXT,        -- человекочитаемая подпись поля
+    type       TEXT NOT NULL DEFAULT 'text',  -- text | textarea | html
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_by BIGINT
   )`
 ];
 
@@ -547,6 +559,38 @@ export async function seedBlog() {
   }
   console.log('[db] seeded blog posts');
 }
+
+// ── Мини-CMS текстов лендинга ──
+import { CONTENT_DEFAULTS } from './content-seed.js';
+
+let _contentCache = null; // { key: value }
+
+// Сид дефолтных текстов: значение пишется только при первом появлении ключа
+// (ON CONFLICT не трогает value → правки админа не затираются), метаданные
+// (section/label/type/sort_order) обновляются, чтобы улучшать подписи со временем.
+export async function seedContent() {
+  for (const c of CONTENT_DEFAULTS) {
+    await pool.query(
+      `INSERT INTO site_content (key, value, section, label, type, sort_order)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (key) DO UPDATE SET
+         section = EXCLUDED.section, label = EXCLUDED.label,
+         type = EXCLUDED.type, sort_order = EXCLUDED.sort_order`,
+      [c.key, c.value, c.section, c.label, c.type, c.sort]
+    );
+  }
+  _contentCache = null;
+}
+
+// Карта {key: value} для публичной отдачи (кешируется в памяти).
+export async function getContentMap() {
+  if (_contentCache) return _contentCache;
+  const rows = await many(`SELECT key, value FROM site_content`);
+  _contentCache = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  return _contentCache;
+}
+
+export function invalidateContentCache() { _contentCache = null; }
 
 // Получить числовой % кэшбэка из настроек (по умолчанию 5)
 export async function getCashbackPercent() {

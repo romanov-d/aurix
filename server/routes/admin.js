@@ -1,12 +1,35 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
-import { many, q, one, getCashbackPercent } from '../db.js';
+import { many, q, one, getCashbackPercent, invalidateContentCache } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
 import { logAudit } from '../audit.js';
 
 const router = Router();
 router.use(requireRole('admin'));
+
+// ── Тексты сайта (мини-CMS) ──
+router.get('/content', async (_req, res, next) => {
+  try {
+    const rows = await many(
+      `SELECT key, value, section, label, type, sort_order, updated_at
+       FROM site_content ORDER BY section, sort_order, key`);
+    res.json(rows);
+  } catch (e) { next(e); }
+});
+router.patch('/content/:key', async (req, res, next) => {
+  try {
+    const value = typeof req.body?.value === 'string' ? req.body.value : '';
+    const { rows } = await q(
+      `UPDATE site_content SET value = $1, updated_at = NOW(), updated_by = $2
+       WHERE key = $3 RETURNING key, value, section, label, type`,
+      [value, req.user.id, req.params.key]);
+    if (!rows[0]) return res.status(404).json({ error: 'Ключ не найден' });
+    invalidateContentCache();
+    logAudit(req, 'content', req.params.key, 'update', { value: value.slice(0, 80) });
+    res.json(rows[0]);
+  } catch (e) { next(e); }
+});
 
 // ── Этапы воронки бронирования ──
 // Каждый этап маппится на «грубый» status, на котором держится дашборд.

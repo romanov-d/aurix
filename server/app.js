@@ -12,6 +12,7 @@ import adminRouter from './routes/admin.js';
 import contactRouter from './routes/contact.js';
 import faqRouter from './routes/faq.js';
 import blogRouter from './routes/blog.js';
+import contentRouter from './routes/content.js';
 import { clientRouter as chatRouter, adminRouter as chatAdminRouter } from './routes/chat.js';
 
 export const app = express();
@@ -86,6 +87,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/contact', contactRouter);
 app.use('/api/faq', faqRouter);
 app.use('/api/blog', blogRouter);
+app.use('/api/content', contentRouter);
 
 // Неизвестные /api/* → JSON 404 (а не отдача index.html)
 app.use('/api', (_req, res) => res.status(404).json({ error: 'Not found' }));
