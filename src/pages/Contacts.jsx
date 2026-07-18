@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import T from '../components/T.jsx';
 
 export default function Contacts() {
   const [form, setForm] = useState({ name: '', phone: '', car: '', message: '' });
@@ -47,8 +48,8 @@ export default function Contacts() {
       <div className="page-head">
         <div className="container">
           <div className="breadcrumbs"><Link to="/">Главная</Link><span className="sep">/</span><span>Контакты</span></div>
-          <h1>Свяжитесь <em>с нами</em></h1>
-          <p style={{ color: '#bdbdbd', maxWidth: 540, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>Мы на связи 24/7. Звоните, пишите в мессенджеры или приезжайте в наш шоурум.</p>
+          <T k="contacts.hero.title" as="h1" html>Свяжитесь <em>с нами</em></T>
+          <T k="contacts.hero.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 540, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>Мы на связи 24/7. Звоните, пишите в мессенджеры или приезжайте в наш шоурум.</T>
         </div>
       </div>
 
@@ -57,26 +58,26 @@ export default function Contacts() {
           <div className="contacts-top-row">
             <div>
               <div className="contact-box">
-                <div className="lbl">Телефон · 24/7</div>
-                <div className="v">+7 999 123 45 67<small>Москва, основной номер</small></div>
+                <T k="contacts.info.phoneLabel" as="div" className="lbl">Телефон · 24/7</T>
+                <div className="v"><T k="contacts.info.phone">+7 999 123 45 67</T><T k="contacts.info.phoneNote" as="small">Москва, основной номер</T></div>
               </div>
               <div className="contact-box">
-                <div className="lbl">Мессенджеры</div>
-                <div className="v">@aurixmotors<small>Telegram · WhatsApp · iMessage</small></div>
+                <T k="contacts.info.messengersLabel" as="div" className="lbl">Мессенджеры</T>
+                <div className="v"><T k="contacts.info.messengers">@aurixmotors</T><T k="contacts.info.messengersNote" as="small">Telegram · WhatsApp · iMessage</T></div>
               </div>
               <div className="contact-box">
-                <div className="lbl">Email</div>
-                <div className="v">info@aurixmotors.com<small>booking@aurixmotors.com — бронирование</small></div>
+                <T k="contacts.info.emailLabel" as="div" className="lbl">Email</T>
+                <div className="v"><T k="contacts.info.email">info@aurixmotors.com</T><T k="contacts.info.emailNote" as="small">booking@aurixmotors.com — бронирование</T></div>
               </div>
               <div className="contact-box">
-                <div className="lbl">Шоурум</div>
-                <div className="v">Москва, Олимпийский проспект, 12<small>Ежедневно, 24 часа</small></div>
+                <T k="contacts.info.addressLabel" as="div" className="lbl">Шоурум</T>
+                <div className="v"><T k="contacts.info.address">Москва, Олимпийский проспект, 12</T><T k="contacts.info.hours" as="small">Ежедневно, 24 часа</T></div>
               </div>
             </div>
 
             <div>
               <form className="form-card" onSubmit={onSubmit} style={{ padding: 32, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <h3 style={{ color: 'var(--gold)', fontSize: 22, marginBottom: 18, fontWeight: 600 }}>Оставьте заявку</h3>
+                <T k="contacts.form.title" as="h3" style={{ color: 'var(--gold)', fontSize: 22, marginBottom: 18, fontWeight: 600 }}>Оставьте заявку</T>
                 
                 {success && (
                   <div style={{ color: '#2ecc71', marginBottom: 18, fontSize: 14, background: 'rgba(46, 204, 113, 0.1)', padding: '12px 16px', borderRadius: 6 }}>
@@ -131,9 +132,9 @@ export default function Contacts() {
                   />
                 </div>
                 <div className="form-actions" style={{ marginTop: 8 }}>
-                  <p className="note">Перезвоним в течение 5 минут</p>
+                  <T k="contacts.form.note" as="p" className="note">Перезвоним в течение 5 минут</T>
                   <button className="btn btn-filled" type="submit" disabled={loading}>
-                    {loading ? 'Отправка...' : 'Отправить'}
+                    {loading ? 'Отправка...' : <T k="contacts.form.submit">Отправить</T>}
                   </button>
                 </div>
               </form>

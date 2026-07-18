@@ -35,20 +35,27 @@ delete process.env.PGSSLMODE;
 delete process.env.PGSSLROOTCERT;
 
 let poolConnString = connectionString;
+let dbHost = '';
 if (poolConnString) {
   try {
     const u = new URL(poolConnString);
     u.searchParams.delete('sslmode');
     u.searchParams.delete('ssl');
+    dbHost = u.hostname;
     poolConnString = u.toString();
   } catch { /* строка не URL — оставляем как есть */ }
 }
-console.log('[db] SSL: проверка цепочки ОТКЛЮЧЕНА (rejectUnauthorized:false), sslmode/PGSSLMODE нейтрализованы');
+// Локальная БД (localhost) не использует SSL — pg по умолчанию пытается TLS,
+// а локальный Postgres его не поддерживает → коннект падает. Для удалённой
+// (самоподписанной) БД шифруем без проверки цепочки.
+const isLocalDb = ['localhost', '127.0.0.1', '::1', ''].includes(dbHost);
+const sslOption = isLocalDb ? false : { rejectUnauthorized: false };
+console.log(`[db] SSL: ${isLocalDb ? 'ОТКЛЮЧЁН (локальная БД)' : 'вкл, без проверки цепочки (удалённая БД)'}`);
 
 const pool = poolConnString
   ? new Pool({
       connectionString: poolConnString,
-      ssl: { rejectUnauthorized: false }, // принять самоподписанный сертификат своей БД
+      ssl: sslOption,
       max: 10,
       connectionTimeoutMillis: 10000,
       // Запросы и блокировки НЕ должны висеть вечно. Без этих таймаутов

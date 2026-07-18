@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import T from '../components/T.jsx';
 
 function fmt(n) {
   if (n === null || n === undefined) return '—';
@@ -44,10 +45,10 @@ export default function Tariffs() {
           <div className="breadcrumbs">
             <Link to="/">Главная</Link><span className="sep">/</span><span>Тарифы</span>
           </div>
-          <h1>Тарифы <em>и цены</em></h1>
-          <p style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
+          <T k="tariffs.head.title" as="h1" html>Тарифы <em>и цены</em></T>
+          <T k="tariffs.head.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
             Прозрачное ценообразование без скрытых платежей. Стоимость зависит от модели и срока аренды. Цена включает НДС 22%.
-          </p>
+          </T>
         </div>
       </div>
 
@@ -109,36 +110,36 @@ export default function Tariffs() {
             </div>
           )}
 
-          <p className="muted" style={{ fontSize: 12, marginTop: 12, letterSpacing: '.06em' }}>
+          <T k="tariffs.table.note" as="p" className="muted" style={{ fontSize: 12, marginTop: 12, letterSpacing: '.06em' }}>
             Цена включает НДС 22%. Залог обязателен по всем автомобилям и возвращается после сдачи авто.
-          </p>
+          </T>
 
           <div className="divider-h"></div>
 
           {/* Notes */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 16 }}>
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
-              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Аренда для фотосессий</h3>
+              <T k="tariffs.notes.photo.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Аренда для фотосессий</T>
               <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
-                Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО. <Link to="/photo" style={{ color: 'var(--gold)' }}>Подробнее об аренде для фото →</Link>
+                <T k="tariffs.notes.photo.text">Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО.</T> <Link to="/photo" style={{ color: 'var(--gold)' }}>Подробнее об аренде для фото →</Link>
               </p>
             </div>
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
-              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Подарочные сертификаты</h3>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
+              <T k="tariffs.notes.gift.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Подарочные сертификаты</T>
+              <T k="tariffs.notes.gift.text" as="p" style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
                 Подарочный сертификат на аренду любого автомобиля из парка. Стоимость сертификата равна стоимости одних суток аренды выбранного автомобиля. Срок действия — 1 год с даты оформления.
-              </p>
+              </T>
             </div>
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
-              <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Доставка и получение</h3>
-              <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
+              <T k="tariffs.notes.delivery.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Доставка и получение</T>
+              <T k="tariffs.notes.delivery.text" as="p" style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
                 Доставка и забор автомобиля осуществляются за дополнительную плату в любое удобное место. Работаем 7 дней в неделю, 24 часа в сутки. Свяжитесь с нами для уточнения стоимости.
-              </p>
+              </T>
             </div>
           </div>
 
           <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <Link to="/catalog" className="btn btn-filled">Выбрать автомобиль</Link>
+            <Link to="/catalog" className="btn btn-filled"><T k="tariffs.cta.button">Выбрать автомобиль</T></Link>
           </div>
 
         </div>

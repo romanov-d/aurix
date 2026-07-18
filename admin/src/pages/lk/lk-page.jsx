@@ -56,11 +56,23 @@ export function LkPage() {
   const [cars, setCars] = useState([]);
   const [points, setPoints] = useState([]);
   const [finances, setFinances] = useState(null);
+  const [chatUnread, setChatUnread] = useState(0);
   const [msg, setMsg] = useState('');
 
   const loadUser = useCallback(() => {
     api.get('/auth/me').then((d) => setUser(d?.user || null)).catch(() => {});
   }, []);
+
+  // Счётчик непрочитанных в чате (опрос раз в 15 c). На открытой вкладке «Чат» скрываем.
+  useEffect(() => {
+    let alive = true;
+    const tick = () => api.get('/chat/unread-count')
+      .then((d) => { if (alive) setChatUnread(d?.count || 0); }).catch(() => {});
+    tick();
+    const t = setInterval(tick, 15000);
+    return () => { alive = false; clearInterval(t); };
+  }, []);
+  useEffect(() => { if (tab === 'chat') setChatUnread(0); }, [tab]);
 
   useEffect(() => {
     loadUser();
@@ -159,7 +171,12 @@ export function LkPage() {
         {/* Табы */}
         <div className="flex flex-wrap gap-1.5 my-5">
           {TABS.map(([k, label]) => (
-            <Button key={k} size="sm" variant={tab === k ? 'primary' : 'outline'} onClick={() => setTab(k)}>{label}</Button>
+            <Button key={k} size="sm" variant={tab === k ? 'primary' : 'outline'} onClick={() => setTab(k)}>
+              {label}
+              {k === 'chat' && chatUnread > 0 && (
+                <Badge size="sm" variant="destructive" className="ms-1.5">{chatUnread}</Badge>
+              )}
+            </Button>
           ))}
         </div>
 

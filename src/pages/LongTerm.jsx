@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import T from '../components/T.jsx';
 
 export default function LongTerm() {
   return (
@@ -8,13 +9,13 @@ export default function LongTerm() {
           <div className="breadcrumbs">
             <Link to="/">Главная</Link><span className="sep">/</span><span>Долгосрочная аренда</span>
           </div>
-          <h1>Премиальное авто <em>в долгосрочную аренду</em></h1>
-          <p style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
+          <T k="longterm.head.title" as="h1" html>Премиальное авто <em>в долгосрочную аренду</em></T>
+          <T k="longterm.head.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
             Подписка AURIX MOTORS от 1 месяца с фиксированным ежемесячным платежом. Свежий автомобиль премиум-класса, полное обслуживание, страховка, сезонная резина и подменное авто — всё включено в один платёж. Меняйте модель, когда захотите, без забот о покупке и содержании.
-          </p>
+          </T>
           <div style={{ display: 'flex', gap: 18, marginTop: 28 }}>
-            <Link to="/catalog" className="btn btn-filled">Подобрать автомобиль</Link>
-            <Link to="/contacts" className="btn">Получить расчёт</Link>
+            <Link to="/catalog" className="btn btn-filled"><T k="longterm.head.cta1">Подобрать автомобиль</T></Link>
+            <Link to="/contacts" className="btn"><T k="longterm.head.cta2">Получить расчёт</T></Link>
           </div>
         </div>
       </div>
@@ -22,8 +23,8 @@ export default function LongTerm() {
       <section>
         <div className="container">
           <div className="section-head">
-            <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Преимущества</span></div>
-            <h2>Почему <em>долгосрочная</em> аренда</h2>
+            <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow"><T k="longterm.benefits.eyebrow">Преимущества</T></span></div>
+            <T k="longterm.benefits.title" as="h2" html>Почему <em>долгосрочная</em> аренда</T>
           </div>
           <div className="services-grid">
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-currency-rub" /></div><h3>Фиксированная цена</h3><p>Один платёж в месяц — никаких сюрпризов. Ставка фиксируется на весь срок договора.</p></div>
