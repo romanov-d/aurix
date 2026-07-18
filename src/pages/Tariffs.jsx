@@ -43,7 +43,7 @@ export default function Tariffs() {
       <div className="page-head">
         <div className="container">
           <div className="breadcrumbs">
-            <Link to="/">Главная</Link><span className="sep">/</span><span>Тарифы</span>
+            <Link to="/"><T k="tariffs.head.crumbHome">Главная</T></Link><span className="sep">/</span><span><T k="tariffs.head.crumbCurrent">Тарифы</T></span>
           </div>
           <T k="tariffs.head.title" as="h1" html>Тарифы <em>и цены</em></T>
           <T k="tariffs.head.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
@@ -57,7 +57,7 @@ export default function Tariffs() {
 
           {loading ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: '#bdbdbd' }}>
-              Загрузка тарифов...
+              <T k="tariffs.state.loading">Загрузка тарифов...</T>
             </div>
           ) : error ? (
             <div style={{ padding: '60px 0', textAlign: 'center', color: '#e74c3c' }}>
@@ -69,15 +69,15 @@ export default function Tariffs() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 860, fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }}>
                 <thead>
                   <tr style={{ background: '#181818' }}>
-                    <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11, minWidth: 200 }}>Автомобиль</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>1–5 дней</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>6–12 дней</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>от 13 дней</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>от 30 дней</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>Залог</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>Пробег/сут</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>Перекат/км</th>
-                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}>Фотосессия/час</th>
+                    <th style={{ textAlign: 'left', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11, minWidth: 200 }}><T k="tariffs.table.colCar">Автомобиль</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.col1_5">1–5 дней</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.col6_12">6–12 дней</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.col13">от 13 дней</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.col30">от 30 дней</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.colDeposit">Залог</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.colMileage">Пробег/сут</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.colOvermileage">Перекат/км</T></th>
+                    <th style={{ textAlign: 'right', padding: '14px 16px', fontWeight: 600, letterSpacing: '.06em', color: '#bdbdbd', textTransform: 'uppercase', fontSize: 11 }}><T k="tariffs.table.colPhoto">Фотосессия/час</T></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -97,7 +97,7 @@ export default function Tariffs() {
                       </td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_per_day)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_6_12)}</td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right', color: '#bdbdbd', fontStyle: 'italic', fontSize: 12 }}>договорная</td>
+                      <td style={{ padding: '14px 16px', textAlign: 'right', color: '#bdbdbd', fontStyle: 'italic', fontSize: 12 }}><T k="tariffs.table.priceNegotiable">договорная</T></td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: 'var(--gold)', fontFamily: "'Inter', sans-serif", fontSize: 14 }}>{price(car.price_30)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{fmt(car.deposit)}</td>
                       <td style={{ padding: '14px 16px', textAlign: 'right', color: '#cfcfcf' }}>{car.mileage_limit} км</td>
@@ -121,7 +121,7 @@ export default function Tariffs() {
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
               <T k="tariffs.notes.photo.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Аренда для фотосессий</T>
               <p style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
-                <T k="tariffs.notes.photo.text">Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО.</T> <Link to="/photo" style={{ color: 'var(--gold)' }}>Подробнее об аренде для фото →</Link>
+                <T k="tariffs.notes.photo.text">Автомобиль можно арендовать для фотосессии или съёмки без пробега. Тариф указан за час. Возможна подача в любое место Москвы и МО.</T> <Link to="/photo" style={{ color: 'var(--gold)' }}><T k="tariffs.notes.photo.link">Подробнее об аренде для фото →</T></Link>
               </p>
             </div>
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>

@@ -47,7 +47,7 @@ export default function Contacts() {
       `}</style>
       <div className="page-head">
         <div className="container">
-          <div className="breadcrumbs"><Link to="/">Главная</Link><span className="sep">/</span><span>Контакты</span></div>
+          <div className="breadcrumbs"><Link to="/"><T k="contacts.hero.crumbHome">Главная</T></Link><span className="sep">/</span><span><T k="contacts.hero.crumbCurrent">Контакты</T></span></div>
           <T k="contacts.hero.title" as="h1" html>Свяжитесь <em>с нами</em></T>
           <T k="contacts.hero.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 540, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>Мы на связи 24/7. Звоните, пишите в мессенджеры или приезжайте в наш шоурум.</T>
         </div>
@@ -81,7 +81,7 @@ export default function Contacts() {
                 
                 {success && (
                   <div style={{ color: '#2ecc71', marginBottom: 18, fontSize: 14, background: 'rgba(46, 204, 113, 0.1)', padding: '12px 16px', borderRadius: 6 }}>
-                    Заявка успешно отправлена! Мы перезвоним вам в течение 5 минут.
+                    <T k="contacts.form.success">Заявка успешно отправлена! Мы перезвоним вам в течение 5 минут.</T>
                   </div>
                 )}
 
@@ -93,28 +93,28 @@ export default function Contacts() {
 
                 <div className="form-row">
                   <div className="field">
-                    <label>Имя</label>
-                    <input 
+                    <label><T k="contacts.form.labelName">Имя</T></label>
+                    <input
                       value={form.name}
                       onChange={handleChange('name')}
-                      placeholder="Иван" 
+                      placeholder="Иван"
                       required
                       disabled={loading}
                     />
                   </div>
                   <div className="field">
-                    <label>Телефон</label>
-                    <input 
+                    <label><T k="contacts.form.labelPhone">Телефон</T></label>
+                    <input
                       value={form.phone}
                       onChange={handleChange('phone')}
-                      placeholder="+7 999 123 45 67" 
+                      placeholder="+7 999 123 45 67"
                       required
                       disabled={loading}
                     />
                   </div>
                 </div>
                 <div className="field" style={{ marginBottom: 18, marginTop: 16 }}>
-                  <label>Какой автомобиль вас интересует</label>
+                  <label><T k="contacts.form.labelCar">Какой автомобиль вас интересует</T></label>
                   <input 
                     value={form.car}
                     onChange={handleChange('car')}
@@ -123,7 +123,7 @@ export default function Contacts() {
                   />
                 </div>
                 <div className="field" style={{ marginBottom: 18 }}>
-                  <label>Сообщение</label>
+                  <label><T k="contacts.form.labelMessage">Сообщение</T></label>
                   <textarea 
                     value={form.message}
                     onChange={handleChange('message')}
@@ -134,7 +134,7 @@ export default function Contacts() {
                 <div className="form-actions" style={{ marginTop: 8 }}>
                   <T k="contacts.form.note" as="p" className="note">Перезвоним в течение 5 минут</T>
                   <button className="btn btn-filled" type="submit" disabled={loading}>
-                    {loading ? 'Отправка...' : <T k="contacts.form.submit">Отправить</T>}
+                    {loading ? <T k="contacts.form.loading">Отправка...</T> : <T k="contacts.form.submit">Отправить</T>}
                   </button>
                 </div>
               </form>

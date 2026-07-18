@@ -81,7 +81,7 @@ export default function Home() {
             <div className="fs-search-bar">
               <div className="fs-seg fs-seg-pick">
                 <i className="ph-fill ph-map-pin" />
-                <span>Москва</span>
+                <T k="home.search.city">Москва</T>
               </div>
               <div className="fs-seg fs-seg-dates" style={{ flex: 1, padding: 0, position: 'relative' }}>
                 <DateRangePicker
@@ -94,7 +94,7 @@ export default function Home() {
               </div>
               <div className="fs-seg fs-seg-brand">
                 <div className="fs-seg-stack">
-                  <span className="fs-seg-lbl">Марка</span>
+                  <T k="home.search.brandLabel" className="fs-seg-lbl">Марка</T>
                   <span className="fs-seg-val">{brand || 'Любая'}</span>
                 </div>
                 <select
@@ -110,7 +110,7 @@ export default function Home() {
                 const p = new URLSearchParams({ from: fromDate, to: toDate });
                 if (brand) p.set('brand', brand);
                 nav(`/catalog?${p.toString()}`);
-              }}>Показать авто</button>
+              }}><T k="home.search.cta">Показать авто</T></button>
             </div>
           </div>
 
@@ -123,11 +123,11 @@ export default function Home() {
                 ['ph-bell', 'Консьерж-сервис', 'Персональный менеджер на весь период аренды'],
                 ['ph-airplane-tilt', 'Аэропорты и отели', 'Подача в любую точку Москвы и МО'],
                 ['ph-diamond', 'Клуб привилегий', 'Доступ к закрытым мероприятиям и бонусам'],
-              ].map(([ico, title, desc]) => (
+              ].map(([ico, title, desc], i) => (
                 <div className="fs-perk" key={title}>
                   <i className={`ph-fill ${ico}`} />
-                  <div className="fs-perk-title">{title}</div>
-                  <div className="fs-perk-desc">{desc}</div>
+                  <T k={`home.perks.item${i}title`} className="fs-perk-title">{title}</T>
+                  <T k={`home.perks.item${i}desc`} className="fs-perk-desc">{desc}</T>
                 </div>
               ))}
             </div>
@@ -138,7 +138,7 @@ export default function Home() {
           <div className="fs-cats">
             <div className="fs-cats-head">
               <T k="home.categories.title" as="h2">Категории автопарка</T>
-              <Link to="/catalog" className="fs-cats-all">Смотреть весь автопарк →</Link>
+              <Link to="/catalog" className="fs-cats-all"><T k="home.categories.allLink">Смотреть весь автопарк →</T></Link>
             </div>
             <div className="fs-cats-grid">
               {[
@@ -147,13 +147,13 @@ export default function Home() {
                 ['cabrio', 'Кабриолеты', 'Кабриолет', 16000],
                 ['roadster', 'Купе/Кабриолеты', 'Купе/Кабриолет', 14000],
                 ['sedan', 'Седаны', 'Седан', 10000],
-              ].map(([kind, name, body, price]) => (
+              ].map(([kind, name, body, price], i) => (
                 <Link key={name} to={`/catalog?body=${encodeURIComponent(body)}`} className="fs-cat">
                   <CarIcon kind={kind} />
                   <div className="fs-cat-shade" />
                   <div className="fs-cat-top">
                     <div>
-                      <div className="fs-cat-name">{name}</div>
+                      <T k={`home.categories.item${i}`} className="fs-cat-name">{name}</T>
                       <div className="fs-cat-price">от {price.toLocaleString('ru-RU')} ₽/сутки</div>
                     </div>
                     <i className="ph ph-arrow-right" />
@@ -187,7 +187,7 @@ export default function Home() {
         <div className="exp-wrap">
           <div className="exp-head">
             <T k="home.experience.title" as="h2" className="exp-title" html>Мы создаём опыт,<br />который запоминается</T>
-            <p className="exp-lead">AURIX MOTORS — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</p>
+            <T k="home.experience.lead" as="p" className="exp-lead">AURIX MOTORS — это не просто аренда авто. Это стиль жизни, свобода и эмоции за рулём лучших автомобилей мира.</T>
           </div>
           <div className="exp-photos">
             {/* Локальные фото из парка — внешний CDN (Unsplash) режется в РФ и не грузится */}
@@ -202,7 +202,7 @@ export default function Home() {
         <div className="sp-wrap">
           <div className="sp-head">
             <T k="home.fleet.title" as="h2">Наш автопарк</T>
-            <Link to="/catalog" className="sp-all">Смотреть все</Link>
+            <Link to="/catalog" className="sp-all"><T k="home.fleet.allLink">Смотреть все</T></Link>
           </div>
           <div className="catalog-grid" style={{ marginTop: 24 }}>
             {specials.map(c => <CarCard key={c.id} car={c} />)}
@@ -214,7 +214,7 @@ export default function Home() {
                 style={{ padding: '14px 48px', fontSize: 15 }}
                 onClick={() => setVisibleCount(v => v + 6)}
               >
-                Ещё авто
+                <T k="home.fleet.moreBtn">Ещё авто</T>
               </button>
             </div>
           )}
@@ -225,15 +225,15 @@ export default function Home() {
         <div className="rv2-inner">
           <div className="trust-heading" style={{ paddingBottom: 0 }}>
             <h2 className="trust-h">
-              Что говорят
+              <T k="home.reviews.headBefore">Что говорят</T>
               <span className="rph-wrap">
                 <span className="rph-car">
                   <img src="/cars/ferrari_f8_hero.webp" alt="" />
                 </span>
               </span>
-              о нас
+              <T k="home.reviews.headAfter">о нас</T>
             </h2>
-            <h2 className="trust-h trust-h-muted">тысячи клиентов</h2>
+            <T k="home.reviews.headMuted" as="h2" className="trust-h trust-h-muted">тысячи клиентов</T>
           </div>
           {isMobileRv ? (
             <div className="rv-mob">
@@ -266,13 +266,13 @@ export default function Home() {
           <div className="sub-banner-left">
             <div className="sub-mark">
               <img src="/letter.svg" alt="A" className="sub-mark-letter" />
-              <span className="sub-mark-text">АРЕНДА</span>
+              <T k="home.subscribe.mark" className="sub-mark-text">АРЕНДА</T>
             </div>
             <div className="sub-banner-text">
-              <h3>Хотите арендовать дольше?</h3>
-              <p>Оформите подписку AURIX+ на длительный период.</p>
+              <T k="home.subscribe.title" as="h3">Хотите арендовать дольше?</T>
+              <T k="home.subscribe.subtitle" as="p">Оформите подписку AURIX+ на длительный период.</T>
             </div>
-            <Link to="/long-term" className="sub-banner-cta">Подобрать подписку</Link>
+            <Link to="/long-term" className="sub-banner-cta"><T k="home.subscribe.cta">Подобрать подписку</T></Link>
           </div>
           <div className="sub-banner-right">
             <img src="/cars/lexus_lx_hero.webp" alt="Lexus LX" className="sub-banner-car" />
@@ -288,15 +288,15 @@ export default function Home() {
           <div className="pt-photo pt-photo-2">
             <img src="https://images.unsplash.com/photo-1611821064430-0d40291d0f0b?w=1200&auto=format&fit=crop&q=80" alt="" />
             <div className="pt-photo-caption">
-              <div className="pt-photo-caption-acc">Удобное решение для вашего комфорта</div>
-              <div className="pt-photo-caption-main">Зарабатывайте больше. Без усилий.</div>
+              <T k="home.partner.captionAcc" className="pt-photo-caption-acc">Удобное решение для вашего комфорта</T>
+              <T k="home.partner.captionMain" className="pt-photo-caption-main">Зарабатывайте больше. Без усилий.</T>
             </div>
           </div>
           <div className="pt-panel">
             <img src="/letter.svg" alt="A" className="pt-mark-letter" />
             <T k="home.partner.title" as="h2" className="pt-title" html><span className="pt-title-accent">Сдаёте</span> авто<br />в аренду?</T>
-            <p className="pt-desc">Покажите свой автопарк премиум-клиентам. Получайте брони. Полный контроль.</p>
-            <Link to="/rent-out" className="pt-cta">Разместить авто</Link>
+            <T k="home.partner.desc" as="p" className="pt-desc">Покажите свой автопарк премиум-клиентам. Получайте брони. Полный контроль.</T>
+            <Link to="/rent-out" className="pt-cta"><T k="home.partner.cta">Разместить авто</T></Link>
           </div>
         </div>
       </section>
@@ -306,22 +306,22 @@ export default function Home() {
         <div className="dl-grid">
           <div className="dl-left">
             <T k="home.delivery.title" as="h2" className="dl-title" html>Доставка и получение<br/>автомобиля</T>
-            <p className="dl-lead">AURIX MOTORS предлагает гибкие варианты получения и доставки авто, чтобы подстроиться под ваш график. Заберите авто в офисе или закажите доставку — быстро, удобно, по всей Москве.</p>
+            <T k="home.delivery.lead" as="p" className="dl-lead">AURIX MOTORS предлагает гибкие варианты получения и доставки авто, чтобы подстроиться под ваш график. Заберите авто в офисе или закажите доставку — быстро, удобно, по всей Москве.</T>
             <div className="dl-cards">
               <div className="dl-card">
                 <div className="dl-card-ico"><i className="ph-fill ph-storefront" /></div>
                 <div>
-                  <h4>Получение в офисе</h4>
-                  <p>Приезжайте в наш офис и заберите авто сами. Команда подготовит машину к вашему приезду — никаких ожиданий.</p>
+                  <T k="home.delivery.card1title" as="h4">Получение в офисе</T>
+                  <T k="home.delivery.card1text" as="p">Приезжайте в наш офис и заберите авто сами. Команда подготовит машину к вашему приезду — никаких ожиданий.</T>
                 </div>
               </div>
               <div className="dl-card">
                 <div className="dl-card-ico"><i className="ph-fill ph-truck" /></div>
                 <div>
-                  <h4>Доставка</h4>
+                  <T k="home.delivery.card2title" as="h4">Доставка</T>
                   <ul className="dl-list">
-                    <li><strong>Бесплатная доставка по Москве.</strong> Доставим выбранный авто в любую точку города — отель, дом, офис — 24/7, без доплат.</li>
-                    <li><strong>Доставка по области.</strong> Подача в Подмосковье и соседние регионы. Стоимость зависит от расстояния, но скорость и качество — на уровне.</li>
+                    <T k="home.delivery.card2li1" as="li" html><strong>Бесплатная доставка по Москве.</strong> Доставим выбранный авто в любую точку города — отель, дом, офис — 24/7, без доплат.</T>
+                    <T k="home.delivery.card2li2" as="li" html><strong>Доставка по области.</strong> Подача в Подмосковье и соседние регионы. Стоимость зависит от расстояния, но скорость и качество — на уровне.</T>
                   </ul>
                 </div>
               </div>
@@ -338,9 +338,9 @@ export default function Home() {
             <div className="dl-pin">
               <div className="dl-pin-ico"><i className="ph-fill ph-buildings" /></div>
               <div className="dl-pin-info">
-                <div className="dl-pin-title">Наш офис</div>
-                <div className="dl-pin-line">Москва, Олимпийский проспект, 12</div>
-                <div className="dl-pin-line">Работаем 24/7</div>
+                <T k="home.delivery.pinTitle" className="dl-pin-title">Наш офис</T>
+                <T k="home.delivery.pinAddr" className="dl-pin-line">Москва, Олимпийский проспект, 12</T>
+                <T k="home.delivery.pinHours" className="dl-pin-line">Работаем 24/7</T>
               </div>
             </div>
           </div>
@@ -353,26 +353,26 @@ export default function Home() {
           <div className="why-grid">
             <div className="why-card why-yellow">
               <div className="why-num">01</div>
-              <h4>Полная страховка</h4>
-              <p>В стоимость включены КАСКО и ОСАГО. При ДТП не по вашей вине — <strong>ответственность 0 ₽</strong>. Никаких скрытых доплат.</p>
+              <T k="home.why.card1title" as="h4">Полная страховка</T>
+              <T k="home.why.card1text" as="p" html>В стоимость включены КАСКО и ОСАГО. При ДТП не по вашей вине — <strong>ответственность 0 ₽</strong>. Никаких скрытых доплат.</T>
             </div>
             <div className="why-card why-dark why-tall">
               <div className="why-num">02</div>
-              <h4>Доставка 24/7</h4>
-              <p>Нужен авто в аэропорт в 2 ночи или в отель в полдень? Доставим в любое время, в любую точку Москвы.</p>
+              <T k="home.why.card2title" as="h4">Доставка 24/7</T>
+              <T k="home.why.card2text" as="p">Нужен авто в аэропорт в 2 ночи или в отель в полдень? Доставим в любое время, в любую точку Москвы.</T>
             </div>
             <div className="why-photo">
               <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=1200&auto=format&fit=crop&q=80" alt="" />
             </div>
             <div className="why-card why-dark">
               <div className="why-num">03</div>
-              <h4>Новые автомобили<br/>со всеми опциями</h4>
-              <p>Весь автопарк — новые модели с минимальным пробегом и полной комплектацией. Комфорт, стиль и динамика в каждой поездке.</p>
+              <T k="home.why.card3title" as="h4" html>Новые автомобили<br/>со всеми опциями</T>
+              <T k="home.why.card3text" as="p">Весь автопарк — новые модели с минимальным пробегом и полной комплектацией. Комфорт, стиль и динамика в каждой поездке.</T>
             </div>
             <div className="why-card why-yellow">
               <div className="why-num">04</div>
-              <h4>Прозрачные цены<br/>и полная страховка</h4>
-              <p>Никаких скрытых платежей. Чёткая цена и страхование в каждой аренде — сосредоточьтесь на дороге, а не на деталях.</p>
+              <T k="home.why.card4title" as="h4" html>Прозрачные цены<br/>и полная страховка</T>
+              <T k="home.why.card4text" as="p">Никаких скрытых платежей. Чёткая цена и страхование в каждой аренде — сосредоточьтесь на дороге, а не на деталях.</T>
             </div>
           </div>
         </div>
@@ -407,7 +407,7 @@ function Faq() {
       <div className="faq-wrap">
         <div className="faq-left">
           <T k="home.faq.title" as="h2" html>Часто задаваемые<br/>вопросы</T>
-          <p>Собрали ответы на самые популярные вопросы об аренде премиум-авто в AURIX MOTORS, чтобы вы могли спокойно планировать поездку без сомнений.</p>
+          <T k="home.faq.lead" as="p">Собрали ответы на самые популярные вопросы об аренде премиум-авто в AURIX MOTORS, чтобы вы могли спокойно планировать поездку без сомнений.</T>
         </div>
         <div className="faq-right">
           {items.map((item, i) => (

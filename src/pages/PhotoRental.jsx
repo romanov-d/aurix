@@ -23,7 +23,7 @@ export default function PhotoRental() {
       <div className="page-head">
         <div className="container">
           <div className="breadcrumbs">
-            <Link to="/">Главная</Link><span className="sep">/</span><span>Аренда для фото</span>
+            <Link to="/"><T k="photo.crumb.home">Главная</T></Link><span className="sep">/</span><T k="photo.crumb.current" as="span">Аренда для фото</T>
           </div>
           <T k="photo.hero.title" as="h1" html>Аренда авто <em>для фотосессий</em></T>
           <T k="photo.hero.lead" as="p" style={{ color: '#bdbdbd', maxWidth: 640, marginTop: 18, fontSize: 15, lineHeight: 1.7 }}>
@@ -51,14 +51,14 @@ export default function PhotoRental() {
           </div>
 
           <div className="section-head">
-            <div className="row-eyebrow"><span className="bar"></span><span className="eyebrow">Тарифы</span></div>
-            <h2>Стоимость <em>за час</em></h2>
+            <div className="row-eyebrow"><span className="bar"></span><T k="photo.rates.eyebrow" as="span" className="eyebrow">Тарифы</T></div>
+            <T k="photo.rates.title" as="h2" html>Стоимость <em>за час</em></T>
           </div>
 
           {loading ? (
-            <div style={{ padding: '40px 0', textAlign: 'center', color: '#bdbdbd' }}>Загрузка…</div>
+            <T k="photo.rates.loading" as="div" style={{ padding: '40px 0', textAlign: 'center', color: '#bdbdbd' }}>Загрузка…</T>
           ) : cars.length === 0 ? (
-            <p style={{ color: '#bdbdbd' }}>Тарифы уточняйте у менеджера — <Link to="/contacts" style={{ color: 'var(--gold)' }}>свяжитесь с нами</Link>.</p>
+            <p style={{ color: '#bdbdbd' }}><T k="photo.rates.emptyPre">Тарифы уточняйте у менеджера — </T><Link to="/contacts" style={{ color: 'var(--gold)' }}><T k="photo.rates.emptyLink">свяжитесь с нами</T></Link><T k="photo.rates.emptyPost">.</T></p>
           ) : (
             <div className="catalog-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {cars.map(car => (
@@ -73,7 +73,7 @@ export default function PhotoRental() {
                       {car.body && <span className="meta-chip">{car.body}</span>}
                     </div>
                     <div className="card-price">
-                      <span className="from">фотосессия · час</span>
+                      <T k="photo.card.priceLabel" as="span" className="from">фотосессия · час</T>
                       <span className="val">{fmt(car.photo_rate)}</span>
                     </div>
                   </div>
@@ -83,17 +83,17 @@ export default function PhotoRental() {
           )}
 
           <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14, marginTop: 40 }}>
-            <h3 style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Условия</h3>
+            <T k="photo.terms.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Условия</T>
             <ul style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 2, fontFamily: "'Inter', sans-serif", paddingLeft: 18, margin: 0 }}>
-              <li>Тариф действует для статичной съёмки без пробега; поездки в кадре — по договорённости.</li>
-              <li>Подача и возврат по Москве оплачиваются отдельно в зависимости от адреса.</li>
-              <li>Залог обязателен и возвращается сразу после завершения съёмки.</li>
-              <li>Бронь подтверждает менеджер — <Link to="/contacts" style={{ color: 'var(--gold)' }}>напишите нам</Link> или оставьте заявку на странице авто.</li>
+              <T k="photo.terms.item1" as="li">Тариф действует для статичной съёмки без пробега; поездки в кадре — по договорённости.</T>
+              <T k="photo.terms.item2" as="li">Подача и возврат по Москве оплачиваются отдельно в зависимости от адреса.</T>
+              <T k="photo.terms.item3" as="li">Залог обязателен и возвращается сразу после завершения съёмки.</T>
+              <li><T k="photo.terms.item4Pre">Бронь подтверждает менеджер — </T><Link to="/contacts" style={{ color: 'var(--gold)' }}><T k="photo.terms.item4Link">напишите нам</T></Link><T k="photo.terms.item4Post"> или оставьте заявку на странице авто.</T></li>
             </ul>
           </div>
 
           <div style={{ marginTop: 40, textAlign: 'center' }}>
-            <Link to="/contacts" className="btn btn-filled">Забронировать съёмку</Link>
+            <Link to="/contacts" className="btn btn-filled"><T k="photo.cta.book">Забронировать съёмку</T></Link>
           </div>
         </div>
       </section>
