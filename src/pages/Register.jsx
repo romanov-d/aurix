@@ -7,6 +7,7 @@ export default function Register() {
   const { register, verifyEmailCode, resendEmailCode } = useAuth();
   const nav = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
+  const [consent, setConsent] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form'); // 'form' | 'code'
@@ -20,6 +21,7 @@ export default function Register() {
     if (!form.phone.trim()) return setError('Укажите телефон');
     if (form.password.length < 6) return setError('Пароль минимум 6 символов');
     if (form.password !== form.confirm) return setError('Пароли не совпадают');
+    if (!consent) return setError('Необходимо согласие на обработку персональных данных');
     setSubmitting(true);
     try {
       const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
@@ -97,6 +99,10 @@ export default function Register() {
               <label>
                 <span>Повторите пароль</span>
                 <input type="password" value={form.confirm} onChange={set('confirm')} required />
+              </label>
+              <label className="auth-consent">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <span>Я согласен на <Link to="/privacy" target="_blank">обработку персональных данных</Link> и принимаю <Link to="/terms" target="_blank">условия</Link>.</span>
               </label>
               {error && <div className="auth-error">{error}</div>}
               <button className="auth-cta" type="submit" disabled={submitting}>

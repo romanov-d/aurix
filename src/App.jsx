@@ -12,6 +12,7 @@ const LongTerm = lazy(() => import('./pages/LongTerm.jsx'));
 const Club = lazy(() => import('./pages/Club.jsx'));
 const Terms = lazy(() => import('./pages/Terms.jsx'));
 const Privacy = lazy(() => import('./pages/Privacy.jsx'));
+const Requisites = lazy(() => import('./pages/Requisites.jsx'));
 const Blog = lazy(() => import('./pages/Blog.jsx'));
 const BlogPost = lazy(() => import('./pages/BlogPost.jsx'));
 const Contacts = lazy(() => import('./pages/Contacts.jsx'));
@@ -84,6 +85,7 @@ export default function App() {
         <Route path="/club" element={<Club />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/requisites" element={<Requisites />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
         <Route path="/contacts" element={<Contacts />} />

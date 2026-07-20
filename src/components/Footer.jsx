@@ -41,6 +41,7 @@ export default function Footer() {
             <ul>
               <li><Link to="/terms">Условия и положения</Link></li>
               <li><Link to="/privacy">Политика конфиденциальности</Link></li>
+              <li><Link to="/requisites">Реквизиты</Link></li>
               <li><Link to="/blog">Блог</Link></li>
             </ul>
           </div>

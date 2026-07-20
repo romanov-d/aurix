@@ -1437,6 +1437,10 @@ html{scroll-behavior:smooth}
 .auth-cta{margin-top:8px;background:var(--gold);color:var(--bg-1);border:0;padding:14px;border-radius:10px;font-size:14px;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s}
 .auth-cta:hover:not(:disabled){background:var(--gold-soft)}
 .auth-cta:disabled{opacity:.6;cursor:wait}
+.auth-consent{flex-direction:row!important;align-items:flex-start;gap:10px!important;font-size:12.5px!important;color:#9a9a9a!important;line-height:1.5}
+.auth-consent input{width:16px;height:16px;margin-top:1px;flex-shrink:0;accent-color:var(--gold)}
+.auth-consent a{color:var(--gold)}
+.auth-consent a:hover{text-decoration:underline}
 .auth-foot{margin-top:18px;text-align:center;font-size:13px;color:#9a9a9a}
 .auth-foot a{color:var(--gold);font-weight:500}
 .auth-foot a:hover{text-decoration:underline}
@@ -2173,4 +2177,20 @@ html{scroll-behavior:smooth}
   .admin-chat-list{max-height:280px}
   .admin-chat-main{min-height:440px}
   .chatbox{height:440px}
+}
+
+/* ── Карточка предприятия (реквизиты) — в дизайне сайта (тёмные карточки + золото) ── */
+.req-wrap{display:flex;flex-direction:column;gap:20px}
+.req-block{background:#101010;border:1px solid #1e1e1e;border-radius:14px;padding:28px 32px}
+.req-block-title{font-family:'Inter',sans-serif;color:var(--gold);font-size:13px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;margin:0 0 18px;display:flex;align-items:center;gap:12px}
+.req-block-title::before{content:'';width:22px;height:2px;background:var(--gold);display:inline-block}
+.req-block-rows{display:flex;flex-direction:column}
+.req-row{display:grid;grid-template-columns:minmax(220px,320px) 1fr;gap:24px;padding:14px 0;align-items:baseline;border-bottom:1px solid #191919}
+.req-row:last-child{border-bottom:0;padding-bottom:0}
+.req-row:first-child{padding-top:0}
+.req-key{color:#9a9a9a;font-size:13px;letter-spacing:.02em}
+.req-val{color:#fff;font-size:15px;font-family:'Inter',sans-serif;word-break:break-word}
+@media(max-width:640px){
+  .req-block{padding:22px 20px}
+  .req-row{grid-template-columns:1fr;gap:4px}
 }
