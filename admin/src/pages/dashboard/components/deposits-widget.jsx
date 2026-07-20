@@ -1,44 +1,49 @@
 'use client';
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardHeading, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { api } from '@/lib/aurix-api';
 import { useDashboardData } from '../dashboard-data';
 
 const fmtFull = (v) => (Number(v) || 0).toLocaleString('ru-RU') + ' ₽';
 
-const fmtDate = (iso) => {
-  if (!iso) return 'Без даты';
-  const d = new Date(iso);
-  if (isNaN(d)) return 'Без даты';
-  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
-};
-
-// Плашка «Залог на руках» + календарь запланированных возвратов залога клиентам.
-// Клик по дате раскрывает список: кому, сколько, по какой машине.
+// «Залог на руках» = собрано − возвращено − удержано(из залога), по всем машинам.
+// Ниже — список броней с реальным остатком к возврату (авто, без ручных «плановых
+// возвратов»). Клик по строке открывает бронь; «Выдал» отдаёт остаток одним кликом.
 export function DepositsWidget() {
   const d = useDashboardData();
-  const onHand = Number(d.deposits_on_hand || 0);
-  const returns = d.deposit_returns || [];
-  const [openDate, setOpenDate] = useState(null);
+  const nav = useNavigate();
+  const pending = d.deposit_pending || [];
+  const [returnedIds, setReturnedIds] = useState(() => new Set()); // выдано в этой сессии
+  const [busyId, setBusyId] = useState(null);
+  const [error, setError] = useState('');
 
-  // Группируем возвраты по дате
-  const groups = [];
-  const byDate = new Map();
-  for (const r of returns) {
-    const key = r.due_date ? String(r.due_date).slice(0, 10) : '';
-    if (!byDate.has(key)) {
-      const g = { key, items: [], total: 0, overdue: false };
-      byDate.set(key, g);
-      groups.push(g);
+  // Выданное в этой сессии убираем из списка и вычитаем из «на руках».
+  const rows = pending.filter((r) => !returnedIds.has(r.booking_id));
+  const returnedSum = pending
+    .filter((r) => returnedIds.has(r.booking_id))
+    .reduce((s, r) => s + Number(r.remaining || 0), 0);
+  const onHand = Math.max(0, Number(d.deposits_on_hand || 0) - returnedSum);
+  const pendingTotal = rows.reduce((s, r) => s + Number(r.remaining || 0), 0);
+
+  const openBooking = (id) => nav(`/bookings?open=${id}`);
+
+  async function issue(r, e) {
+    e.stopPropagation();
+    if (busyId) return;
+    setBusyId(r.booking_id);
+    setError('');
+    try {
+      await api.post(`/admin/bookings/${r.booking_id}/return-remaining`);
+      setReturnedIds((prev) => new Set(prev).add(r.booking_id));
+    } catch (e) {
+      setError(e?.message || 'Не удалось отметить выдачу');
+    } finally {
+      setBusyId(null);
     }
-    const g = byDate.get(key);
-    g.items.push(r);
-    g.total += Number(r.amount || 0);
-    if (r.overdue) g.overdue = true;
   }
-
-  const plannedTotal = returns.reduce((s, r) => s + Number(r.amount || 0), 0);
 
   return (
     <Card>
@@ -55,52 +60,48 @@ export function DepositsWidget() {
 
         <div className="border-t border-border pt-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm font-medium text-mono">Календарь возвратов залога</div>
-            {plannedTotal > 0 && (
-              <span className="text-sm text-muted-foreground">к возврату {fmtFull(plannedTotal)}</span>
+            <div className="text-sm font-medium text-mono">К возврату клиентам</div>
+            {pendingTotal > 0 && (
+              <span className="text-sm text-muted-foreground">{fmtFull(pendingTotal)}</span>
             )}
           </div>
 
-          {groups.length === 0 ? (
-            <div className="text-sm text-muted-foreground">Запланированных возвратов нет</div>
+          {error && <div className="text-sm text-destructive mb-2">{error}</div>}
+
+          {rows.length === 0 ? (
+            <div className="text-sm text-muted-foreground">Нет залогов к возврату</div>
           ) : (
             <div className="flex flex-col gap-1.5">
-              {groups.map((g) => {
-                const open = openDate === g.key;
-                return (
-                  <div key={g.key || 'none'} className="rounded-md border border-border overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => setOpenDate(open ? null : g.key)}
-                      className="w-full flex items-center justify-between gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors"
-                    >
-                      <span className="flex items-center gap-2">
-                        <span className="text-sm text-mono">{fmtDate(g.key)}</span>
-                        {g.overdue && <Badge size="sm" variant="destructive" appearance="light">просрочено</Badge>}
-                        <span className="text-xs text-muted-foreground">· {g.items.length}</span>
-                      </span>
-                      <span className="text-sm font-medium text-primary whitespace-nowrap">{fmtFull(g.total)}</span>
-                    </button>
-                    {open && (
-                      <div className="border-t border-border divide-y divide-border">
-                        {g.items.map((r) => (
-                          <div key={r.id} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-                            <div className="min-w-0">
-                              <div className="text-mono truncate">{r.client_name || 'Клиент'}</div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {[r.brand, r.car_name].filter(Boolean).join(' ')}
-                                {r.client_phone ? ` · ${r.client_phone}` : ''}
-                                {r.note ? ` · ${r.note}` : ''}
-                              </div>
-                            </div>
-                            <div className="text-mono whitespace-nowrap">{fmtFull(r.amount)}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              {rows.map((r) => (
+                <div
+                  key={r.booking_id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openBooking(r.booking_id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') openBooking(r.booking_id); }}
+                  className="rounded-md border border-border px-3 py-2.5 flex items-center justify-between gap-3 cursor-pointer hover:bg-muted/50 transition-colors"
+                >
+                  <div className="min-w-0">
+                    <div className="text-sm text-mono truncate">{r.client_name || 'Клиент'}</div>
+                    <div className="text-xs text-muted-foreground truncate">
+                      {[r.brand, r.car_name].filter(Boolean).join(' ')}
+                      {r.client_phone ? ` · ${r.client_phone}` : ''}
+                      {Number(r.held) > 0 ? ` · удержано ${fmtFull(r.held)}` : ''}
+                    </div>
                   </div>
-                );
-              })}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-sm font-medium text-primary whitespace-nowrap">{fmtFull(r.remaining)}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busyId === r.booking_id}
+                      onClick={(e) => issue(r, e)}
+                    >
+                      {busyId === r.booking_id ? 'Выдаю…' : 'Выдал'}
+                    </Button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

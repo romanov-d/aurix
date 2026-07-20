@@ -123,21 +123,36 @@ router.get('/dashboard', async (req, res, next) => {
         AND b.to_dt >= CURRENT_DATE
         AND b.from_dt <= CURRENT_DATE + INTERVAL '14 days'
       ORDER BY b.from_dt`),
-      // Залог «на руках»: собранные, но ещё не возвращённые депозиты по всем машинам.
-      one(`SELECT COALESCE(SUM(deposit_amount - deposit_returned), 0) AS total
-        FROM bookings
-        WHERE status <> 'cancelled' AND deposit_amount > deposit_returned`),
-      // Календарь возвратов залога: запланированные возвраты клиентам (когда/сколько/кому).
-      many(`SELECT m.id, m.booking_id, m.amount, m.due_date, m.note, m.status,
+      // Залог «на руках»: собрано − возвращено клиенту − удержано из залога (штрафы).
+      // По каждой брони пол в 0, чтобы штраф больше залога не уводил сумму в минус.
+      one(`SELECT COALESCE(SUM(GREATEST(0, b.deposit_amount - b.deposit_returned - COALESCE(ch.held, 0))), 0) AS total
+        FROM bookings b
+        LEFT JOIN (
+          SELECT booking_id, SUM(amount) AS held
+          FROM rental_charges WHERE from_deposit = true
+          GROUP BY booking_id
+        ) ch ON ch.booking_id = b.id
+        WHERE b.status <> 'cancelled'`),
+      // К возврату по каждой брони — реальный остаток (залог − возвращено − удержано
+      // из залога), а не стопка ручных «плановых возвратов». Клик по строке (в UI)
+      // открывает бронь. Только брони с ненулевым остатком.
+      many(`SELECT b.id AS booking_id,
+        b.deposit_amount, b.deposit_returned,
+        COALESCE(ch.held, 0) AS held,
+        (b.deposit_amount - b.deposit_returned - COALESCE(ch.held, 0)) AS remaining,
         u.name AS client_name, u.phone AS client_phone,
-        c.name AS car_name, c.brand,
-        (m.due_date IS NOT NULL AND m.due_date < CURRENT_DATE) AS overdue
-      FROM deposit_movements m
-      JOIN bookings b ON b.id = m.booking_id
+        c.name AS car_name, c.brand
+      FROM bookings b
       JOIN users u ON u.id = b.user_id
       JOIN cars c ON c.id = b.car_id
-      WHERE m.kind = 'return' AND m.status = 'planned'
-      ORDER BY m.due_date NULLS LAST, m.id`)
+      LEFT JOIN (
+        SELECT booking_id, SUM(amount) AS held
+        FROM rental_charges WHERE from_deposit = true
+        GROUP BY booking_id
+      ) ch ON ch.booking_id = b.id
+      WHERE b.status <> 'cancelled'
+        AND (b.deposit_amount - b.deposit_returned - COALESCE(ch.held, 0)) > 0
+      ORDER BY b.created_at DESC`)
     ]);
 
     res.json({
@@ -156,7 +171,7 @@ router.get('/dashboard', async (req, res, next) => {
       revenue_by_month: revenueByMonth,
       calendar: calendar,
       deposits_on_hand: Number(depositsOnHand?.total || 0),
-      deposit_returns: depositReturns,
+      deposit_pending: depositReturns,
     });
   } catch (e) {
     next(e);
@@ -196,6 +211,21 @@ const patchBookingSchema = z.object({
   deposit_status: z.enum(['held', 'partial', 'returned']).optional().nullable(),
 });
 
+// Авто-статус залога по числам брони: возвращено + удержано(из залога) vs залог.
+// Единый источник правды — менеджеру не нужно выставлять статус руками.
+async function recomputeDepositStatus(bookingId) {
+  const b = await one(`SELECT deposit_amount, deposit_returned FROM bookings WHERE id = $1`, [bookingId]);
+  if (!b) return;
+  const held = await one(
+    `SELECT COALESCE(SUM(amount), 0) AS s FROM rental_charges WHERE booking_id = $1 AND from_deposit = true`,
+    [bookingId]);
+  const amount = Number(b.deposit_amount) || 0;
+  const settled = (Number(b.deposit_returned) || 0) + (Number(held?.s) || 0);
+  let status = null;
+  if (amount > 0) status = settled >= amount ? 'returned' : settled > 0 ? 'partial' : 'held';
+  await q(`UPDATE bookings SET deposit_status = $1 WHERE id = $2`, [status, bookingId]);
+}
+
 // Детали брони + удержания (для карточки брони, Блок 1)
 router.get('/bookings/:id', async (req, res, next) => {
   try {
@@ -206,7 +236,7 @@ router.get('/bookings/:id', async (req, res, next) => {
        WHERE b.id = $1`, [req.params.id]);
     if (!booking) return res.status(404).json({ error: 'Бронь не найдена' });
     const charges = await many(
-      `SELECT id, type, amount, note, photo_url, created_at FROM rental_charges WHERE booking_id = $1 ORDER BY created_at DESC`,
+      `SELECT id, type, amount, note, photo_url, from_deposit, created_at FROM rental_charges WHERE booking_id = $1 ORDER BY created_at DESC`,
       [req.params.id]);
     const movements = await many(
       `SELECT id, kind, amount, note, to_char(due_date, 'YYYY-MM-DD') AS due_date, status, done_at, created_at
@@ -222,14 +252,17 @@ const chargeSchema = z.object({
   amount: z.coerce.number().int(),
   note: z.string().max(500).optional().nullable(),
   photo_url: z.string().optional().nullable(),
+  from_deposit: z.coerce.boolean().optional(),
 });
 router.post('/bookings/:id/charges', async (req, res, next) => {
   try {
     const body = chargeSchema.parse(req.body);
+    const fromDeposit = body.from_deposit === undefined ? true : body.from_deposit;
     const { rows } = await q(
-      `INSERT INTO rental_charges (booking_id, type, amount, note, photo_url, created_by)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING id, type, amount, note, photo_url, created_at`,
-      [req.params.id, body.type || null, body.amount, body.note || null, body.photo_url || null, req.user.id]);
+      `INSERT INTO rental_charges (booking_id, type, amount, note, photo_url, from_deposit, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, type, amount, note, photo_url, from_deposit, created_at`,
+      [req.params.id, body.type || null, body.amount, body.note || null, body.photo_url || null, fromDeposit, req.user.id]);
+    await recomputeDepositStatus(req.params.id);
     logAudit(req, 'booking', req.params.id, 'charge_add', { type: body.type, amount: body.amount });
     res.status(201).json(rows[0]);
   } catch (e) {
@@ -240,6 +273,7 @@ router.post('/bookings/:id/charges', async (req, res, next) => {
 router.delete('/bookings/:id/charges/:chargeId', async (req, res, next) => {
   try {
     await q(`DELETE FROM rental_charges WHERE id = $1 AND booking_id = $2`, [req.params.chargeId, req.params.id]);
+    await recomputeDepositStatus(req.params.id);
     logAudit(req, 'booking', req.params.id, 'charge_del', { charge_id: req.params.chargeId });
     res.json({ ok: true });
   } catch (e) { next(e); }
@@ -272,12 +306,34 @@ router.post('/bookings/:id/movements', async (req, res, next) => {
 router.patch('/bookings/:id/movements/:mvId', async (req, res, next) => {
   try {
     const status = z.enum(['planned', 'done']).parse(req.body.status);
+    // Текущее состояние движения — чтобы не задваивать списание при повторной отметке.
+    const prev = await one(
+      `SELECT kind, amount, status FROM deposit_movements WHERE id = $1 AND booking_id = $2`,
+      [req.params.mvId, req.params.id]);
+    if (!prev) return res.status(404).json({ error: 'Не найдено' });
+
     const { rows } = await q(
       `UPDATE deposit_movements SET status = $1, done_at = $2
        WHERE id = $3 AND booking_id = $4
        RETURNING id, kind, amount, note, to_char(due_date, 'YYYY-MM-DD') AS due_date, status, done_at, created_at`,
       [status, status === 'done' ? new Date() : null, req.params.mvId, req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: 'Не найдено' });
+
+    // Возврат залога, отмеченный «выдан» (done) → списываем сумму с залога брони:
+    // deposit_returned растёт, «на руках» уменьшается. Откат done→planned возвращает
+    // сумму обратно. Удержания (kind='hold') на залог брони не влияют.
+    if (prev.kind === 'return' && prev.status !== status) {
+      const bk = await one(`SELECT deposit_amount, deposit_returned FROM bookings WHERE id = $1`, [req.params.id]);
+      if (bk) {
+        const amount = Number(prev.amount) || 0;
+        const delta = status === 'done' ? amount : -amount;
+        const total = Number(bk.deposit_amount) || 0;
+        const returned = Math.max(0, Math.min(total, (Number(bk.deposit_returned) || 0) + delta));
+        await q(`UPDATE bookings SET deposit_returned = $1 WHERE id = $2`, [returned, req.params.id]);
+        await recomputeDepositStatus(req.params.id);
+      }
+    }
+
     logAudit(req, 'booking', req.params.id, 'deposit_movement_status', { id: req.params.mvId, status });
     res.json(rows[0]);
   } catch (e) {
@@ -290,6 +346,23 @@ router.delete('/bookings/:id/movements/:mvId', async (req, res, next) => {
     await q(`DELETE FROM deposit_movements WHERE id = $1 AND booking_id = $2`, [req.params.mvId, req.params.id]);
     logAudit(req, 'booking', req.params.id, 'deposit_movement_del', { id: req.params.mvId });
     res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// «Выдал остаток» одним кликом с дашборда: возвращаем клиенту весь остаток залога
+// (залог − удержано из залога), статус → возвращён.
+router.post('/bookings/:id/return-remaining', async (req, res, next) => {
+  try {
+    const b = await one(`SELECT deposit_amount FROM bookings WHERE id = $1`, [req.params.id]);
+    if (!b) return res.status(404).json({ error: 'Бронь не найдена' });
+    const held = await one(
+      `SELECT COALESCE(SUM(amount), 0) AS s FROM rental_charges WHERE booking_id = $1 AND from_deposit = true`,
+      [req.params.id]);
+    const returned = Math.max(0, (Number(b.deposit_amount) || 0) - (Number(held?.s) || 0));
+    await q(`UPDATE bookings SET deposit_returned = $1 WHERE id = $2`, [returned, req.params.id]);
+    await recomputeDepositStatus(req.params.id);
+    logAudit(req, 'booking', req.params.id, 'deposit_return_remaining', { returned });
+    res.json({ ok: true, deposit_returned: returned });
   } catch (e) { next(e); }
 });
 
@@ -306,6 +379,13 @@ router.patch('/bookings/:id', async (req, res, next) => {
       body.cancelled_by = 'admin';
     }
 
+    // Таймер этапа сбрасываем только если этап реально сменился (а не при обычном
+    // сохранении с тем же этапом).
+    if (body.stage) {
+      const cur = await one(`SELECT stage FROM bookings WHERE id = $1`, [req.params.id]);
+      if (cur && cur.stage !== body.stage) body.stage_changed_at = new Date().toISOString();
+    }
+
     const sets = [];
     const vals = [];
     let idx = 1;
@@ -317,6 +397,13 @@ router.patch('/bookings/:id', async (req, res, next) => {
     vals.push(req.params.id);
     const { rows } = await q(`UPDATE bookings SET ${sets.join(', ')} WHERE id = $${idx} RETURNING *`, vals);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
+
+    // Меняли залог — статус пересчитываем автоматически (перекрывает присланный).
+    if (body.deposit_amount !== undefined || body.deposit_returned !== undefined) {
+      await recomputeDepositStatus(req.params.id);
+      const [fresh] = await many(`SELECT * FROM bookings WHERE id = $1`, [req.params.id]);
+      if (fresh) rows[0] = fresh;
+    }
 
     await awardCashbackIfNeeded(rows[0]);
     logAudit(req, 'booking', req.params.id, 'update', body);

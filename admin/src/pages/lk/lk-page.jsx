@@ -243,7 +243,14 @@ export function LkPage() {
                     </div>
                     <div className="text-sm text-secondary-foreground mt-1">
                       Залог {fmtMoney(d.deposit_amount)} · возвращено {fmtMoney(d.deposit_returned)}
+                      {Number(d.held_from_deposit) > 0 && <> · удержано {fmtMoney(d.held_from_deposit)}</>}
                     </div>
+                    {(() => {
+                      const toReturn = Math.max(0, (d.deposit_amount || 0) - (d.deposit_returned || 0) - (Number(d.held_from_deposit) || 0));
+                      return toReturn > 0 ? (
+                        <div className="text-sm font-medium mt-0.5">К возврату: {fmtMoney(toReturn)}</div>
+                      ) : null;
+                    })()}
                   </div>
                 )) : <div className="text-sm text-muted-foreground">Залогов пока нет.</div>}
 

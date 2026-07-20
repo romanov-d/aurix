@@ -18,13 +18,6 @@ export default function CarCard({ car, days }) {
   const total = days ? price * days : null;
   const isFav = favorites.has(car.id);
 
-  // «Закрыта до даты» — показываем плашку «В аренде до …»
-  const closedUntil = car.closed_until ? new Date(car.closed_until) : null;
-  const isClosed = closedUntil && closedUntil > new Date();
-  const closedLabel = isClosed
-    ? `В аренде до ${closedUntil.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}`
-    : null;
-
   const prev = (e) => {
     e.preventDefault();
     setIdx(i => (i - 1 + allPhotos.length) % allPhotos.length);
@@ -43,9 +36,7 @@ export default function CarCard({ car, days }) {
   return (
     <Link to={`/car/${car.id}`} className="card">
       <div className="card-img">
-        {isClosed
-          ? <div className="card-badge" style={{ background: '#b91c1c', color: '#fff' }}>{closedLabel}</div>
-          : car.badge && <div className="card-badge">{car.badge}</div>}
+        {car.badge && <div className="card-badge">{car.badge}</div>}
         <button
           className={`card-fav-btn ${isFav ? 'active' : ''}`}
           onClick={handleFavoriteClick}

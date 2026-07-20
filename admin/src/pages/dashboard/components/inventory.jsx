@@ -1,4 +1,4 @@
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router-dom';
 import { Badge, BadgeDot } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +6,7 @@ import { useDashboardData } from '../dashboard-data';
 
 export function Inventory() {
   const d = useDashboardData();
+  const nav = useNavigate();
   const total = d.cars_published ?? 0;
   const inRent = d.bookings_active ?? 0;
   const free = Math.max(0, total - inRent);
@@ -20,7 +21,7 @@ export function Inventory() {
   const rows = (d.calendar || [])
     .filter((b) => b.status === 'active')
     .slice(0, 3)
-    .map((b) => ({ text: b.car_name, who: b.user_name }));
+    .map((b) => ({ id: b.id, text: b.car_name, who: b.user_name }));
 
   const renderItem = (item, index) => (
     <div key={index} className="flex items-center">
@@ -34,7 +35,11 @@ export function Inventory() {
   const renderRows = (row, index) => (
     <div
       key={index}
-      className="flex items-center justify-between flex-wrap bg-accent/50 p-2.5 rounded-md gap-2"
+      role={row.id ? 'button' : undefined}
+      tabIndex={row.id ? 0 : undefined}
+      onClick={row.id ? () => nav(`/bookings?open=${row.id}`) : undefined}
+      onKeyDown={row.id ? (e) => { if (e.key === 'Enter') nav(`/bookings?open=${row.id}`); } : undefined}
+      className={`flex items-center justify-between flex-wrap bg-accent/50 p-2.5 rounded-md gap-2${row.id ? ' cursor-pointer hover:bg-accent transition-colors' : ''}`}
     >
       <span className="text-sm text-mono">{row.text}</span>
       <span className="text-sm text-secondary-foreground">{row.who}</span>

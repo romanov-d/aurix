@@ -207,6 +207,8 @@ const SCHEMA_STATEMENTS = [
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_balance_tx_user ON balance_transactions(user_id)`,
+  // Когда бронь вошла в текущий этап воронки — для таймера «сколько висит на этапе».
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stage_changed_at TIMESTAMPTZ DEFAULT NOW()`,
   // Блок 1: залог и удержания по аренде
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_amount   INTEGER NOT NULL DEFAULT 0`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_returned INTEGER NOT NULL DEFAULT 0`,
@@ -222,6 +224,8 @@ const SCHEMA_STATEMENTS = [
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `CREATE INDEX IF NOT EXISTS idx_rental_charges_booking ON rental_charges(booking_id)`,
+  // Удержание покрывается из залога (уменьшает «на руках») или выставляется отдельно.
+  `ALTER TABLE rental_charges ADD COLUMN IF NOT EXISTS from_deposit BOOLEAN NOT NULL DEFAULT true`,
   // Блок 1: внутренний календарь возвратов/удержаний залога.
   // kind: return (возврат клиенту) | hold (удержание). status: planned | done.
   `CREATE TABLE IF NOT EXISTS deposit_movements (

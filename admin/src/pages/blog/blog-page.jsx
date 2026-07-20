@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState } from 'react';
 import { PencilSimple, Trash, Plus } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
+import { fileToCompressedDataUrl, dataUrlBytes } from '@/lib/image';
 import {
   Toolbar,
   ToolbarActions,
@@ -50,13 +51,13 @@ export function BlogPage() {
     setOpen(true);
   };
 
-  const onImage = (e) => {
-    const file = e.target.files?.[0];
+  const onImage = async (e) => {
+    const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой (макс 2 МБ)'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => setForm((f) => ({ ...f, image_url: reader.result }));
-    reader.readAsDataURL(file);
+    // Сжимаем на клиенте (айфон 4–8 МБ), до 8 МБ после сжатия.
+    const url = await fileToCompressedDataUrl(file, { maxSize: 1920, quality: 0.82 });
+    if (dataUrlBytes(url) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия'); return; }
+    setForm((f) => ({ ...f, image_url: url }));
   };
 
   const save = async () => {

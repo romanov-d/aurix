@@ -160,13 +160,23 @@ export default function Car() {
   );
   const isFav = favorites.has(car.id);
 
-  // «Закрыта до даты» — бронь возможна только с даты открытия
+  // «Закрыта до даты» — ручная пометка «в аренде до …». Вместо отдельной плашки
+  // показываем эти дни занятыми прямо в календаре: календарь закрыт на них,
+  // остальные даты доступны к брони.
   const closedUntil = car.closed_until ? new Date(car.closed_until) : null;
   const isClosed = closedUntil && closedUntil > new Date();
   const closedLabel = isClosed
     ? closedUntil.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })
     : null;
-  const bookMinDate = isClosed ? toDateStr(closedUntil) : toDateStr(today);
+  const bookMinDate = toDateStr(today);
+
+  // Дни от сегодня до даты открытия — раскрываем в занятые дни для календаря.
+  const closedBusy = [];
+  if (isClosed) {
+    const dd = new Date(today); dd.setHours(0, 0, 0, 0);
+    for (; dd < closedUntil; dd.setDate(dd.getDate() + 1)) closedBusy.push(toDateStr(dd));
+  }
+  const allBusyDates = closedBusy.length ? [...busyDates, ...closedBusy] : busyDates;
 
   // Calc days
   const d1 = new Date(fromDt);
@@ -382,9 +392,9 @@ export default function Car() {
           </div>
 
           {isClosed && (
-            <div style={{ background: 'rgba(185,28,28,.12)', border: '1px solid rgba(185,28,28,.4)', color: '#fca5a5', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
-              <i className="ph-fill ph-clock" style={{ marginRight: 6 }} />
-              Автомобиль в аренде — будет доступен с <b>{closedLabel}</b>. Бронь возможна с этой даты.
+            <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', color: '#bdbdbd', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+              <i className="ph ph-calendar-blank" style={{ marginRight: 6 }} />
+              Ближайшие даты заняты. Свободные даты — с <b>{closedLabel}</b>.
             </div>
           )}
           <div className="field" style={{ marginBottom: 12 }}>
@@ -393,7 +403,7 @@ export default function Car() {
               from={fromDate}
               to={toDate}
               minDate={bookMinDate}
-              busyDates={busyDates}
+              busyDates={allBusyDates}
               variant="sidebar"
               onChange={({ from, to }) => {
                 if (from) {

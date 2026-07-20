@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link } from 'react-router-dom';
 import { MagnifyingGlass, PaperPlaneTilt, Paperclip } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
+import { fileToCompressedDataUrl, dataUrlBytes } from '@/lib/image';
 import {
   Toolbar, ToolbarDescription, ToolbarHeading, ToolbarPageTitle,
 } from '@/partials/common/toolbar';
@@ -65,13 +66,13 @@ export function ChatPage() {
 
   const openThread = (id) => { setActiveId(id); setMessages([]); };
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл больше 2 МБ'); return; }
-    const r = new FileReader();
-    r.onloadend = () => setAttachment({ url: r.result, name: file.name, type: file.type, size: file.size });
-    r.readAsDataURL(file);
+    // Картинки сжимаем на клиенте (айфон 4–8 МБ), PDF/прочее — как есть, до 8 МБ.
+    const url = await fileToCompressedDataUrl(file, { maxSize: 1600, quality: 0.8 });
+    if (dataUrlBytes(url) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите файл поменьше.'); return; }
+    setAttachment({ url, name: file.name, type: file.type, size: dataUrlBytes(url) });
   };
 
   const send = async () => {

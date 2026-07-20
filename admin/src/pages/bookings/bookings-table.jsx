@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   getCoreRowModel,
   getFilteredRowModel,
@@ -10,6 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { MagnifyingGlass, X, PencilSimple } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
+import { fileToCompressedDataUrl, dataUrlBytes } from '@/lib/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -48,6 +50,27 @@ const fmtDate = (iso) => {
   return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' });
 };
 
+// Дата+время подачи заявки
+const fmtDateTime = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+
+// Сколько времени прошло с момента (таймер ожидания заявки)
+const fmtElapsed = (iso) => {
+  if (!iso) return '';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (isNaN(ms) || ms < 0) return '';
+  const min = Math.floor(ms / 60000);
+  if (min < 60) return `${min} мин`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h} ч ${min % 60} мин`;
+  const d = Math.floor(h / 24);
+  return `${d} дн ${h % 24} ч`;
+};
+
 // Этапы воронки (как в старой админке)
 const STAGES = [
   ['new', 'Новая заявка'], ['docs', 'Проверка документов'],
@@ -73,14 +96,20 @@ export function BookingsTable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
-  const [sorting, setSorting] = useState([{ id: 'id', desc: true }]);
+  const [sorting, setSorting] = useState([{ id: 'submitted', desc: true }]);
+  // Раз в минуту обновляем «таймеры ожидания» в таблице.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setTick((x) => x + 1), 60000);
+    return () => clearInterval(t);
+  }, []);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [charges, setCharges] = useState([]);
-  const [newCharge, setNewCharge] = useState({ type: '', amount: '', note: '', photo_url: '' });
+  const [newCharge, setNewCharge] = useState({ type: '', amount: '', note: '', photo_url: '', from_deposit: true });
   const [movements, setMovements] = useState([]);
   const [newMovement, setNewMovement] = useState({ kind: 'return', amount: '', note: '', due_date: '' });
 
@@ -144,6 +173,7 @@ export function BookingsTable() {
   const openEdit = (b) => {
     setEditForm({
       id: b.id, total: b.total ?? 0, stage: b.stage || 'new', manager: b.manager || '',
+      status: b.status, created_at: b.created_at, stage_changed_at: b.stage_changed_at,
       pickup_city: b.pickup_city || '', notes: b.notes || '',
       from_dt: isoToLocalInput(b.from_dt), to_dt: isoToLocalInput(b.to_dt),
       car: b.car, user: b.user,
@@ -151,7 +181,7 @@ export function BookingsTable() {
     });
     setCharges([]);
     setMovements([]);
-    setNewCharge({ type: '', amount: '', note: '', photo_url: '' });
+    setNewCharge({ type: '', amount: '', note: '', photo_url: '', from_deposit: true });
     setNewMovement({ kind: 'return', amount: '', note: '', due_date: '' });
     setEditOpen(true);
     // подтягиваем удержания + календарь + актуальные поля залога
@@ -197,10 +227,11 @@ export function BookingsTable() {
     if (!amt) return;
     try {
       const c = await api.post(`/admin/bookings/${editForm.id}/charges`, {
-        type: newCharge.type || null, amount: amt, note: newCharge.note || null, photo_url: newCharge.photo_url || null,
+        type: newCharge.type || null, amount: amt, note: newCharge.note || null,
+        photo_url: newCharge.photo_url || null, from_deposit: newCharge.from_deposit,
       });
       setCharges((cs) => [c, ...cs]);
-      setNewCharge({ type: '', amount: '', note: '', photo_url: '' });
+      setNewCharge({ type: '', amount: '', note: '', photo_url: '', from_deposit: true });
     } catch (e) { alert(e.message); }
   };
   const delCharge = async (cid) => {
@@ -209,8 +240,10 @@ export function BookingsTable() {
   };
   const uploadChargePhoto = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
-    if (!file || file.size > 2 * 1024 * 1024) { if (file) alert('Файл больше 2 МБ'); return; }
-    const url = await new Promise((res) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file); });
+    if (!file) return;
+    // Фото с айфона 4–8 МБ ужимаем на клиенте, чтобы влезало и не раздувало БД.
+    const url = await fileToCompressedDataUrl(file, { maxSize: 1600, quality: 0.8 });
+    if (dataUrlBytes(url) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия'); return; }
     setNewCharge((n) => ({ ...n, photo_url: url }));
   };
 
@@ -227,7 +260,7 @@ export function BookingsTable() {
         to_dt: localInputToIso(editForm.to_dt),
         deposit_amount: parseInt(editForm.deposit_amount, 10) || 0,
         deposit_returned: parseInt(editForm.deposit_returned, 10) || 0,
-        deposit_status: editForm.deposit_status || null,
+        // deposit_status не шлём — бэкенд считает статус автоматически.
       });
       setEditOpen(false);
     } catch (e) {
@@ -254,6 +287,21 @@ export function BookingsTable() {
     };
   }, []);
 
+  // Клик-переход с дашборда: /bookings?open=<id> → сразу открываем шторку брони.
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (!openId || !rows.length) return;
+    const b = rows.find((r) => String(r.id) === String(openId));
+    if (b) {
+      openEdit(b);
+      const next = new URLSearchParams(searchParams);
+      next.delete('open');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, searchParams]);
+
   const filteredData = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return rows.filter((b) => {
@@ -268,11 +316,23 @@ export function BookingsTable() {
     () => [
       {
         id: 'id',
-        accessorFn: (row) => row.id,
+        accessorFn: (row) => Number(row.id) || 0, // число, а не строка — иначе 1,10,2,3…
         header: ({ column }) => <DataGridColumnHeader title="№" column={column} />,
         cell: ({ row }) => <span className="font-medium text-mono">#{row.original.id}</span>,
         enableSorting: true,
         size: 80,
+      },
+      {
+        id: 'submitted',
+        accessorFn: (row) => (row.created_at ? new Date(row.created_at).getTime() : 0),
+        header: ({ column }) => <DataGridColumnHeader title="Подана" column={column} />,
+        cell: ({ row }) => (
+          <span className="text-secondary-foreground font-normal whitespace-nowrap text-xs">
+            {fmtDateTime(row.original.created_at)}
+          </span>
+        ),
+        enableSorting: true,
+        size: 140,
       },
       {
         id: 'customer',
@@ -324,11 +384,23 @@ export function BookingsTable() {
         accessorFn: (row) => row.status,
         header: ({ column }) => <DataGridColumnHeader title="Статус" column={column} />,
         cell: ({ row }) => {
-          const s = STATUS_MAP[row.original.status] || { label: row.original.status, variant: 'secondary' };
+          const b = row.original;
+          const s = STATUS_MAP[b.status] || { label: b.status, variant: 'secondary' };
+          // Таймер: сколько бронь висит на текущем этапе (для контроля менеджеров).
+          const active = b.status !== 'completed' && b.status !== 'cancelled';
+          const elapsed = active ? fmtElapsed(b.stage_changed_at || b.created_at) : '';
+          const label = b.status === 'pending' ? 'ждёт' : 'на этапе';
           return (
-            <Badge size="sm" variant={s.variant} appearance="light">
-              {s.label}
-            </Badge>
+            <div className="flex flex-col items-start gap-0.5">
+              <Badge size="sm" variant={s.variant} appearance="light">
+                {s.label}
+              </Badge>
+              {elapsed && (
+                <span className={`text-[11px] whitespace-nowrap ${b.status === 'pending' ? 'text-warning' : 'text-muted-foreground'}`}>
+                  {label} {elapsed}
+                </span>
+              )}
+            </div>
           );
         },
         enableSorting: true,
@@ -374,6 +446,19 @@ export function BookingsTable() {
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
   });
+
+  // Расчёт залога для шторки. «Из залога» удержания (штрафы) уменьшают остаток
+  // к возврату клиенту; «отдельно» — выставляются сверх залога и его не трогают.
+  const depAmount = parseInt(editForm?.deposit_amount, 10) || 0;
+  const depReturned = parseInt(editForm?.deposit_returned, 10) || 0;
+  const heldFromDeposit = charges.reduce((s, c) => s + (c.from_deposit === false ? 0 : (c.amount || 0)), 0);
+  const heldSeparate = charges.reduce((s, c) => s + (c.from_deposit === false ? (c.amount || 0) : 0), 0);
+  const toReturnClient = Math.max(0, depAmount - depReturned - heldFromDeposit);
+  // Авто-статус залога от чисел (менеджеру не нужно выставлять руками).
+  const depSettled = depReturned + heldFromDeposit;
+  const depStatusAuto = depAmount <= 0 ? null : depSettled >= depAmount ? 'returned' : depSettled > 0 ? 'partial' : 'held';
+  const depStatusLabel = { returned: 'Возвращён', partial: 'Возврат частично', held: 'Удерживается' }[depStatusAuto] || '—';
+  const depStatusVariant = depStatusAuto === 'returned' ? 'success' : depStatusAuto === 'partial' ? 'warning' : 'outline';
 
   return (
     <DataGrid
@@ -444,6 +529,17 @@ export function BookingsTable() {
               <div className="text-sm text-secondary-foreground">
                 {editForm.car?.name} · {editForm.user?.name}
               </div>
+              {editForm.created_at && (
+                <div className="text-xs text-muted-foreground -mt-2">
+                  Заявка подана: {fmtDateTime(editForm.created_at)}
+                  {editForm.status !== 'completed' && editForm.status !== 'cancelled'
+                    && fmtElapsed(editForm.stage_changed_at || editForm.created_at)
+                    ? <span className={editForm.status === 'pending' ? 'text-warning' : ''}>
+                        {' · '}{editForm.status === 'pending' ? 'ожидает' : 'на этапе'} {fmtElapsed(editForm.stage_changed_at || editForm.created_at)}
+                      </span>
+                    : null}
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className={fieldLabel}>Сумма, ₽</div>
@@ -488,16 +584,34 @@ export function BookingsTable() {
                   <div><div className={fieldLabel}>Возвращено, ₽</div><Input type="number" value={editForm.deposit_returned} onChange={(e) => setEditForm({ ...editForm, deposit_returned: e.target.value })} /></div>
                   <div>
                     <div className={fieldLabel}>Статус залога</div>
-                    <select className={selectCls} value={editForm.deposit_status || ''} onChange={(e) => setEditForm({ ...editForm, deposit_status: e.target.value })}>
-                      <option value="">—</option>
-                      <option value="held">Удержан</option>
-                      <option value="partial">Возврат 50%</option>
-                      <option value="returned">Возвращён</option>
-                    </select>
+                    <div className="h-9 flex items-center">
+                      <Badge size="sm" variant={depStatusVariant} appearance="light">{depStatusLabel}</Badge>
+                    </div>
                   </div>
                 </div>
-                <Button size="sm" variant="outline" className="self-start" onClick={() => setEditForm({ ...editForm, deposit_returned: Math.round((parseInt(editForm.deposit_amount, 10) || 0) / 2), deposit_status: 'partial' })}>
-                  Вернуть 50%
+                {depAmount > 0 && (
+                  <div className="rounded-md bg-zinc-900/40 px-3 py-2 text-sm flex items-center justify-between">
+                    <span className="text-muted-foreground">К возврату клиенту</span>
+                    <span className="font-semibold text-mono">
+                      {toReturnClient.toLocaleString('ru-RU')} ₽
+                      <span className="text-xs text-muted-foreground font-normal ml-2">
+                        = {depAmount.toLocaleString('ru-RU')} − возвращено {depReturned.toLocaleString('ru-RU')}
+                        {heldFromDeposit > 0 ? ` − удержано ${heldFromDeposit.toLocaleString('ru-RU')}` : ''}
+                      </span>
+                    </span>
+                  </div>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="self-start"
+                  disabled={!depAmount}
+                  onClick={() => setEditForm({
+                    ...editForm,
+                    deposit_returned: depAmount - heldFromDeposit,
+                  })}
+                >
+                  Вернуть остаток ({toReturnClient.toLocaleString('ru-RU')} ₽)
                 </Button>
 
                 {/* Удержания */}
@@ -510,6 +624,9 @@ export function BookingsTable() {
                           {c.photo_url && <img src={c.photo_url} alt="" className="h-8 w-10 rounded object-cover" />}
                           <div className="min-w-0">
                             <div className="text-sm truncate">{c.type || 'Удержание'}{c.note ? ` — ${c.note}` : ''}</div>
+                            <Badge size="sm" variant={c.from_deposit === false ? 'secondary' : 'primary'} appearance="light">
+                              {c.from_deposit === false ? 'отдельно' : 'из залога'}
+                            </Badge>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -518,9 +635,17 @@ export function BookingsTable() {
                         </div>
                       </div>
                     ))}
-                    <div className="flex items-center justify-between py-2 text-sm font-semibold">
-                      <span>Итого удержано</span>
-                      <span className="text-destructive">−{charges.reduce((s, c) => s + (c.amount || 0), 0).toLocaleString('ru-RU')} ₽</span>
+                    <div className="flex flex-col gap-1 py-2 text-sm">
+                      <div className="flex items-center justify-between font-semibold">
+                        <span>Удержано из залога</span>
+                        <span className="text-destructive">−{heldFromDeposit.toLocaleString('ru-RU')} ₽</span>
+                      </div>
+                      {heldSeparate > 0 && (
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Выставлено отдельно (не из залога)</span>
+                          <span>−{heldSeparate.toLocaleString('ru-RU')} ₽</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -529,6 +654,15 @@ export function BookingsTable() {
                   <Input type="number" placeholder="Сумма, ₽" value={newCharge.amount} onChange={(e) => setNewCharge({ ...newCharge, amount: e.target.value })} />
                   <Input placeholder="Пояснение" value={newCharge.note} onChange={(e) => setNewCharge({ ...newCharge, note: e.target.value })} className="col-span-2" />
                 </div>
+                <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={newCharge.from_deposit}
+                    onChange={(e) => setNewCharge({ ...newCharge, from_deposit: e.target.checked })}
+                    className="size-4 accent-primary"
+                  />
+                  Удержать из залога (уменьшит сумму к возврату клиенту)
+                </label>
                 <div className="flex items-center gap-2">
                   <label className="inline-flex cursor-pointer">
                     <input type="file" accept="image/*" className="hidden" onChange={uploadChargePhoto} />
@@ -581,8 +715,8 @@ export function BookingsTable() {
                 </div>
                 <div className="flex items-center gap-2 flex-wrap">
                   <Button size="sm" onClick={() => addMovement()} disabled={!newMovement.amount}>Добавить в календарь</Button>
-                  <Button size="sm" variant="outline" onClick={() => addMovement({ kind: 'return', amount: Math.round((parseInt(editForm.deposit_amount, 10) || 0) / 2), note: 'Возврат 50% залога (в течение суток)', due_date: '' })} disabled={!editForm.deposit_amount}>
-                    + возврат 50% залога
+                  <Button size="sm" variant="outline" onClick={() => addMovement({ kind: 'return', amount: toReturnClient, note: 'Возврат остатка залога клиенту', due_date: '' })} disabled={!toReturnClient}>
+                    + возврат остатка ({toReturnClient.toLocaleString('ru-RU')} ₽)
                   </Button>
                 </div>
               </div>

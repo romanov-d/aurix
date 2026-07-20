@@ -182,16 +182,20 @@ router.get('/finances', async (req, res, next) => {
        FROM balance_transactions WHERE user_id = $1 ORDER BY created_at DESC`,
       [req.user.id]);
     const charges = await many(
-      `SELECT rc.id, rc.type, rc.amount, rc.note, rc.photo_url, rc.created_at,
+      `SELECT rc.id, rc.type, rc.amount, rc.note, rc.photo_url, rc.from_deposit, rc.created_at,
               rc.booking_id, c.name AS car_name
        FROM rental_charges rc
        JOIN bookings b ON rc.booking_id = b.id
        JOIN cars c ON b.car_id = c.id
        WHERE b.user_id = $1 ORDER BY rc.created_at DESC`,
       [req.user.id]);
+    // held_from_deposit — удержано из залога (штрафы), чтобы клиент видел корректный
+    // остаток к возврату: deposit_amount − deposit_returned − held_from_deposit.
     const deposits = await many(
       `SELECT b.id AS booking_id, c.name AS car_name, b.deposit_amount,
-              b.deposit_returned, b.deposit_status
+              b.deposit_returned, b.deposit_status,
+              COALESCE((SELECT SUM(amount) FROM rental_charges
+                        WHERE booking_id = b.id AND from_deposit = true), 0) AS held_from_deposit
        FROM bookings b JOIN cars c ON b.car_id = c.id
        WHERE b.user_id = $1 AND b.deposit_amount > 0
        ORDER BY b.created_at DESC`,
