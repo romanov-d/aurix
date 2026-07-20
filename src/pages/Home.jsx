@@ -340,7 +340,7 @@ export default function Home() {
               <div className="dl-pin-info">
                 <T k="home.delivery.pinTitle" className="dl-pin-title">Наш офис</T>
                 <T k="home.delivery.pinAddr" className="dl-pin-line">Москва, Олимпийский проспект, 12</T>
-                <T k="home.delivery.pinHours" className="dl-pin-line">Работаем 24/7</T>
+                <T k="home.delivery.pinHours" className="dl-pin-line">Ежедневно, 10:00–20:00</T>
               </div>
             </div>
           </div>

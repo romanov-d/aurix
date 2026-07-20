@@ -71,7 +71,7 @@ export default function Contacts() {
               </div>
               <div className="contact-box">
                 <T k="contacts.info.addressLabel" as="div" className="lbl">Шоурум</T>
-                <div className="v"><T k="contacts.info.address">Москва, Олимпийский проспект, 12</T><T k="contacts.info.hours" as="small">Ежедневно, 24 часа</T></div>
+                <div className="v"><T k="contacts.info.address">Москва, Олимпийский проспект, 12</T><T k="contacts.info.hours" as="small">Ежедневно, 10:00–20:00</T></div>
               </div>
             </div>
 

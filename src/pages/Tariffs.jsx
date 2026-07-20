@@ -133,7 +133,7 @@ export default function Tariffs() {
             <div style={{ background: '#101010', padding: '28px 32px', borderRadius: 14 }}>
               <T k="tariffs.notes.delivery.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Доставка и получение</T>
               <T k="tariffs.notes.delivery.text" as="p" style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 1.8, fontFamily: "'Inter', sans-serif" }}>
-                Доставка и забор автомобиля осуществляются за дополнительную плату в любое удобное место. Работаем 7 дней в неделю, 24 часа в сутки. Свяжитесь с нами для уточнения стоимости.
+                Доставка и забор автомобиля осуществляются за дополнительную плату в любое удобное место. Работаем ежедневно с 10:00 до 20:00, по предварительной договорённости — в нерабочее время. Свяжитесь с нами для уточнения стоимости.
               </T>
             </div>
           </div>
