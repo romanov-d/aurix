@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 const ACCOUNT_TABS = ['overview', 'bookings', 'history', 'favorites', 'bonuses', 'documents', 'profile', 'chat'];
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
+import { fileToCompressedDataUrl, dataUrlBytes } from '../api/image.js';
 import CarCard from '../components/CarCard.jsx';
 import { useCars } from '../api/useCars.js';
 import AccountChat from '../components/AccountChat.jsx';
@@ -49,23 +50,20 @@ export default function Account() {
     if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', dob: (user.dob || '').slice(0, 10) });
   }, [user]);
 
-  const handleDocChange = (field, e) => {
+  const handleDocChange = async (field, e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл слишком большой. Максимум — 2 МБ.'); return; }
     setDocUploading(field);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        await api('/me', { method: 'PATCH', body: { [field]: reader.result } });
-        await refresh();
-      } catch (err) {
-        alert(err.message || 'Ошибка загрузки документа');
-      } finally {
-        setDocUploading('');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const data = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
+      if (dataUrlBytes(data) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите PDF поменьше или фото.'); return; }
+      await api('/me', { method: 'PATCH', body: { [field]: data } });
+      await refresh();
+    } catch (err) {
+      alert(err.message || 'Ошибка загрузки документа');
+    } finally {
+      setDocUploading('');
+    }
   };
 
   const viewDoc = (url) => {
@@ -126,27 +124,16 @@ export default function Account() {
     const file = e.target.files[0];
     if (!file) return;
 
-    if (file.size > 1024 * 1024) {
-      alert('Файл слишком большой. Максимальный размер — 1 МБ.');
-      return;
-    }
-
     setUploading(true);
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      try {
-        await api('/me', {
-          method: 'PATCH',
-          body: { avatar_url: reader.result }
-        });
-        await refresh();
-      } catch (err) {
-        alert(err.message || 'Ошибка при загрузке аватара');
-      } finally {
-        setUploading(false);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const data = await fileToCompressedDataUrl(file, { maxSize: 512, quality: 0.85 });
+      await api('/me', { method: 'PATCH', body: { avatar_url: data } });
+      await refresh();
+    } catch (err) {
+      alert(err.message || 'Ошибка при загрузке аватара');
+    } finally {
+      setUploading(false);
+    }
   };
 
   const onLogout = async (e) => {
@@ -169,7 +156,7 @@ export default function Account() {
     }
   };
 
-  const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'pending');
+  const activeBookings = bookings.filter(b => b.status === 'active' || b.status === 'pending' || b.status === 'booked');
   const pastBookings = bookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
   const totalSpent = pastBookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + b.total, 0);
   

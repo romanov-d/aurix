@@ -271,10 +271,19 @@ const SCHEMA_STATEMENTS = [
     return_city  TEXT,
     with_driver  BOOLEAN NOT NULL DEFAULT FALSE,
     total        INTEGER NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled')),
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled','booked')),
     created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS with_delivery BOOLEAN NOT NULL DEFAULT FALSE`,
+  // Статус 'booked' — бронь оплачена: даты заняты, авто ещё не выдано.
+  // Расширяем CHECK на существующих БД (инлайновый называется bookings_status_check).
+  `ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check`,
+  `ALTER TABLE bookings ADD CONSTRAINT bookings_status_check
+     CHECK (status IN ('pending','active','completed','cancelled','booked'))`,
+  // Новая воронка: легаси-этап 'prepay' → 'paid'; оплаченные/у менеджера
+  // получают «занятый» статус 'booked' (раньше были 'pending').
+  `UPDATE bookings SET stage = 'paid' WHERE stage = 'prepay'`,
+  `UPDATE bookings SET status = 'booked' WHERE status = 'pending' AND stage IN ('paid','manager')`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_car ON bookings(car_id)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id)`,
   `CREATE TABLE IF NOT EXISTS favorites (
@@ -417,15 +426,21 @@ export async function migrateForeignKeys() {
 // делает пересечение невозможным атомарно: второй INSERT падает с 23P01,
 // роуты переводят это в понятную 400 «Автомобиль занят».
 export async function migrateBookingOverlapGuard() {
-  const done = await one(`SELECT 1 FROM pg_constraint WHERE conname = 'bookings_no_overlap'`);
-  if (done) return; // уже применено
+  const existing = await one(
+    `SELECT pg_get_constraintdef(oid) AS def FROM pg_constraint WHERE conname = 'bookings_no_overlap'`
+  );
+  // Занятыми считаем только оплаченные (booked) и выданные (active) брони —
+  // машина остаётся в общем доступе до оплаты бронирования. Старый констрейнт
+  // блокировал ещё и 'pending' — если он такой, пересоздаём.
+  if (existing && existing.def && existing.def.includes('booked')) return; // актуальная версия
   await pool.query(`CREATE EXTENSION IF NOT EXISTS btree_gist`);
+  if (existing) await pool.query(`ALTER TABLE bookings DROP CONSTRAINT bookings_no_overlap`);
   await pool.query(
     `ALTER TABLE bookings ADD CONSTRAINT bookings_no_overlap
        EXCLUDE USING gist (car_id WITH =, tstzrange(from_dt, to_dt) WITH &&)
-       WHERE (status IN ('pending','active'))`
+       WHERE (status IN ('booked','active'))`
   );
-  console.log('[db] bookings_no_overlap EXCLUDE constraint applied');
+  console.log('[db] bookings_no_overlap EXCLUDE constraint applied (booked/active)');
 }
 
 export async function ensureSchema() {

@@ -33,7 +33,7 @@ import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTi
 
 const emptyClient = { name: '', phone: '', email: '', password: '', role: 'user', is_verified: false, manager: '', admin_note: '' };
 const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
-const selectCls = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
+const selectCls = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring [color-scheme:dark]';
 
 const ROLE_MAP = {
   admin: { label: 'Админ', variant: 'primary' },

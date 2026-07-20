@@ -49,6 +49,7 @@ export default function DateRangePicker({
   to,
   onChange,
   minDate,
+  busyDates = [], // массив 'YYYY-MM-DD' — занятые дни (оплаченные/выданные брони)
   variant = 'default', // 'default' | 'hero' | 'sidebar'
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -64,6 +65,18 @@ export default function DateRangePicker({
   const fromDate = from ? fromStr(from) : null;
   const toDate   = to   ? fromStr(to)   : null;
   const minD = minDate ? fromStr(minDate) : today;
+  const busySet = new Set(busyDates);
+  const isBusyDay = (date) => busySet.has(toStr(date));
+  // Есть ли занятый день строго внутри диапазона (a; b] — тогда бронь невозможна.
+  function rangeHasBusy(a, b) {
+    const start = a < b ? a : b;
+    const end = a < b ? b : a;
+    const d = new Date(start); d.setDate(d.getDate() + 1);
+    for (; d <= end; d.setDate(d.getDate() + 1)) {
+      if (busySet.has(toStr(d))) return true;
+    }
+    return false;
+  }
 
   useEffect(() => {
     function outside(e) {
@@ -91,12 +104,20 @@ export default function DateRangePicker({
   }
 
   function handleDayClick(date) {
-    if (date < minD) return;
+    if (date < minD || isBusyDay(date)) return;
     if (!picking || !fromDate) {
       onChange({ from: toStr(date), to: null });
       setPicking(true);
     } else {
       if (date.getTime() === fromDate.getTime()) return;
+      // Нельзя перекрыть занятые дни: если между началом и концом есть бронь —
+      // начинаем выбор заново с этой даты.
+      if (rangeHasBusy(fromDate, date)) {
+        onChange({ from: toStr(date), to: null });
+        setPicking(true);
+        setHoverDate(null);
+        return;
+      }
       if (date > fromDate) {
         onChange({ from: from, to: toStr(date) });
       } else {
@@ -195,11 +216,13 @@ export default function DateRangePicker({
               const isEnd       = !outside && effEnd    && sameDay(date, effEnd);
               const isInRange   = !outside && effStart && effEnd && date > effStart && date < effEnd;
               const isTodayDay  = !outside && sameDay(date, today);
-              const isDisabled  = date < minD;
+              const isBusy      = !outside && isBusyDay(date);
+              const isDisabled  = date < minD || isBusy;
 
               let cls = 'drp-day';
               if (outside)   cls += ' drp-out';
-              if (isDisabled && !outside) cls += ' drp-disabled';
+              if (isBusy)    cls += ' drp-busy';
+              else if (isDisabled && !outside) cls += ' drp-disabled';
               if (isInRange) cls += ' drp-range';
               if (isStart)   cls += ' drp-start';
               if (isEnd)     cls += ' drp-end';
@@ -209,7 +232,8 @@ export default function DateRangePicker({
                 <div
                   key={i}
                   className={cls}
-                  onMouseEnter={() => picking && !outside && date >= minD && setHoverDate(date)}
+                  title={isBusy ? 'Занято' : undefined}
+                  onMouseEnter={() => picking && !outside && !isBusy && date >= minD && setHoverDate(date)}
                   onMouseLeave={() => picking && setHoverDate(null)}
                   onClick={() => !outside && !isDisabled && handleDayClick(date)}
                 >

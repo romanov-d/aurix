@@ -1499,6 +1499,8 @@ html{scroll-behavior:smooth}
 .drp-out span{color:#272727}
 .drp-out{cursor:default}
 .drp-disabled span{color:#222;cursor:not-allowed}
+.drp-busy{cursor:not-allowed}
+.drp-busy span{color:#5a3a3a;background:repeating-linear-gradient(135deg,rgba(239,68,68,.14),rgba(239,68,68,.14) 3px,transparent 3px,transparent 6px);text-decoration:line-through;text-decoration-color:rgba(239,68,68,.6)}
 .drp-today span{color:var(--gold)}
 /* Range highlight strip */
 .drp-range{background:rgba(193,154,107,.1)}

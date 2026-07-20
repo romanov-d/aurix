@@ -4,6 +4,7 @@ import { InventorySummary } from './components/inventory-summary';
 import { Orders } from './components/orders';
 import { SalesActivity } from './components/sales-activity';
 import { BookingCalendar } from './components/booking-calendar';
+import { DepositsWidget } from './components/deposits-widget';
 import { BookingsTable } from '@/pages/bookings';
 
 export function DashboardContent() {
@@ -25,7 +26,14 @@ export function DashboardContent() {
         </div>
       </div>
 
-      <BookingCalendar />
+      <div className="grid lg:grid-cols-3 gap-5 lg:gap-7.5">
+        <div className="lg:col-span-1">
+          <DepositsWidget />
+        </div>
+        <div className="lg:col-span-2">
+          <BookingCalendar />
+        </div>
+      </div>
 
       <div className="grid lg:grid-cols-1">
         <div className="lg:col-span-1">

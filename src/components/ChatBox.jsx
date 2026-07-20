@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { fileToCompressedDataUrl, dataUrlBytes } from '../api/image.js';
 
 // Переиспользуемая лента чата: сообщения + ввод + вложения.
 // Реалтайм: SSE (мгновенно) + страховочный polling (12с) на случай,
@@ -11,7 +12,6 @@ import { useState, useEffect, useRef } from 'react';
 //   onRead       — опц. колбэк «прочитано»
 //   streamUrl    — URL SSE-потока (для EventSource)
 //   disabled     — заблокировать ввод (закрытый диалог)
-const MAX_FILE = 2 * 1024 * 1024; // 2 МБ
 
 export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRead, streamUrl, disabled }) {
   const [messages, setMessages] = useState([]);
@@ -78,14 +78,13 @@ export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRe
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' }); }, [messages]);
 
-  const onFile = (e) => {
+  const onFile = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
-    if (file.size > MAX_FILE) { alert('Файл слишком большой. Максимум — 2 МБ.'); return; }
-    const reader = new FileReader();
-    reader.onloadend = () => setAttach({ url: reader.result, name: file.name, type: file.type, size: file.size });
-    reader.readAsDataURL(file);
+    const url = await fileToCompressedDataUrl(file, { maxSize: 2000, quality: 0.82 });
+    if (dataUrlBytes(url) > 8 * 1024 * 1024) { alert('Файл слишком большой. Пришлите вложение поменьше.'); return; }
+    setAttach({ url, name: file.name, type: file.type, size: dataUrlBytes(url) });
   };
 
   const submit = async (e) => {

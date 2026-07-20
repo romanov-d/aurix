@@ -8,6 +8,21 @@ import * as Chat from '../api/chat.js';
 import { useFavorites } from '../api/useFavorites.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 
+// Интервалы занятых броней → плоский список дней 'YYYY-MM-DD'.
+// Полуоткрыто [from; to): день возврата свободен для новой выдачи (как на сервере).
+function expandBusyRanges(ranges) {
+  const pad = (n) => String(n).padStart(2, '0');
+  const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const out = [];
+  for (const r of ranges) {
+    if (!r?.from_dt || !r?.to_dt) continue;
+    const d = new Date(r.from_dt); d.setHours(0, 0, 0, 0);
+    const end = new Date(r.to_dt); end.setHours(0, 0, 0, 0);
+    for (; d < end; d.setDate(d.getDate() + 1)) out.push(key(d));
+  }
+  return out;
+}
+
 // Скелетон страницы машины (повторяет реальную раскладку detail)
 function CarDetailSkeleton() {
   const line = (style) => <div className="sk sk-line" style={style} />;
@@ -92,6 +107,7 @@ export default function Car() {
   const [needDelivery, setNeedDelivery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [busyDates, setBusyDates] = useState([]); // занятые дни для календаря брони
 
   const fromDt = `${fromDate}T${fromTime}`;
   const toDt = `${toDate}T${toTime}`;
@@ -126,6 +142,11 @@ export default function Car() {
     api(`/cars/${id}/reviews`)
       .then((reviewsData) => setReviews(Array.isArray(reviewsData) ? reviewsData : []))
       .catch(() => setReviews([]));
+
+    // Занятые даты (оплаченные/выданные брони) — раскрываем интервалы в дни
+    api(`/cars/${id}/busy`)
+      .then((data) => setBusyDates(expandBusyRanges(data?.ranges || [])))
+      .catch(() => setBusyDates([]));
   }, [id]);
 
   if (loading) return <CarDetailSkeleton />;
@@ -372,6 +393,7 @@ export default function Car() {
               from={fromDate}
               to={toDate}
               minDate={bookMinDate}
+              busyDates={busyDates}
               variant="sidebar"
               onChange={({ from, to }) => {
                 if (from) {

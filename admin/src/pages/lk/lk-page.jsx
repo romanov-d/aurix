@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { Link } from 'react-router-dom';
 import { Phone, EnvelopeSimple, ShieldCheck, ArrowSquareOut, PaperPlaneTilt, Paperclip, Plus, X } from '@phosphor-icons/react';
 import { api } from '@/lib/aurix-api';
+import { fileToCompressedDataUrl, dataUrlBytes } from '@/lib/image';
 import { UserHero } from '@/partials/common/user-hero';
 import { Statistics } from '@/pages/public-profile/profiles/company/components/statistics';
 import { Container } from '@/components/common/container';
@@ -29,7 +30,7 @@ const fmtDateTime = (iso) => {
   return isNaN(d) ? '—' : d.toLocaleString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
-const STATUS_RU = { pending: 'Ожидает', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
+const STATUS_RU = { pending: 'Ожидает', booked: 'Забронирована', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
 const DOCS = [
   ['passport_url', 'Паспорт (разворот)'],
   ['passport_page_url', 'Паспорт (1-я страница)'],
@@ -44,9 +45,6 @@ const TABS = [
 const CHARGE_LABEL = { return: 'Возврат клиенту', hold: 'Удержание' };
 const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
 
-function readFile(file) {
-  return new Promise((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
-}
 
 export function LkPage() {
   const [tab, setTab] = useState('overview');
@@ -83,7 +81,7 @@ export function LkPage() {
     api.get('/cars?limit=100').then((d) => setCars(d?.items || [])).catch(() => {});
   }, [loadUser]);
 
-  const active = bookings.filter((b) => b.status === 'active' || b.status === 'pending');
+  const active = bookings.filter((b) => b.status === 'active' || b.status === 'pending' || b.status === 'booked');
   const past = bookings.filter((b) => b.status === 'completed' || b.status === 'cancelled');
   const spent = bookings.filter((b) => b.status === 'completed').reduce((s, b) => s + (b.total || 0), 0);
   const favCars = useMemo(() => cars.filter((c) => favIds.includes(c.id)), [cars, favIds]);
@@ -96,14 +94,15 @@ export function LkPage() {
   const uploadDoc = async (field, e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл больше 2 МБ'); return; }
-    patchMe({ [field]: await readFile(file) });
+    const data = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
+    if (dataUrlBytes(data) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите PDF поменьше или фото.'); return; }
+    patchMe({ [field]: data });
   };
   const uploadAvatar = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    if (file.size > 1024 * 1024) { alert('Аватар больше 1 МБ'); return; }
-    patchMe({ avatar_url: await readFile(file) });
+    const data = await fileToCompressedDataUrl(file, { maxSize: 512, quality: 0.85 });
+    patchMe({ avatar_url: data });
   };
 
   const cancelBooking = async (id) => {
@@ -381,7 +380,7 @@ function ActiveList({ list, onCancel }) {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge size="sm" variant={b.status === 'active' ? 'success' : 'warning'} appearance="light">{STATUS_RU[b.status]}</Badge>
+                  <Badge size="sm" variant={b.status === 'active' ? 'success' : b.status === 'booked' ? 'primary' : 'warning'} appearance="light">{STATUS_RU[b.status]}</Badge>
                   <Button size="sm" variant="ghost" onClick={() => onCancel(b.id)}>Отменить</Button>
                 </div>
               </div>
@@ -446,9 +445,10 @@ function LkChat() {
 
   const onFile = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
-    if (!file || file.size > 2 * 1024 * 1024) { if (file) alert('Файл больше 2 МБ'); return; }
-    const url = await new Promise((res) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.readAsDataURL(file); });
-    setAttach({ url, name: file.name, type: file.type, size: file.size });
+    if (!file) return;
+    const url = await fileToCompressedDataUrl(file, { maxSize: 2000, quality: 0.82 });
+    if (dataUrlBytes(url) > 8 * 1024 * 1024) { alert('Файл слишком большой. Пришлите вложение поменьше.'); return; }
+    setAttach({ url, name: file.name, type: file.type, size: dataUrlBytes(url) });
   };
 
   const send = async () => {

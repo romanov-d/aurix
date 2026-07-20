@@ -75,7 +75,7 @@ router.get('/', async (req, res, next) => {
       params.push(qs.to); const pTo = params.length;
       where.push(`id NOT IN (
         SELECT car_id FROM bookings
-        WHERE status IN ('pending','active')
+        WHERE status IN ('booked','active')
           AND NOT (to_dt <= $${pFrom} OR from_dt >= $${pTo})
       )`);
       // Машина «закрыта до даты» недоступна, если аренда начинается раньше открытия
@@ -122,6 +122,22 @@ router.get('/:id', async (req, res, next) => {
     );
     if (!car) return res.status(404).json({ error: 'Not found' });
     res.json(car);
+  } catch (e) { next(e); }
+});
+
+// Занятые интервалы авто для календаря брони: только оплаченные (booked) и
+// выданные (active) брони, начиная с сегодняшнего дня. Публичный эндпоинт —
+// отдаём лишь диапазоны дат, без данных клиента.
+router.get('/:id/busy', async (req, res, next) => {
+  try {
+    if (!DB_AVAILABLE) return res.json({ ranges: [] });
+    const ranges = await many(
+      `SELECT from_dt, to_dt FROM bookings
+       WHERE car_id = $1 AND status IN ('booked','active') AND to_dt >= CURRENT_DATE
+       ORDER BY from_dt`,
+      [req.params.id]
+    );
+    res.json({ ranges });
   } catch (e) { next(e); }
 });
 

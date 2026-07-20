@@ -6,6 +6,7 @@ import { useDashboardData } from '../dashboard-data';
 
 const STATUS_COLOR = {
   active: 'bg-green-500',
+  booked: 'bg-primary',
   pending: 'bg-yellow-400',
   completed: 'bg-secondary-foreground/40',
 };

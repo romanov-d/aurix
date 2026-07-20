@@ -7,6 +7,7 @@ import {
 import { MagnifyingGlass, X, Plus, PencilSimple, Trash, UploadSimple, CaretUp, CaretDown, Check, Prohibit, LockOpen } from '@phosphor-icons/react';
 import { Link } from 'react-router-dom';
 import { api } from '@/lib/aurix-api';
+import { fileToCompressedDataUrl, dataUrlBytes } from '@/lib/image';
 import {
   Toolbar, ToolbarActions, ToolbarDescription, ToolbarHeading, ToolbarPageTitle,
 } from '@/partials/common/toolbar';
@@ -153,8 +154,8 @@ export function CarsPage() {
   const uploadPhotos = async (e) => {
     const files = Array.from(e.target.files || []); e.target.value = '';
     for (const file of files) {
-      if (file.size > 2 * 1024 * 1024) { alert(`«${file.name}» больше 2 МБ`); continue; }
-      const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+      const dataUrl = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
+      if (dataUrlBytes(dataUrl) > 8 * 1024 * 1024) { alert(`«${file.name}» слишком большой даже после сжатия`); continue; }
       try { const p = await api.post(`/admin/cars/${form.id}/photos`, { url: dataUrl }); setPhotos((ps) => [...ps, p]); } catch (err) { alert(err.message); }
     }
   };
@@ -166,8 +167,8 @@ export function CarsPage() {
   const replaceMainPhoto = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { alert('Файл больше 2 МБ'); return; }
-    const dataUrl = await new Promise((res, rej) => { const r = new FileReader(); r.onloadend = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); });
+    const dataUrl = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
+    if (dataUrlBytes(dataUrl) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия'); return; }
     setForm((f) => ({ ...f, image_url: dataUrl }));
   };
 

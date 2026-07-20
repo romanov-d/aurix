@@ -33,17 +33,25 @@ router.patch('/content/:key', async (req, res, next) => {
 
 // ── Этапы воронки бронирования ──
 // Каждый этап маппится на «грубый» status, на котором держится дашборд.
-const STAGES = ['new', 'docs', 'prepay', 'manager', 'issued', 'completed', 'cancelled'];
+// Воронка брони. Машина остаётся в общем доступе (в календаре свободна) на
+// этапах new/docs/await_payment и «занимает» даты только с этапа «оплачено».
+const STAGES = ['new', 'docs', 'await_payment', 'paid', 'manager', 'issued', 'completed', 'cancelled'];
+// 'prepay' — легаси-этап старой воронки, принимаем как синоним 'paid'.
+const STAGE_ENUM = [...STAGES, 'prepay'];
+// «Занятые» статусы (блокируют даты в календаре): booked (оплачено) и active (в аренде).
+const OCCUPYING_STATUSES = ['booked', 'active'];
 function statusForStage(stage) {
   if (stage === 'issued') return 'active';
   if (stage === 'completed') return 'completed';
   if (stage === 'cancelled') return 'cancelled';
-  return 'pending'; // new / docs / prepay / manager
+  if (stage === 'paid' || stage === 'prepay' || stage === 'manager') return 'booked';
+  return 'pending'; // new / docs / await_payment
 }
 function stageForStatus(status) {
   if (status === 'active') return 'issued';
   if (status === 'completed') return 'completed';
   if (status === 'cancelled') return 'cancelled';
+  if (status === 'booked') return 'paid';
   return 'new';
 }
 
@@ -67,7 +75,7 @@ async function awardCashbackIfNeeded(booking) {
 router.get('/dashboard', async (req, res, next) => {
   try {
     // KPI metrics
-    const [revenue, monthRevenue, bookingStats, clientCount, carCount, topCars, revenueByMonth, calendar] = await Promise.all([
+    const [revenue, monthRevenue, bookingStats, clientCount, carCount, topCars, revenueByMonth, calendar, depositsOnHand, depositReturns] = await Promise.all([
       // Total revenue (completed bookings)
       one(`SELECT COALESCE(SUM(total), 0) AS total FROM bookings WHERE status = 'completed'`),
       // Revenue this month
@@ -111,10 +119,25 @@ router.get('/dashboard', async (req, res, next) => {
       FROM bookings b
       JOIN cars c ON b.car_id = c.id
       JOIN users u ON b.user_id = u.id
-      WHERE b.status IN ('pending', 'active')
+      WHERE b.status IN ('pending', 'booked', 'active')
         AND b.to_dt >= CURRENT_DATE
         AND b.from_dt <= CURRENT_DATE + INTERVAL '14 days'
-      ORDER BY b.from_dt`)
+      ORDER BY b.from_dt`),
+      // Залог «на руках»: собранные, но ещё не возвращённые депозиты по всем машинам.
+      one(`SELECT COALESCE(SUM(deposit_amount - deposit_returned), 0) AS total
+        FROM bookings
+        WHERE status <> 'cancelled' AND deposit_amount > deposit_returned`),
+      // Календарь возвратов залога: запланированные возвраты клиентам (когда/сколько/кому).
+      many(`SELECT m.id, m.booking_id, m.amount, m.due_date, m.note, m.status,
+        u.name AS client_name, u.phone AS client_phone,
+        c.name AS car_name, c.brand,
+        (m.due_date IS NOT NULL AND m.due_date < CURRENT_DATE) AS overdue
+      FROM deposit_movements m
+      JOIN bookings b ON b.id = m.booking_id
+      JOIN users u ON u.id = b.user_id
+      JOIN cars c ON c.id = b.car_id
+      WHERE m.kind = 'return' AND m.status = 'planned'
+      ORDER BY m.due_date NULLS LAST, m.id`)
     ]);
 
     res.json({
@@ -131,7 +154,9 @@ router.get('/dashboard', async (req, res, next) => {
       cars_published: Number(carCount?.published || 0),
       top_cars: topCars,
       revenue_by_month: revenueByMonth,
-      calendar: calendar
+      calendar: calendar,
+      deposits_on_hand: Number(depositsOnHand?.total || 0),
+      deposit_returns: depositReturns,
     });
   } catch (e) {
     next(e);
@@ -157,8 +182,8 @@ router.get('/bookings', async (req, res, next) => {
 });
 
 const patchBookingSchema = z.object({
-  status: z.enum(['pending', 'active', 'completed', 'cancelled']).optional(),
-  stage: z.enum(STAGES).optional(),
+  status: z.enum(['pending', 'active', 'completed', 'cancelled', 'booked']).optional(),
+  stage: z.enum(STAGE_ENUM).optional(),
   total: z.coerce.number().int().min(0).optional(),
   manager: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -299,7 +324,7 @@ router.patch('/bookings/:id', async (req, res, next) => {
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Неверные поля брони', detail: e.errors });
     // EXCLUDE-констрейнт: перенос дат наехал на другую бронь этой машины
-    if (e && e.code === '23P01') return res.status(400).json({ error: 'Даты пересекаются с другой бронью этого автомобиля' });
+    if (e && e.code === '23P01') return res.status(400).json({ error: 'На эти даты уже есть оплаченная бронь этого автомобиля' });
     next(e);
   }
 });
@@ -319,7 +344,7 @@ const manualBookingSchema = z.object({
   with_delivery: z.boolean().default(false),
   manager: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
-  stage: z.enum(STAGES).default('new'),
+  stage: z.enum(STAGE_ENUM).default('new'),
 });
 
 router.post('/bookings', async (req, res, next) => {

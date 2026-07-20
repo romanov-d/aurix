@@ -32,6 +32,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 // Статус брони → подпись + цвет бейджа (дизайн-система Metronic)
 const STATUS_MAP = {
   pending: { label: 'Ожидает', variant: 'warning' },
+  booked: { label: 'Оплачена', variant: 'primary' },
   active: { label: 'В аренде', variant: 'success' },
   completed: { label: 'Завершена', variant: 'secondary' },
   cancelled: { label: 'Отменена', variant: 'destructive' },
@@ -49,7 +50,8 @@ const fmtDate = (iso) => {
 
 // Этапы воронки (как в старой админке)
 const STAGES = [
-  ['new', 'Новая заявка'], ['docs', 'Проверка документов'], ['prepay', 'Оплата бронирования'],
+  ['new', 'Новая заявка'], ['docs', 'Проверка документов'],
+  ['await_payment', 'Ожидает оплаты бронирования'], ['paid', 'Бронирование оплачено'],
   ['manager', 'Назначен менеджер'], ['issued', 'Выдан / в аренде'], ['completed', 'Завершена'], ['cancelled', 'Отменена'],
 ];
 
@@ -64,7 +66,7 @@ const isoToLocalInput = (iso) => {
 const localInputToIso = (v) => (v ? new Date(v).toISOString() : undefined);
 
 const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
-const selectCls = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
+const selectCls = 'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring [color-scheme:dark]';
 
 export function BookingsTable() {
   const [rows, setRows] = useState([]);
@@ -435,10 +437,10 @@ export function BookingsTable() {
       </Card>
 
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] flex flex-col">
           <DialogHeader><DialogTitle>Бронь #{editForm?.id}</DialogTitle></DialogHeader>
           {editForm && (
-            <DialogBody className="flex flex-col gap-4">
+            <DialogBody className="flex flex-col gap-4 overflow-y-auto">
               <div className="text-sm text-secondary-foreground">
                 {editForm.car?.name} · {editForm.user?.name}
               </div>
@@ -452,6 +454,9 @@ export function BookingsTable() {
                   <select className={selectCls} value={editForm.stage} onChange={(e) => setEditForm({ ...editForm, stage: e.target.value })}>
                     {STAGES.map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                   </select>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Даты занимаются в календаре с этапа «Бронирование оплачено». До оплаты авто остаётся в общем доступе.
+                  </div>
                 </div>
                 <div>
                   <div className={fieldLabel}>Начало аренды</div>

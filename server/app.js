@@ -19,7 +19,7 @@ export const app = express();
 // За nginx: без trust proxy req.ip = 127.0.0.1 для всех, и rate limit по IP
 // душил бы всех посетителей одним общим лимитом.
 app.set('trust proxy', 1);
-app.use(express.json({ limit: '5mb' })); // allows base64 avatar + document uploads (до ~2 МБ файлы)
+app.use(express.json({ limit: '12mb' })); // base64 фото/документы: картинки сжимаются на клиенте, PDF до ~8 МБ
 app.use(cookieParser());
 app.use(cors({
   credentials: true,

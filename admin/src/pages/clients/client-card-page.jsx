@@ -54,7 +54,7 @@ function viewDoc(url) {
 
 const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
 const selectClass =
-  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring';
+  'h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring [color-scheme:dark]';
 
 export function ClientCardPage() {
   const { id } = useParams();

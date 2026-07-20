@@ -54,10 +54,11 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: `Автомобиль в аренде — будет доступен с ${openDate}` });
     }
 
-    // Check overlaps (exclude cancelled bookings)
+    // Проверка пересечений: занятыми считаем только оплаченные (booked) и выданные (active).
+    // Новые/на проверке документов/ожидающие оплаты — не блокируют даты.
     const overlap = await one(
       `SELECT id FROM bookings
-       WHERE car_id = $1 AND status IN ('pending', 'active')
+       WHERE car_id = $1 AND status IN ('booked', 'active')
          AND NOT (to_dt <= $2::timestamptz OR from_dt >= $3::timestamptz)`,
       [body.car_id, body.from_dt, body.to_dt]
     );
@@ -165,7 +166,7 @@ router.patch('/:id', async (req, res, next) => {
       // Продление не должно наехать на чужую бронь этой машины
       const clash = await one(
         `SELECT id FROM bookings
-         WHERE car_id = $1 AND id <> $2 AND status IN ('pending','active')
+         WHERE car_id = $1 AND id <> $2 AND status IN ('booked','active')
            AND NOT (to_dt <= $3::timestamptz OR from_dt >= $4::timestamptz)`,
         [booking.car_id, booking.id, booking.from_dt, updates.to_dt]
       );
