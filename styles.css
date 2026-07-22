@@ -1126,13 +1126,6 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 
 /* CAR DETAIL — «подиум» под главным фото */
 .gallery .main-img{position:relative;background:var(--bg-1)}
-.gallery .main-img:before{
-  content:'';position:absolute;left:50%;bottom:-18px;transform:translateX(-50%);
-  width:70%;height:36px;border-radius:50%;
-  background:radial-gradient(ellipse at center,rgba(212,175,55,.45),rgba(212,175,55,0) 70%);
-  filter:blur(10px);z-index:0;pointer-events:none;
-}
-.gallery{padding-bottom:18px}
 
 /* CARD PRICE BLOCK — подсветка золотой цены */
 .card-price .val{text-shadow:0 0 24px rgba(212,175,55,.25)}
