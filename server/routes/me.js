@@ -16,6 +16,14 @@ router.patch('/', async (req, res, next) => {
     const { name, phone, email, avatar_url, dob,
             passport_url, license_url, passport_page_url, registration_url } = req.body;
 
+    // Серверный лимит на размер загрузок (клиентское сжатие можно обойти).
+    const MAX_UPLOAD = 6 * 1024 * 1024; // ~6 МБ base64/url
+    for (const [k, v] of Object.entries({ avatar_url, passport_url, license_url, passport_page_url, registration_url })) {
+      if (typeof v === 'string' && v.length > MAX_UPLOAD) {
+        return res.status(413).json({ error: `Файл «${k}» слишком большой` });
+      }
+    }
+
     // Документы можно редактировать только до прохождения верификации
     const docChange = { passport_url, license_url, passport_page_url, registration_url };
     const editingDocs = DOC_FIELDS.some(f => docChange[f] !== undefined);

@@ -1,16 +1,27 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { sendContactRequestEmail } from '../email.js';
 import { sendContactRequestTelegram } from '../telegram.js';
+import { rateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
-router.post('/', async (req, res, next) => {
-  try {
-    const { name, phone, car, message } = req.body;
+// Публичный неавторизованный эндпоинт — жёстко ограничиваем длины и частоту,
+// чтобы не было спама/email-бомбы через тело до 12 МБ.
+const contactSchema = z.object({
+  name: z.string().trim().min(1, 'Укажите имя').max(100),
+  phone: z.string().trim().min(5, 'Укажите телефон').max(30),
+  car: z.string().trim().max(120).optional().nullable(),
+  message: z.string().trim().max(2000).optional().nullable(),
+});
 
-    if (!name || !phone) {
-      return res.status(400).json({ error: 'Имя и телефон обязательны для заполнения' });
+router.post('/', rateLimit({ windowMs: 10 * 60 * 1000, max: 5 }), async (req, res, next) => {
+  try {
+    const parsed = contactSchema.safeParse(req.body || {});
+    if (!parsed.success) {
+      return res.status(400).json({ error: 'Проверьте поля формы', detail: parsed.error.issues });
     }
+    const { name, phone, car, message } = parsed.data;
 
     // Шлём в оба канала (Telegram + почта). Сбой одного не должен терять заявку.
     const results = await Promise.allSettled([

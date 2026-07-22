@@ -9,10 +9,35 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 // ─────────────────────────────────────────────────────────────────────────────
 
 const MAX_BODY = 4000;
+const ATTACH_MAX_URL = 6 * 1024 * 1024; // ~6 МБ строки url/base64 (сжатие на клиенте есть)
 
 function cleanMsg(body) {
   const t = (body ?? '').toString().trim();
   return t.slice(0, MAX_BODY);
+}
+
+// Валидация вложения на приёме: только безопасные схемы URL.
+// Блокируем javascript:, data:text/html и data:image/svg+xml (SVG может исполнять скрипт),
+// иначе не-image вложение рендерится как <a href> → XSS у менеджера/клиента.
+function validateAttachment(att) {
+  if (!att || typeof att !== 'object') return { ok: true, value: null };
+  const url = String(att.url || '');
+  if (!url) return { ok: true, value: null };
+  const allowed =
+    /^https:\/\//i.test(url) ||
+    /^data:image\/(png|jpe?g|gif|webp|heic|heif);base64,/i.test(url) ||
+    /^data:application\/pdf;base64,/i.test(url);
+  if (!allowed) return { ok: false, error: 'Недопустимый тип вложения' };
+  if (url.length > ATTACH_MAX_URL) return { ok: false, error: 'Вложение слишком большое' };
+  return {
+    ok: true,
+    value: {
+      url,
+      name: att.name ? String(att.name).slice(0, 200) : null,
+      type: att.type ? String(att.type).slice(0, 120) : null,
+      size: Number.isFinite(Number(att.size)) ? Number(att.size) : null,
+    },
+  };
 }
 
 // Один открытый тред на (клиент + машину). Без машины — общий тред поддержки.
@@ -150,7 +175,9 @@ clientRouter.post('/threads/:id/messages', async (req, res, next) => {
     const thread = await one(`SELECT * FROM chat_threads WHERE id = $1 AND user_id = $2`, [req.params.id, req.user.id]);
     if (!thread) return res.status(404).json({ error: 'Диалог не найден' });
     const body = cleanMsg(req.body?.body);
-    const attachment = req.body?.attachment;
+    const attCheck = validateAttachment(req.body?.attachment);
+    if (!attCheck.ok) return res.status(400).json({ error: attCheck.error });
+    const attachment = attCheck.value;
     if (!body && !attachment) return res.status(400).json({ error: 'Пустое сообщение' });
     const msg = await insertMessage(thread, { senderId: req.user.id, senderRole: 'user', body, attachment });
     await markRead(thread.id, 'user', msg.id);
@@ -271,7 +298,9 @@ adminRouter.post('/threads/:id/messages', async (req, res, next) => {
     const thread = await one(`SELECT * FROM chat_threads WHERE id = $1`, [req.params.id]);
     if (!thread) return res.status(404).json({ error: 'Диалог не найден' });
     const body = cleanMsg(req.body?.body);
-    const attachment = req.body?.attachment;
+    const attCheck = validateAttachment(req.body?.attachment);
+    if (!attCheck.ok) return res.status(400).json({ error: attCheck.error });
+    const attachment = attCheck.value;
     if (!body && !attachment) return res.status(400).json({ error: 'Пустое сообщение' });
     const msg = await insertMessage(thread, { senderId: req.user.id, senderRole: 'admin', body, attachment });
     // первый ответивший менеджер закрепляется за тредом

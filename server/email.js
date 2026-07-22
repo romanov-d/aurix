@@ -10,6 +10,13 @@ const SITE = process.env.SITE_URL || 'https://aurixmotors.ru';
 
 export const resendConfigured = !!resend;
 
+// Экранирование пользовательского ввода перед вставкой в HTML письма.
+function esc(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 // Отправка 6-значного кода (вход / подтверждение почты)
 export async function sendCodeEmail(email, code, purpose = 'login') {
   const title = purpose === 'login' ? 'Код для входа' : 'Подтверждение email';
@@ -91,10 +98,10 @@ export async function sendContactRequestEmail({ name, phone, car, message }) {
         <h1 style="font-size:24px;margin:0 0 16px;color:#fff;border-bottom:1px solid #333;padding-bottom:16px">
           Новая заявка на обратную связь
         </h1>
-        <p style="margin:16px 0"><strong>Имя:</strong> ${name}</p>
-        <p style="margin:16px 0"><strong>Телефон:</strong> ${phone}</p>
-        <p style="margin:16px 0"><strong>Автомобиль:</strong> ${car || 'Не указан'}</p>
-        <p style="margin:16px 0"><strong>Сообщение:</strong><br />${(message || 'Пусто').replace(/\n/g, '<br />')}</p>
+        <p style="margin:16px 0"><strong>Имя:</strong> ${esc(name)}</p>
+        <p style="margin:16px 0"><strong>Телефон:</strong> ${esc(phone)}</p>
+        <p style="margin:16px 0"><strong>Автомобиль:</strong> ${esc(car || 'Не указан')}</p>
+        <p style="margin:16px 0"><strong>Сообщение:</strong><br />${esc(message || 'Пусто').replace(/\n/g, '<br />')}</p>
       </div>
     `,
   });

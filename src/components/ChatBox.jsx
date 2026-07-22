@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { fileToCompressedDataUrl, dataUrlBytes } from '../api/image.js';
 
+// Безопасная ссылка на вложение: только https и data:image/pdf (не javascript:/svg/html).
+const safeAttUrl = (u) =>
+  /^(https:\/\/|data:image\/(png|jpe?g|gif|webp|heic|heif)|data:application\/pdf)/i.test(u || '') ? u : undefined;
+
 // Переиспользуемая лента чата: сообщения + ввод + вложения.
 // Реалтайм: SSE (мгновенно) + страховочный polling (12с) на случай,
 // если поток заблокирован прокси.
@@ -127,12 +131,12 @@ export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRe
           <div key={m.id} className={`chat-msg ${m.sender_role === selfRole ? 'mine' : 'theirs'}`}>
             <div className="chat-bubble">
               {m.body && <span className="chat-text">{m.body}</span>}
-              {m.attachment_url && (m.attachment_type || '').startsWith('image/') ? (
-                <a href={m.attachment_url} target="_blank" rel="noreferrer" className="chat-img-link">
-                  <img src={m.attachment_url} alt={m.attachment_name || ''} className="chat-img" />
+              {m.attachment_url && (m.attachment_type || '').startsWith('image/') && safeAttUrl(m.attachment_url) ? (
+                <a href={safeAttUrl(m.attachment_url)} target="_blank" rel="noreferrer" className="chat-img-link">
+                  <img src={safeAttUrl(m.attachment_url)} alt={m.attachment_name || ''} className="chat-img" />
                 </a>
-              ) : m.attachment_url ? (
-                <a href={m.attachment_url} target="_blank" rel="noreferrer" download={m.attachment_name} className="chat-att">
+              ) : m.attachment_url && safeAttUrl(m.attachment_url) ? (
+                <a href={safeAttUrl(m.attachment_url)} target="_blank" rel="noreferrer" download={m.attachment_name} className="chat-att">
                   <i className="ph-fill ph-paperclip" /> {m.attachment_name || 'файл'}
                 </a>
               ) : null}
