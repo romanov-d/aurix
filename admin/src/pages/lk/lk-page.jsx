@@ -392,7 +392,10 @@ function ActiveList({ list, onCancel }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge size="sm" variant={b.status === 'active' ? 'success' : b.status === 'booked' ? 'primary' : 'warning'} appearance="light">{STATUS_RU[b.status]}</Badge>
-                  <Button size="sm" variant="ghost" onClick={() => onCancel(b.id)}>Отменить</Button>
+                  {/* Отменить можно только до выдачи авто; выданную аренду — через менеджера. */}
+                  {['pending', 'booked'].includes(b.status)
+                    ? <Button size="sm" variant="ghost" onClick={() => onCancel(b.id)}>Отменить</Button>
+                    : <span className="text-xs text-muted-foreground">через менеджера</span>}
                 </div>
               </div>
             ))}

@@ -146,8 +146,10 @@ router.patch('/:id', async (req, res, next) => {
     let params = [];
 
     if (updates.status === 'cancelled') {
-      if (!isAdmin && !['pending', 'active'].includes(booking.status)) {
-        return res.status(400).json({ error: 'Эту бронь уже нельзя отменить' });
+      // Клиент может отменить только ДО выдачи авто (заявка/оплачена). Выданную
+      // аренду (active) и завершённую самому отменять нельзя — только через менеджера.
+      if (!isAdmin && !['pending', 'booked'].includes(booking.status)) {
+        return res.status(400).json({ error: 'Эту бронь уже нельзя отменить — обратитесь к менеджеру' });
       }
       params.push('cancelled'); setClauses.push(`status = $${params.length}`);
       params.push('cancelled'); setClauses.push(`stage = $${params.length}`);
