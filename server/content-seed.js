@@ -172,7 +172,7 @@ export const CONTENT_DEFAULTS = [
   { key: 'contacts.hero.title', section: 'Контакты', label: 'Заголовок страницы', type: 'html', sort: 10, value: 'Свяжитесь <em>с нами</em>' },
   { key: 'contacts.hero.lead', section: 'Контакты', label: 'Подзаголовок', type: 'textarea', sort: 20, value: 'Мы на связи 24/7. Звоните, пишите в мессенджеры или приезжайте в наш шоурум.' },
   { key: 'contacts.info.phoneLabel', section: 'Контакты', label: 'Подпись блока «Телефон»', type: 'text', sort: 30, value: 'Телефон · 24/7' },
-  { key: 'contacts.info.phone', section: 'Контакты', label: 'Телефон', type: 'text', sort: 40, value: '+7 999 123 45 67' },
+  { key: 'contacts.info.phone', section: 'Контакты', label: 'Телефон', type: 'text', sort: 40, value: '+7 925 312 28 02' },
   { key: 'contacts.info.phoneNote', section: 'Контакты', label: 'Примечание к телефону', type: 'text', sort: 50, value: 'Москва, основной номер' },
   { key: 'contacts.info.messengersLabel', section: 'Контакты', label: 'Подпись «Мессенджеры»', type: 'text', sort: 60, value: 'Мессенджеры' },
   { key: 'contacts.info.messengers', section: 'Контакты', label: 'Мессенджеры (ник)', type: 'text', sort: 70, value: '@aurixmotors' },

@@ -56,7 +56,7 @@ export default function Footer() {
           <div className="ft-col">
             <h5>Связь и поддержка</h5>
             <ul>
-              <li><a href="tel:+79991234567"><i className="ph-fill ph-phone" /> +7 999 123 45 67</a></li>
+              <li><a href="tel:+79253122802"><i className="ph-fill ph-phone" /> +7 925 312 28 02</a></li>
               <li><a href="mailto:info@aurixmotors.com"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a></li>
             </ul>
           </div>

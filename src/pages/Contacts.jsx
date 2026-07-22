@@ -59,7 +59,7 @@ export default function Contacts() {
             <div>
               <div className="contact-box">
                 <T k="contacts.info.phoneLabel" as="div" className="lbl">Телефон · 24/7</T>
-                <div className="v"><T k="contacts.info.phone">+7 999 123 45 67</T><T k="contacts.info.phoneNote" as="small">Москва, основной номер</T></div>
+                <div className="v"><T k="contacts.info.phone">+7 925 312 28 02</T><T k="contacts.info.phoneNote" as="small">Москва, основной номер</T></div>
               </div>
               <div className="contact-box">
                 <T k="contacts.info.messengersLabel" as="div" className="lbl">Мессенджеры</T>
