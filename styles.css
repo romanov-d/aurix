@@ -2007,8 +2007,8 @@ html{scroll-behavior:smooth}
 .fs-perk{padding:24px 20px;border-right:1px solid var(--line)}
 .fs-perk:last-child{border-right:0}
 .fs-perk > i{font-size:26px;color:var(--gold);display:block;margin-bottom:14px}
-.fs-perk-title{font-size:14px;font-weight:600;color:var(--head);margin-bottom:6px}
-.fs-perk-desc{font-size:12px;color:#9a9a9a;line-height:1.5}
+.fs-perk-title{display:block;font-size:14px;font-weight:600;color:var(--head);margin-bottom:6px}
+.fs-perk-desc{display:block;font-size:12px;color:#9a9a9a;line-height:1.5}
 
 /* карточки категорий: фото + название + цена + стрелка */
 .fs-cat{align-items:stretch;text-align:left;padding:22px 20px 0;gap:0;justify-content:space-between;overflow:hidden}
