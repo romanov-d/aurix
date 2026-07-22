@@ -15,6 +15,31 @@ const ipEmailKey = (req) => `${req.ip}|${(req.body?.email || '').toLowerCase()}`
 const loginLimiter = rateLimit({ windowMs: 5 * 60 * 1000, max: 10, keyFn: ipEmailKey });
 const codeLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 8, keyFn: ipEmailKey });
 const registerLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5 });
+const forgotLimiter = rateLimit({ windowMs: 10 * 60 * 1000, max: 5 });
+
+// Пер-аккаунт анти-брутфорс пароля (IP-НЕзависимо): считаем НЕудачные попытки по email.
+// Ротация IP не спасает атакующего. Сбрасывается при успешном входе/смене пароля.
+// Порог с запасом, чтобы не залочить живого пользователя.
+const ACCOUNT_MAX_FAILS = 12;
+const ACCOUNT_WINDOW_MS = 15 * 60 * 1000;
+const failedLogins = new Map(); // email -> { count, first }
+function accountLocked(email) {
+  const e = failedLogins.get(email);
+  if (!e) return false;
+  if (Date.now() - e.first > ACCOUNT_WINDOW_MS) { failedLogins.delete(email); return false; }
+  return e.count >= ACCOUNT_MAX_FAILS;
+}
+function noteFailedLogin(email) {
+  const now = Date.now();
+  const e = failedLogins.get(email);
+  if (!e || now - e.first > ACCOUNT_WINDOW_MS) failedLogins.set(email, { count: 1, first: now });
+  else e.count += 1;
+}
+function clearFailedLogins(email) { failedLogins.delete(email); }
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of failedLogins) if (now - v.first > ACCOUNT_WINDOW_MS) failedLogins.delete(k);
+}, 10 * 60 * 1000).unref();
 
 const SEED_ADMIN_EMAIL = 'admin@aurix.local'; // встроенный админ — без 2FA (почта не настоящая)
 const CODE_TTL_MS = 10 * 60 * 1000;
@@ -149,10 +174,18 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     try { body = loginSchema.parse(req.body); }
     catch (e) { return res.status(400).json({ error: 'Bad input', detail: e.errors }); }
 
-    const user = await one('SELECT * FROM users WHERE email = $1', [body.email.toLowerCase()]);
-    if (!user) return res.status(401).json({ error: 'Неверный email или пароль' });
-    if (!bcrypt.compareSync(body.password, user.password_hash))
+    const email = body.email.toLowerCase();
+    // Пер-аккаунт лок: перебор пароля с ротацией IP становится бессмысленным.
+    if (accountLocked(email)) {
+      return res.status(429).json({ error: 'Слишком много неудачных попыток. Попробуйте через 15 минут или восстановите пароль.' });
+    }
+
+    const user = await one('SELECT * FROM users WHERE email = $1', [email]);
+    if (!user || !bcrypt.compareSync(body.password, user.password_hash)) {
+      noteFailedLogin(email);
       return res.status(401).json({ error: 'Неверный email или пароль' });
+    }
+    clearFailedLogins(email);
 
     // 2FA: код на почту. Пропускаем для встроенного админа и когда почта не настроена (чтобы не залочить).
     const skip2fa = !resendConfigured || user.email === SEED_ADMIN_EMAIL;
@@ -181,6 +214,48 @@ router.post('/login-verify', codeLimiter, async (req, res, next) => {
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS).json({ user: publicUser(user) });
   } catch (e) {
     if (e instanceof z.ZodError) return res.status(400).json({ error: 'Введите код' });
+    next(e);
+  }
+});
+
+// POST /api/auth/forgot — запросить код сброса пароля на почту.
+// Ответ всегда ok, чтобы не раскрывать, существует ли аккаунт (защита от перечисления).
+router.post('/forgot', forgotLimiter, async (req, res, next) => {
+  try {
+    const { email } = z.object({ email: z.string().email() }).parse(req.body);
+    const user = await one('SELECT id, email FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (user) await issueCode(user.id, user.email, 'reset');
+    res.json({ ok: true });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Введите корректный email' });
+    next(e);
+  }
+});
+
+// POST /api/auth/reset — задать новый пароль по коду из письма.
+const resetSchema = z.object({
+  email: z.string().email(),
+  code: z.string().min(4),
+  password: z.string().min(6, 'Минимум 6 символов').max(120),
+});
+router.post('/reset', codeLimiter, async (req, res, next) => {
+  try {
+    const { email, code, password } = resetSchema.parse(req.body);
+    const user = await one('SELECT * FROM users WHERE email = $1', [email.toLowerCase()]);
+    if (!user || !checkCode(user, code, 'reset')) {
+      if (user) await registerFailedAttempt(user.id);
+      return res.status(400).json({ error: 'Неверный или истёкший код' });
+    }
+    const hash = bcrypt.hashSync(password, 10);
+    await q(
+      `UPDATE users SET password_hash = $1, auth_code = NULL, auth_code_expires = NULL, auth_code_purpose = NULL WHERE id = $2`,
+      [hash, user.id]
+    );
+    clearFailedLogins(user.email);
+    const token = signToken(user);
+    res.cookie(COOKIE_NAME, token, COOKIE_OPTS).json({ ok: true, user: publicUser(user) });
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Проверьте поля', detail: e.errors });
     next(e);
   }
 });

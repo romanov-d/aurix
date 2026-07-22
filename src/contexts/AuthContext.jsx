@@ -23,6 +23,8 @@ export function AuthProvider({ children }) {
     async register(body) { const res = await Auth.register(body); if (res.user) setUser(res.user); return res; },
     async verifyEmailCode(code) { const { user } = await Auth.verifyCode({ code }); setUser(user); return user; },
     async resendEmailCode() { return Auth.resendCode(); },
+    async forgotPassword(email) { return Auth.forgotPassword({ email }); },
+    async resetPassword(body) { const { user } = await Auth.resetPassword(body); setUser(user); return user; },
     async logout() { await Auth.logout(); setUser(null); },
     async refresh() { try { const { user } = await Auth.me(); setUser(user); } catch { setUser(null); } },
   };

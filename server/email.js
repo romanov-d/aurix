@@ -19,9 +19,13 @@ function esc(s) {
 
 // Отправка 6-значного кода (вход / подтверждение почты)
 export async function sendCodeEmail(email, code, purpose = 'login') {
-  const title = purpose === 'login' ? 'Код для входа' : 'Подтверждение email';
+  const title = purpose === 'login' ? 'Код для входа'
+    : purpose === 'reset' ? 'Сброс пароля'
+    : 'Подтверждение email';
   const lead = purpose === 'login'
     ? 'Используйте этот код, чтобы войти в личный кабинет AURIX MOTORS:'
+    : purpose === 'reset'
+    ? 'Используйте этот код, чтобы задать новый пароль AURIX MOTORS:'
     : 'Введите этот код, чтобы подтвердить ваш email:';
 
   if (!resend) {

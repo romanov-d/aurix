@@ -4,15 +4,17 @@ import { useAuth } from '../contexts/AuthContext.jsx';
 import SafeShader from '../components/SafeShader.jsx';
 
 export default function Login() {
-  const { login, loginVerify } = useAuth();
+  const { login, loginVerify, forgotPassword, resetPassword } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [step, setStep] = useState('login'); // 'login' | 'code'
+  const [step, setStep] = useState('login'); // 'login' | 'code' | 'forgot' | 'reset'
   const [code, setCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [notice, setNotice] = useState('');
 
   // Оба — в новую панель (отдельный бандл): админ на дашборд, клиент в свой ЛК.
   // Кука сессии общая, повторный вход в панели не нужен. Если пользователя
@@ -52,6 +54,36 @@ export default function Login() {
     }
   };
 
+  const onForgot = async (e) => {
+    e.preventDefault();
+    setError(''); setNotice('');
+    setSubmitting(true);
+    try {
+      await forgotPassword(email);
+      setNotice('Если аккаунт есть — код отправлен на почту.');
+      setCode(''); setNewPassword('');
+      setStep('reset');
+    } catch (err) {
+      setError(err.message || 'Не удалось отправить код');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const onReset = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSubmitting(true);
+    try {
+      const user = await resetPassword({ email, code: code.trim(), password: newPassword });
+      goNext(user);
+    } catch (err) {
+      setError(err.message || 'Не удалось сменить пароль');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="auth-fullscreen">
       <div className="auth-shader">
@@ -80,7 +112,7 @@ export default function Login() {
           </Link>
         </div>
 
-        {step === 'login' ? (
+        {step === 'login' && (
           <>
             <h1 className="auth-title">Вход в кабинет</h1>
             <p className="auth-sub">Введите email и пароль для входа.</p>
@@ -98,11 +130,14 @@ export default function Login() {
                 {submitting ? 'Входим…' : 'Войти'}
               </button>
             </form>
-            <div className="auth-foot">
-              Нет аккаунта? <Link to="/register">Зарегистрироваться</Link>
+            <div className="auth-foot" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <span>Нет аккаунта? <Link to="/register">Зарегистрироваться</Link></span>
+              <button type="button" onClick={() => { setStep('forgot'); setError(''); setNotice(''); }} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>Забыли пароль?</button>
             </div>
           </>
-        ) : (
+        )}
+
+        {step === 'code' && (
           <>
             <h1 className="auth-title">Код подтверждения</h1>
             <p className="auth-sub">Отправили 6-значный код на <b>{email}</b>. Введите его, чтобы войти.</p>
@@ -119,6 +154,52 @@ export default function Login() {
             </form>
             <div className="auth-foot">
               <button type="button" onClick={() => { setStep('login'); setCode(''); setError(''); }} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>← Назад</button>
+            </div>
+          </>
+        )}
+
+        {step === 'forgot' && (
+          <>
+            <h1 className="auth-title">Восстановление пароля</h1>
+            <p className="auth-sub">Укажите email — пришлём код для смены пароля.</p>
+            <form onSubmit={onForgot} className="auth-form">
+              <label>
+                <span>Email</span>
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required autoFocus />
+              </label>
+              {error && <div className="auth-error">{error}</div>}
+              <button className="auth-cta" type="submit" disabled={submitting}>
+                {submitting ? 'Отправляем…' : 'Отправить код'}
+              </button>
+            </form>
+            <div className="auth-foot">
+              <button type="button" onClick={() => { setStep('login'); setError(''); setNotice(''); }} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>← Назад ко входу</button>
+            </div>
+          </>
+        )}
+
+        {step === 'reset' && (
+          <>
+            <h1 className="auth-title">Новый пароль</h1>
+            <p className="auth-sub">{notice || <>Код отправлен на <b>{email}</b>.</>} Введите код и новый пароль.</p>
+            <form onSubmit={onReset} className="auth-form">
+              <label>
+                <span>Код из письма</span>
+                <input value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" placeholder="000000" required autoFocus
+                  style={{ letterSpacing: '8px', fontSize: 22, textAlign: 'center' }} />
+              </label>
+              <label>
+                <span>Новый пароль</span>
+                <input type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} placeholder="Минимум 6 символов" required minLength={6} />
+              </label>
+              {error && <div className="auth-error">{error}</div>}
+              <button className="auth-cta" type="submit" disabled={submitting}>
+                {submitting ? 'Сохраняем…' : 'Сменить пароль и войти'}
+              </button>
+            </form>
+            <div className="auth-foot" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <button type="button" onClick={() => { setStep('forgot'); setError(''); }} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>← Изменить email</button>
+              <button type="button" onClick={() => onForgot({ preventDefault() {} })} disabled={submitting} style={{ background: 'none', border: 0, color: 'var(--gold)', cursor: 'pointer', font: 'inherit' }}>Отправить код ещё раз</button>
             </div>
           </>
         )}
