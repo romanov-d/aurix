@@ -1,15 +1,6 @@
 import { Link } from 'react-router-dom';
 import SafeShader from './SafeShader.jsx';
 
-/* ── Иконка мессенджера MAX ── */
-function IconMax() {
-  return (
-    <svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path fill="currentColor" d="M5 19V5.6c0-.5.62-.74.95-.37l5.3 5.86a1 1 0 0 0 1.5 0l5.3-5.86c.33-.37.95-.13.95.37V19a1 1 0 0 1-1 1 1 1 0 0 1-1-1v-8.2l-4.05 4.48a3 3 0 0 1-4.4 0L7.5 10.8V19a1 1 0 0 1-1 1 1 1 0 0 1-1.5-1Z"/>
-    </svg>
-  );
-}
-
 export default function Footer() {
   return (
     <footer className="ft">
@@ -69,10 +60,7 @@ export default function Footer() {
         <div className="ft-bot">
           <div className="ft-social">
             <span>Подписывайтесь</span>
-            <a href="https://instagram.com/aurixmotors" target="_blank" rel="noopener noreferrer" aria-label="Instagram"><i className="ph-fill ph-instagram-logo" /></a>
             <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" aria-label="Telegram"><i className="ph-fill ph-telegram-logo" /></a>
-            <a href="https://youtube.com/@aurixmotors" target="_blank" rel="noopener noreferrer" aria-label="YouTube"><i className="ph-fill ph-youtube-logo" /></a>
-            <a href="https://max.ru/aurixmotors" target="_blank" rel="noopener noreferrer" className="ft-max" aria-label="MAX"><IconMax /></a>
           </div>
           <div className="ft-pay">
             <span>Оплата</span>
