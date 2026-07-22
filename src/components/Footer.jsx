@@ -80,7 +80,7 @@ export default function Footer() {
           </div>
           <div className="ft-error">
             <span>Нашли ошибку? Напишите нам</span>
-            <a href="mailto:bugs@aurixmotors.com" className="ft-error-btn">Сообщить об ошибке</a>
+            <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" className="ft-error-btn">Сообщить об ошибке</a>
           </div>
         </div>
       </div>

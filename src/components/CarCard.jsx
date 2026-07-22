@@ -72,7 +72,7 @@ export default function CarCard({ car, days }) {
           alt={car.name}
           loading="lazy"
           decoding="async"
-          style={{ transition: 'opacity .2s' }}
+          style={{ transition: 'opacity .2s ease, transform .6s cubic-bezier(.4,0,.2,1)' }}
         />
       </div>
       <div className="card-body">
