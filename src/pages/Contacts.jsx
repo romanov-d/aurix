@@ -63,7 +63,18 @@ export default function Contacts() {
               </div>
               <div className="contact-box">
                 <T k="contacts.info.messengersLabel" as="div" className="lbl">Мессенджеры</T>
-                <div className="v"><T k="contacts.info.messengers">@aurixmotors</T><T k="contacts.info.messengersNote" as="small">Telegram · WhatsApp · iMessage</T></div>
+                <div className="v" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде."
+                     target="_blank" rel="noopener noreferrer"
+                     style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
+                    <i className="ph-fill ph-whatsapp-logo" style={{ color: '#25D366', fontSize: 22 }} /> WhatsApp
+                  </a>
+                  <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"
+                     style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
+                    <i className="ph-fill ph-telegram-logo" style={{ color: '#29A9EB', fontSize: 22 }} /> Telegram
+                  </a>
+                </div>
+                <T k="contacts.info.messengersNote" as="small">Напишите — ответим быстро</T>
               </div>
               <div className="contact-box">
                 <T k="contacts.info.emailLabel" as="div" className="lbl">Email</T>
