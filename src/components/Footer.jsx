@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import SafeShader from './SafeShader.jsx';
+import { WhatsAppIcon, TelegramIcon } from './BrandIcons.jsx';
 
 export default function Footer() {
   return (
@@ -49,6 +50,8 @@ export default function Footer() {
             <ul>
               <li><a href="tel:+79253122802"><i className="ph-fill ph-phone" /> +7 925 312 28 02</a></li>
               <li><a href="mailto:info@aurixmotors.com"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a></li>
+              <li><a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16} style={{ color: '#25D366' }} /> WhatsApp</a></li>
+              <li><a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"><TelegramIcon size={16} style={{ color: '#29A9EB' }} /> Telegram</a></li>
             </ul>
           </div>
           <div className="ft-col">
@@ -60,7 +63,7 @@ export default function Footer() {
         <div className="ft-bot">
           <div className="ft-social">
             <span>Подписывайтесь</span>
-            <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" aria-label="Telegram"><i className="ph-fill ph-telegram-logo" /></a>
+            <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" aria-label="Telegram"><TelegramIcon size={20} /></a>
           </div>
           <div className="ft-pay">
             <span>Оплата</span>

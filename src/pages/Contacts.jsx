@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import T from '../components/T.jsx';
+import { WhatsAppIcon, TelegramIcon } from '../components/BrandIcons.jsx';
 
 export default function Contacts() {
   const [form, setForm] = useState({ name: '', phone: '', car: '', message: '' });
@@ -67,11 +68,11 @@ export default function Contacts() {
                   <a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде."
                      target="_blank" rel="noopener noreferrer"
                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
-                    <i className="ph-fill ph-whatsapp-logo" style={{ color: '#25D366', fontSize: 22 }} /> WhatsApp
+                    <WhatsAppIcon size={22} style={{ color: '#25D366' }} /> WhatsApp
                   </a>
                   <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"
                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
-                    <i className="ph-fill ph-telegram-logo" style={{ color: '#29A9EB', fontSize: 22 }} /> Telegram
+                    <TelegramIcon size={22} style={{ color: '#29A9EB' }} /> Telegram
                   </a>
                 </div>
                 <T k="contacts.info.messengersNote" as="small">Напишите — ответим быстро</T>
