@@ -4,9 +4,9 @@ import CarCard from '../components/CarCard.jsx';
 import { getCar, listCars } from '../api/cars.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { api } from '../api/client.js';
-import * as Chat from '../api/chat.js';
 import { useFavorites } from '../api/useFavorites.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
+import { TelegramIcon } from '../components/BrandIcons.jsx';
 
 // Интервалы занятых броней → плоский список дней 'YYYY-MM-DD'.
 // Полуоткрыто [from; to): день возврата свободен для новой выдачи (как на сервере).
@@ -473,17 +473,15 @@ export default function Car() {
           <button onClick={handleBook} disabled={isSubmitting || isNegotiated} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14, opacity: isNegotiated ? 0.45 : 1 }}>
             {isSubmitting ? 'Оформление...' : isNegotiated ? 'Уточните цену по телефону' : (user ? 'Забронировать' : 'Войти для бронирования')}
           </button>
-          <button
-            onClick={async () => {
-              if (!user) { nav('/login'); return; }
-              try { const t = await Chat.openThread({ car_id: car.id }); nav(`/account?ct=${t.id}#chat`); }
-              catch { nav('/account#chat'); }
-            }}
+          <a
+            href={`https://t.me/aurixmotors?text=${encodeURIComponent(`Здравствуйте! Интересует ${car.name} на сайте AURIX MOTORS — можно подробнее?`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
             className="btn btn-ghost"
-            style={{ width: '100%', padding: 14, marginTop: 10 }}
+            style={{ width: '100%', padding: 14, marginTop: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           >
-            <i className="ph-fill ph-chat-circle-dots" style={{ marginRight: 8 }} /> Спросить по этой машине
-          </button>
+            <TelegramIcon size={18} /> Спросить по этой машине
+          </a>
           <p className="muted" style={{ fontSize: 11, textAlign: 'center', marginTop: 14, letterSpacing: '.06em' }}>Подтверждение менеджером · Оплата по ссылке или наличными</p>
 
           <div className="spec-grid">
