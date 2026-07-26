@@ -49,7 +49,7 @@ export default function Footer() {
             <h5>Связь и поддержка</h5>
             <ul>
               <li><a href="tel:+79253122802"><i className="ph-fill ph-phone" /> +7 925 312 28 02</a></li>
-              <li><a href="mailto:info@aurixmotors.com"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a></li>
+              <li><a href="mailto:info@aurixmotors.ru"><i className="ph-fill ph-envelope" /> info@aurixmotors.ru</a></li>
               <li><a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16} style={{ color: '#25D366' }} /> WhatsApp</a></li>
               <li><a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"><TelegramIcon size={16} style={{ color: '#29A9EB' }} /> Telegram</a></li>
             </ul>

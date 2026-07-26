@@ -104,7 +104,7 @@ export default function Header() {
             <a href="tel:+79253122802" className="mm-sub mm-icon"><i className="ph-fill ph-phone" /> +7 925 312 28 02</a>
             <a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде." target="_blank" rel="noopener noreferrer" className="mm-sub mm-icon"><i className="ph-fill ph-whatsapp-logo" /> WhatsApp</a>
             <a href="https://t.me/aurixmotors" className="mm-sub mm-icon"><i className="ph-fill ph-telegram-logo" /> Telegram</a>
-            <a href="mailto:info@aurixmotors.com" className="mm-sub mm-icon"><i className="ph-fill ph-envelope" /> info@aurixmotors.com</a>
+            <a href="mailto:info@aurixmotors.ru" className="mm-sub mm-icon"><i className="ph-fill ph-envelope" /> info@aurixmotors.ru</a>
           </div>
           <div className="mm-foot">
             <a href="/admin/me" className="btn" style={{ width: '100%', marginBottom: 10 }} onClick={() => setOpen(false)}><i className="ph-fill ph-user-circle" /> &nbsp;Личный кабинет</a>

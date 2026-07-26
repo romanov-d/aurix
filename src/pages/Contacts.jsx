@@ -79,7 +79,7 @@ export default function Contacts() {
               </div>
               <div className="contact-box">
                 <T k="contacts.info.emailLabel" as="div" className="lbl">Email</T>
-                <div className="v"><T k="contacts.info.email">info@aurixmotors.com</T><T k="contacts.info.emailNote" as="small">booking@aurixmotors.com — бронирование</T></div>
+                <div className="v"><T k="contacts.info.email">info@aurixmotors.ru</T><T k="contacts.info.emailNote" as="small">booking@aurixmotors.ru — бронирование</T></div>
               </div>
               <div className="contact-box">
                 <T k="contacts.info.addressLabel" as="div" className="lbl">Шоурум</T>

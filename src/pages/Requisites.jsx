@@ -21,8 +21,8 @@ const BANK = [
 
 const CONTACTS = [
   ['Руководитель', 'Сусарова Марина Ханпашевна'],
-  ['Электронная почта', 'info@aurixmotors.com'],
-  ['Телефон', '+7 977 660 67 73'],
+  ['Электронная почта', 'info@aurixmotors.ru'],
+  ['Телефон', '+7 925 312 28 02'],
 ];
 
 function Block({ title, rows }) {

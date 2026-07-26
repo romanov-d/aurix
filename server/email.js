@@ -80,7 +80,7 @@ export async function sendVerificationEmail(email, token) {
 }
 
 export async function sendContactRequestEmail({ name, phone, car, message }) {
-  const toEmail = process.env.CONTACT_EMAIL || 'info@aurixmotors.com';
+  const toEmail = process.env.CONTACT_EMAIL || 'info@aurixmotors.ru';
 
   if (!resend) {
     console.warn('[email] RESEND_API_KEY not set — skipping sending contact request email');
