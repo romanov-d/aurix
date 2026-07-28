@@ -4,6 +4,7 @@ import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
 import Preloader from './components/Preloader.jsx';
 import Home from './pages/Home.jsx'; // главная — eager, чтобы лендинг был мгновенным
+import { ymHit } from './api/metrika.js';
 // Остальные страницы — отдельными чанками (code-splitting): грузятся по заходу,
 // чтобы стартовый бандл не тащил всю админку и второстепенные страницы на телефон.
 const Catalog = lazy(() => import('./pages/Catalog.jsx'));
@@ -47,6 +48,7 @@ export default function App() {
   const timerRef = useRef(null);
 
   useEffect(() => {
+    ymHit(window.location.href); // SPA-просмотр страницы для Метрики
     clearTimeout(timerRef.current);
     setTransClass('pt-in');
     timerRef.current = setTimeout(() => setTransClass('pt-out'), 50);

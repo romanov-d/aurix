@@ -7,6 +7,7 @@ import { api } from '../api/client.js';
 import { useFavorites } from '../api/useFavorites.js';
 import DateRangePicker from '../components/DateRangePicker.jsx';
 import { TelegramIcon } from '../components/BrandIcons.jsx';
+import { reachGoal } from '../api/metrika.js';
 
 // Интервалы занятых броней → плоский список дней 'YYYY-MM-DD'.
 // Полуоткрыто [from; to): день возврата свободен для новой выдачи (как на сервере).
@@ -230,6 +231,7 @@ export default function Car() {
           with_delivery: needDelivery
         }
       });
+      reachGoal('booking'); // цель Метрики: оформлена бронь
       nav('/account');
     } catch (e) {
       setError(e.message || 'Ошибка бронирования');
@@ -477,6 +479,7 @@ export default function Car() {
             href={`https://t.me/aurixmotors?text=${encodeURIComponent(`Здравствуйте! Интересует ${car.name} на сайте AURIX MOTORS — можно подробнее?`)}`}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => reachGoal('ask_car')}
             className="btn btn-ghost"
             style={{ width: '100%', padding: 14, marginTop: 10, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
           >

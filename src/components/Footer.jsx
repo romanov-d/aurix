@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import SafeShader from './SafeShader.jsx';
 import { WhatsAppIcon, TelegramIcon } from './BrandIcons.jsx';
+import { reachGoal } from '../api/metrika.js';
 
 export default function Footer() {
   return (
@@ -48,10 +49,10 @@ export default function Footer() {
           <div className="ft-col">
             <h5>Связь и поддержка</h5>
             <ul>
-              <li><a href="tel:+79253122802"><i className="ph-fill ph-phone" /> +7 925 312 28 02</a></li>
+              <li><a href="tel:+79253122802" onClick={() => reachGoal('phone')}><i className="ph-fill ph-phone" /> +7 925 312 28 02</a></li>
               <li><a href="mailto:info@aurixmotors.ru"><i className="ph-fill ph-envelope" /> info@aurixmotors.ru</a></li>
-              <li><a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде." target="_blank" rel="noopener noreferrer"><WhatsAppIcon size={16} style={{ color: '#25D366' }} /> WhatsApp</a></li>
-              <li><a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"><TelegramIcon size={16} style={{ color: '#29A9EB' }} /> Telegram</a></li>
+              <li><a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде." target="_blank" rel="noopener noreferrer" onClick={() => reachGoal('whatsapp')}><WhatsAppIcon size={16} style={{ color: '#25D366' }} /> WhatsApp</a></li>
+              <li><a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" onClick={() => reachGoal('telegram')}><TelegramIcon size={16} style={{ color: '#29A9EB' }} /> Telegram</a></li>
             </ul>
           </div>
           <div className="ft-col">

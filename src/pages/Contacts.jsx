@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import T from '../components/T.jsx';
 import { WhatsAppIcon, TelegramIcon } from '../components/BrandIcons.jsx';
+import { reachGoal } from '../api/metrika.js';
 
 export default function Contacts() {
   const [form, setForm] = useState({ name: '', phone: '', car: '', message: '' });
@@ -30,6 +31,7 @@ export default function Contacts() {
         method: 'POST',
         body: form,
       });
+      reachGoal('contact'); // цель Метрики: отправлена заявка с формы
       setSuccess(true);
       setForm({ name: '', phone: '', car: '', message: '' });
     } catch (err) {
@@ -66,11 +68,11 @@ export default function Contacts() {
                 <T k="contacts.info.messengersLabel" as="div" className="lbl">Мессенджеры</T>
                 <div className="v" style={{ display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                   <a href="https://wa.me/79253122802?text=Здравствуйте!%20Пишу%20с%20сайта%20AURIX%20MOTORS%20—%20хочу%20задать%20вопрос%20по%20аренде."
-                     target="_blank" rel="noopener noreferrer"
+                     target="_blank" rel="noopener noreferrer" onClick={() => reachGoal('whatsapp')}
                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
                     <WhatsAppIcon size={22} style={{ color: '#25D366' }} /> WhatsApp
                   </a>
-                  <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer"
+                  <a href="https://t.me/aurixmotors" target="_blank" rel="noopener noreferrer" onClick={() => reachGoal('telegram')}
                      style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: 'var(--head)' }}>
                     <TelegramIcon size={22} style={{ color: '#29A9EB' }} /> Telegram
                   </a>
