@@ -34,6 +34,16 @@ export async function sendTelegramMessage(text) {
   }
 }
 
+// Новый зарегистрированный пользователь → сообщение в Telegram.
+export async function sendNewUserTelegram({ name, email, phone }) {
+  const text =
+    '👤 <b>Новый пользователь AURIX</b>\n\n' +
+    `<b>Имя:</b> ${esc(name)}\n` +
+    `<b>Email:</b> ${esc(email)}\n` +
+    `<b>Телефон:</b> ${esc(phone || 'Не указан')}`;
+  await sendTelegramMessage(text);
+}
+
 // Заявка с формы «Оставьте заявку» → красивое сообщение в Telegram.
 export async function sendContactRequestTelegram({ name, phone, car, message }) {
   const text =

@@ -4,7 +4,8 @@ import bcrypt from 'bcryptjs';
 import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
-import { sendCodeEmail, resendConfigured } from '../email.js';
+import { sendCodeEmail, sendNewUserEmail, resendConfigured } from '../email.js';
+import { sendNewUserTelegram } from '../telegram.js';
 import { pushToSalebot } from '../salebot.js';
 
 const router = Router();
@@ -127,6 +128,12 @@ router.post('/register', registerLimiter, async (req, res, next) => {
     pushToSalebot('register', {
       user_id: user.id, name: user.name, email: user.email, phone: user.phone,
     }).catch(() => {});
+
+    // Уведомление админу о новой регистрации (почта + Telegram), не блокирует ответ.
+    sendNewUserEmail({ name: user.name, email: user.email, phone: user.phone })
+      .catch((e) => console.error('[auth] new-user email:', e.message));
+    sendNewUserTelegram({ name: user.name, email: user.email, phone: user.phone })
+      .catch((e) => console.error('[auth] new-user telegram:', e.message));
 
     const token = signToken(user);
     res.cookie(COOKIE_NAME, token, COOKIE_OPTS).json({

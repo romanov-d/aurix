@@ -110,3 +110,31 @@ export async function sendContactRequestEmail({ name, phone, car, message }) {
     `,
   });
 }
+
+// Уведомление админу о новом зарегистрированном пользователе.
+export async function sendNewUserEmail({ name, email, phone }) {
+  const toEmail = process.env.CONTACT_EMAIL || 'info@aurixmotors.ru';
+
+  if (!resend) {
+    console.warn('[email] RESEND_API_KEY not set — skipping new-user notification');
+    console.log(`[email] Новый пользователь: ${name} / ${email} / ${phone || '—'}`);
+    return;
+  }
+
+  await resend.emails.send({
+    from: FROM,
+    to: toEmail,
+    subject: `Новый пользователь: ${name}`,
+    html: `
+      <div style="background:#000;color:#fff;font-family:sans-serif;padding:48px;max-width:560px;margin:0 auto">
+        <img src="${SITE}/logo.svg" alt="AURIX" style="height:36px;margin-bottom:32px" />
+        <h1 style="font-size:24px;margin:0 0 16px;color:#fff;border-bottom:1px solid #333;padding-bottom:16px">
+          Новая регистрация на сайте
+        </h1>
+        <p style="margin:16px 0"><strong>Имя:</strong> ${esc(name)}</p>
+        <p style="margin:16px 0"><strong>Email:</strong> ${esc(email)}</p>
+        <p style="margin:16px 0"><strong>Телефон:</strong> ${esc(phone || 'Не указан')}</p>
+      </div>
+    `,
+  });
+}
