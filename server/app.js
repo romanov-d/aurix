@@ -14,6 +14,7 @@ import faqRouter from './routes/faq.js';
 import blogRouter from './routes/blog.js';
 import contentRouter from './routes/content.js';
 import { clientRouter as chatRouter, adminRouter as chatAdminRouter } from './routes/chat.js';
+import { many } from './db.js';
 
 export const app = express();
 // За nginx: без trust proxy req.ip = 127.0.0.1 для всех, и rate limit по IP
@@ -101,6 +102,30 @@ if (adminDistDir) {
     res.sendFile(path.join(adminDistDir, 'index.html'));
   });
 }
+
+// ── SEO: sitemap.xml динамически из БД (статические страницы + опубликованные
+// авто + статьи блога). robots.txt раздаётся статикой из dist (public/robots.txt). ──
+const SITE_BASE = (process.env.SITE_URL || 'https://aurixmotors.ru').replace(/\/$/, '');
+app.get('/sitemap.xml', async (_req, res, next) => {
+  try {
+    const staticPaths = ['/', '/catalog', '/long-term', '/tariffs', '/photo', '/club',
+      '/terms', '/privacy', '/requisites', '/blog', '/contacts'];
+    let urls = staticPaths.map((p) => `${SITE_BASE}${p}`);
+    try {
+      const cars = await many(`SELECT id FROM cars WHERE status = 'published'`);
+      urls = urls.concat(cars.map((c) => `${SITE_BASE}/car/${c.id}`));
+      const posts = await many(`SELECT id FROM blog_posts`);
+      urls = urls.concat(posts.map((b) => `${SITE_BASE}/blog/${b.id}`));
+    } catch { /* БД недоступна — отдаём хотя бы статические страницы */ }
+    const body = `<?xml version="1.0" encoding="UTF-8"?>\n` +
+      `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+      urls.map((loc) => `  <url><loc>${loc}</loc></url>`).join('\n') +
+      `\n</urlset>\n`;
+    res.set('Content-Type', 'application/xml; charset=utf-8');
+    res.set('Cache-Control', 'public, max-age=3600');
+    res.send(body);
+  } catch (e) { next(e); }
+});
 
 // ── Самохостинг (VPS / Node-хостинг): SPA-fallback на index.html ──
 // Сами файлы статики уже раздаются выше (до loadUser). Здесь — только отдача
