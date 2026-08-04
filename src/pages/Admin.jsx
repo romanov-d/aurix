@@ -634,7 +634,7 @@ export default function Admin() {
     const u = client.user;
     const inp = { width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '10px 12px', borderRadius: 8, fontSize: 14, fontFamily: 'inherit' };
     const save = (patch) => saveClientCard(patch).catch(e => alert(e.message));
-    const docs = [['passport_url', 'Паспорт'], ['passport_page_url', 'Паспорт (1-я стр.)'], ['registration_url', 'Прописка'], ['license_url', 'Вод. удостоверение']];
+    const docs = [['passport_url', 'Паспорт — основной разворот'], ['registration_url', 'Паспорт — прописка'], ['license_url', 'Права — лицевая сторона'], ['passport_page_url', 'Права — оборотная сторона']];
     return (
       <div>
         {backBtn(() => setClient(null), 'Назад к пользователям')}

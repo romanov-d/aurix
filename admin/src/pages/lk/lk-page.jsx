@@ -36,10 +36,10 @@ const fmtDateTime = (iso) => {
 
 const STATUS_RU = { pending: 'Ожидает', booked: 'Забронирована', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
 const DOCS = [
-  ['passport_url', 'Паспорт (разворот)'],
-  ['passport_page_url', 'Паспорт (1-я страница)'],
-  ['registration_url', 'Прописка'],
-  ['license_url', 'Вод. удостоверение'],
+  ['passport_url', 'Паспорт — основной разворот'],
+  ['registration_url', 'Паспорт — прописка'],
+  ['license_url', 'Права — лицевая сторона'],
+  ['passport_page_url', 'Права — оборотная сторона'],
 ];
 const TABS = [
   ['overview', 'Обзор'], ['bookings', 'Бронирования'], ['history', 'История'],

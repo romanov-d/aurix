@@ -464,10 +464,10 @@ export default function Account() {
                   )}
                   <div className="doc-list">
                     {[
-                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт (разворот)' },
-                      { field: 'passport_page_url', icon: 'ph-identification-badge', label: 'Паспорт (1-я страница)' },
-                      { field: 'registration_url', icon: 'ph-house', label: 'Прописка' },
-                      { field: 'license_url', icon: 'ph-car', label: 'Водительское удостоверение' },
+                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт — основной разворот' },
+                      { field: 'registration_url', icon: 'ph-house', label: 'Паспорт — прописка' },
+                      { field: 'license_url', icon: 'ph-car', label: 'Права — лицевая сторона' },
+                      { field: 'passport_page_url', icon: 'ph-car', label: 'Права — оборотная сторона' },
                     ].map(d => {
                       const url = user?.[d.field];
                       const busy = docUploading === d.field;

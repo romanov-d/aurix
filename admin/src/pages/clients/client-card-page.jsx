@@ -15,10 +15,10 @@ import { Input } from '@/components/ui/input';
 
 const ROLES = [['user', 'Клиент'], ['partner', 'Партнёр'], ['admin', 'Админ']];
 const DOCS = [
-  ['passport_url', 'Паспорт'],
-  ['passport_page_url', 'Паспорт (1-я стр.)'],
-  ['registration_url', 'Прописка'],
-  ['license_url', 'Вод. удостоверение'],
+  ['passport_url', 'Паспорт — основной разворот'],
+  ['registration_url', 'Паспорт — прописка'],
+  ['license_url', 'Права — лицевая сторона'],
+  ['passport_page_url', 'Права — оборотная сторона'],
 ];
 
 const fmtMoney = (n) => (n || n === 0 ? Number(n).toLocaleString('ru-RU') : '0') + ' ₽';

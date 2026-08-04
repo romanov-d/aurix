@@ -330,6 +330,8 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'site'`,
   // ── Доп. данные клиента ──
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE`,
+  // NB: исторически «паспорт 1-я стр.», с 2026-07 переиспользуется под ОБОРОТНУЮ сторону
+  // прав (структура доков: паспорт=основной разворот+прописка, права=лицевая+оборотная).
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS passport_page_url TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS registration_url TEXT`,
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS admin_note TEXT`,
