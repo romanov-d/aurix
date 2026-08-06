@@ -1612,12 +1612,9 @@ html{scroll-behavior:smooth}
 
 /* brand popup */
 .brand-popup{
-  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-  width:340px;max-width:calc(100vw - 40px);max-height:74vh;overflow-y:auto;z-index:9999;
-  background:var(--bg-1);border:1px solid rgba(255,255,255,.1);
-  border-radius:16px;padding:18px;
-  box-shadow:0 24px 64px rgba(0,0,0,.75),0 0 0 1px rgba(255,255,255,.04);
-  animation:drpInModal .16s cubic-bezier(.2,.8,.2,1);
+  margin-top:10px;width:100%;max-height:320px;overflow-y:auto;
+  background:var(--bg-2);border:1px solid rgba(255,255,255,.08);
+  border-radius:12px;padding:10px;
 }
 .brand-popup-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;padding:0 4px}
 .brand-popup-head span{font-size:12px;color:#888;letter-spacing:.04em}

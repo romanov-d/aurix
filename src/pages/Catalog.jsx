@@ -242,31 +242,28 @@ export default function Catalog() {
               </span>
             </h5>
             {brandsOpen && (
-              <>
-                <div className="brand-popup-backdrop" onClick={() => setBrandsOpen(false)} />
-                <div className="brand-popup">
-                  <div className="brand-popup-head">
-                    <span>Выберите марки</span>
-                    <button onClick={() => setSelectedBrands(null)}>Все</button>
-                  </div>
-                  {brands.map(brand => {
-                    const checked = !selectedBrands || selectedBrands.has(brand);
-                    return (
-                      <div
-                        key={brand}
-                        className={`brand-option${checked ? ' selected' : ''}`}
-                        onClick={() => toggleBrand(brand)}
-                      >
-                        <span className="brand-check">
-                          {checked && <i className="ph-fill ph-check" />}
-                        </span>
-                        {BRAND_LOGOS[brand] && <img className="brand-logo" src={BRAND_LOGOS[brand]} alt="" loading="lazy" />}
-                        {brand}
-                      </div>
-                    );
-                  })}
+              <div className="brand-popup">
+                <div className="brand-popup-head">
+                  <span>Выберите марки</span>
+                  <button onClick={() => setSelectedBrands(null)}>Все</button>
                 </div>
-              </>
+                {brands.map(brand => {
+                  const checked = !selectedBrands || selectedBrands.has(brand);
+                  return (
+                    <div
+                      key={brand}
+                      className={`brand-option${checked ? ' selected' : ''}`}
+                      onClick={() => toggleBrand(brand)}
+                    >
+                      <span className="brand-check">
+                        {checked && <i className="ph-fill ph-check" />}
+                      </span>
+                      {BRAND_LOGOS[brand] && <img className="brand-logo" src={BRAND_LOGOS[brand]} alt="" loading="lazy" />}
+                      {brand}
+                    </div>
+                  );
+                })}
+              </div>
             )}
           </div>
 
