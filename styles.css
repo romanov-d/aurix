@@ -341,8 +341,8 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .pt-photo-2{display:flex;flex-direction:column;background:var(--bg-1)}
 .pt-photo-2 img{flex:1;object-fit:cover;width:100%;height:auto;min-height:0}
 .pt-photo-caption{padding:24px 22px 28px;text-align:center;background:var(--bg-1)}
-.pt-photo-caption-acc{font-size:15px;color:var(--gold);margin-bottom:8px;font-weight:500}
-.pt-photo-caption-main{font-size:18px;color:var(--head);font-weight:600}
+.pt-photo-caption-acc{display:block;font-size:15px;color:var(--gold);margin-bottom:8px;font-weight:500}
+.pt-photo-caption-main{display:block;font-size:18px;color:var(--head);font-weight:600}
 .pt-panel{background:var(--bg-1);padding:48px 48px 48px;display:flex;flex-direction:column;justify-content:center;position:relative}
 .pt-photo-2{display:flex;flex-direction:column;background:var(--bg-1)}
 .pt-mark{position:absolute;top:28px;right:32px;display:flex;align-items:center;gap:2px;color:var(--gold);font-family:'Inter',sans-serif;font-weight:800;line-height:1}
@@ -384,8 +384,8 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .dl-pin{position:absolute;top:14%;left:38%;background:var(--bg-1);color:var(--head);padding:16px 20px;display:flex;gap:14px;align-items:flex-start;max-width:300px;box-shadow:0 14px 40px rgba(0,0,0,.3);z-index:2}
 .dl-pin::before{content:'';position:absolute;left:-12px;top:14px;width:14px;height:14px;background:var(--gold);border-radius:50%;box-shadow:0 0 0 5px rgba(212,175,55,.25)}
 .dl-pin-ico{flex-shrink:0;width:32px;height:32px;color:var(--gold);display:grid;place-items:center;font-size:22px;border-radius:0 !important;background:transparent}
-.dl-pin-title{font-size:14px;font-weight:600;color:var(--head);margin-bottom:6px}
-.dl-pin-line{font-size:12px;color:#cfcfcf;margin-bottom:2px}
+.dl-pin-title{display:block;font-size:14px;font-weight:600;color:var(--head);margin-bottom:6px}
+.dl-pin-line{display:block;font-size:12px;color:#cfcfcf;margin-bottom:2px}
 
 @media (max-width:1024px){
   .dl-grid{grid-template-columns:1fr}
@@ -723,6 +723,10 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 
 /* ==== FORM ==== */
 .form-card{background:var(--bg-1);border:1px solid var(--line);padding:40px;max-width:760px;margin:0 auto}
+/* Форма на «Контактах» — чуть компактнее десктопного .form-card; на мобиле
+   работает общий медиазапрос .form-card{padding:24px} (раньше был инлайн 32px,
+   который его перебивал). */
+.contacts-form{padding:32px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
 .field{display:flex;flex-direction:column;gap:8px}
 .field label{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
@@ -1621,7 +1625,6 @@ html{scroll-behavior:smooth}
 .brand-popup-head button{font-size:11px;color:var(--gold);background:none;border:none;cursor:pointer;padding:0}
 .brand-logo{width:30px;height:30px;object-fit:contain;flex-shrink:0;background:#fff;border-radius:7px;padding:4px;box-shadow:0 1px 4px rgba(0,0,0,.3)}
 .brand-option{font-size:14px}
-.brand-popup-backdrop{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.6);backdrop-filter:blur(2px)}
 
 /* ==== CAR PAGE FIXES ==== */
 /* 1. Inter font for car page */
@@ -1878,9 +1881,11 @@ html{scroll-behavior:smooth}
   display:flex;align-items:center;gap:12px;margin-top:20px;
   padding-top:18px;border-top:1px solid rgba(255,255,255,.07);
 }
+/* Аватар отзыва — кружок с инициалом (без внешних CDN-картинок) */
 .rv-mob-ava{
-  width:44px;height:44px;border-radius:50%;background:#2a2a2a;object-fit:cover;
-  flex-shrink:0;display:block;
+  width:44px;height:44px;border-radius:50%;background:#2a2a2a;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  color:var(--gold);font-weight:600;font-size:17px;user-select:none;
 }
 .rv-mob-who b{display:block;color:var(--head);font-size:14px;font-weight:600}
 .rv-mob-who small{color:#777;font-size:12px}

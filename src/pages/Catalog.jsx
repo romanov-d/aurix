@@ -230,7 +230,7 @@ export default function Catalog() {
           </div>
 
           {/* Марка — попап */}
-          <div className="filter-group" style={{ position: 'relative' }}>
+          <div className="filter-group">
             <h5
               onClick={() => setBrandsOpen(v => !v)}
               style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 0 }}

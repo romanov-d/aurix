@@ -417,7 +417,9 @@ export default function Car() {
               }}
             />
           </div>
-          <div className="form-row" style={{ gridTemplateColumns: '1fr 1fr', display: 'grid', gap: 12 }}>
+          {/* gridTemplateColumns/display НЕ задаём инлайном — иначе перебивают
+              медиазапрос и на 801–1100px сайдбар остаётся в 2 колонки */}
+          <div className="form-row" style={{ gap: 12 }}>
             <div className="field">
               <label>Время получения</label>
               <select value={fromTime} onChange={e => setFromTime(e.target.value)}>

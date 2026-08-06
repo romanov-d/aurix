@@ -90,7 +90,7 @@ export default function Contacts() {
             </div>
 
             <div>
-              <form className="form-card" onSubmit={onSubmit} style={{ padding: 32, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <form className="form-card contacts-form" onSubmit={onSubmit} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <T k="contacts.form.title" as="h3" style={{ color: 'var(--gold)', fontSize: 22, marginBottom: 18, fontWeight: 600 }}>Оставьте заявку</T>
                 
                 {success && (

@@ -8,14 +8,14 @@ import ErrorBoundary from '../components/ErrorBoundary.jsx';
 import { api } from '../api/client.js';
 import T from '../components/T.jsx';
 
-const AV = (id) => `https://images.unsplash.com/${id}?w=160&h=160&fit=crop&crop=faces&q=80`;
+// Аватары отзывов — инициалы (без внешних CDN: Unsplash в РФ не грузится).
 const REVIEWS = [
-  { name: 'Анатолий Яров',      when: 'месяц назад',   rating: 5, avatar: AV('photo-1500648767791-00dcc994a43e'), text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
-  { name: 'Святослав Гордеев',  when: '3 недели назад', rating: 5, avatar: AV('photo-1519085360753-af0119f7cbe7'), text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
-  { name: 'Аркадий Лозинский',  when: '3 недели назад', rating: 5, avatar: AV('photo-1506794778202-cad84cf45f1d'), text: 'Огромный выбор машин в AURIX MOTORS поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
-  { name: 'Ярослава Кравец',    when: 'месяц назад',   rating: 5, avatar: AV('photo-1438761681033-6461ffad8d80'), text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
-  { name: 'Глеб Северин',       when: '2 недели назад', rating: 5, avatar: AV('photo-1472099645785-5658abf4ff4e'), text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
-  { name: 'Ростислав Невзоров', when: 'неделю назад',  rating: 5, avatar: AV('photo-1488161628813-04466f872be2'), text: 'Арендовал Porsche Panamera — незабываемо. AURIX MOTORS — это другой уровень аренды авто в Москве.' },
+  { name: 'Анатолий Яров',      when: 'месяц назад',   rating: 5, text: 'Первый раз арендовал авто и исследовал Москву — впечатления отличные. Команда профессиональная, каждая деталь продумана.' },
+  { name: 'Святослав Гордеев',  when: '3 недели назад', rating: 5, text: 'Автомобиль чистый, в идеальном состоянии. Совершенно новая модель с полной комплектацией — ничего лишнего.' },
+  { name: 'Аркадий Лозинский',  when: '3 недели назад', rating: 5, text: 'Огромный выбор машин в AURIX MOTORS поразил. Нашёл именно то, что нужно. Рекомендую всем!' },
+  { name: 'Ярослава Кравец',    when: 'месяц назад',   rating: 5, text: 'Быстрое оформление, вежливые менеджеры. Обязательно арендую снова. Спасибо за сервис!' },
+  { name: 'Глеб Северин',       when: '2 недели назад', rating: 5, text: 'Подача точно в срок, документы оформили за 10 минут. Всё на высшем уровне. 10 из 10.' },
+  { name: 'Ростислав Невзоров', when: 'неделю назад',  rating: 5, text: 'Арендовал Porsche Panamera — незабываемо. AURIX MOTORS — это другой уровень аренды авто в Москве.' },
 ];
 
 const BRANDS = ['Lexus', 'Mercedes', 'Lamborghini', 'Ferrari', 'BMW', 'Rolls-Royce', 'Porsche'];
@@ -26,19 +26,6 @@ const toDateStr = (d) => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getD
 const today = new Date();
 const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
 const dayAfter4 = new Date(); dayAfter4.setDate(dayAfter4.getDate() + 4);
-
-function brandLogo(name) {
-  if (/^mercedes/i.test(name)) return '/mercedes.svg';
-  if (/^rolls/i.test(name)) return '/rolls-royce.svg';
-  if (/^lambo/i.test(name)) return '/lamborghini.svg';
-  if (/^bentley/i.test(name)) return 'https://logo.clearbit.com/bentleymotors.com';
-  if (/^lexus/i.test(name)) return '/lexus.svg';
-  if (/^ferrari/i.test(name)) return '/ferrari.svg';
-  if (/^bmw/i.test(name)) return '/bmw.svg';
-  if (/^porsche/i.test(name)) return '/porsche.svg';
-  const slug = name.split(/[\s-]/)[0].toLowerCase();
-  return `https://cdn.simpleicons.org/${slug}`;
-}
 
 // Car body-type icons — 3D renders, all facing left
 function CarIcon({ kind }) {
@@ -83,7 +70,7 @@ export default function Home() {
                 <i className="ph-fill ph-map-pin" />
                 <T k="home.search.city">Москва</T>
               </div>
-              <div className="fs-seg fs-seg-dates" style={{ flex: 1, padding: 0, position: 'relative' }}>
+              <div className="fs-seg fs-seg-dates">
                 <DateRangePicker
                   from={fromDate}
                   to={toDate}
@@ -242,7 +229,7 @@ export default function Home() {
                   <div className="rv-mob-stars">★★★★★</div>
                   <p className="rv-mob-text">{r.text}</p>
                   <div className="rv-mob-foot">
-                    <img className="rv-mob-ava" src={r.avatar} alt={r.name} loading="lazy" />
+                    <div className="rv-mob-ava" aria-hidden="true">{r.name.charAt(0)}</div>
                     <div className="rv-mob-who">
                       <b>{r.name}</b>
                       <small>{r.when}</small>
@@ -286,7 +273,7 @@ export default function Home() {
       <section className="partner reveal">
         <div className="pt-wrap">
           <div className="pt-photo pt-photo-2">
-            <img src="https://images.unsplash.com/photo-1611821064430-0d40291d0f0b?w=1200&auto=format&fit=crop&q=80" alt="" />
+            <img src="/cars/porsche_panamera.webp" alt="" loading="lazy" />
             <div className="pt-photo-caption">
               <T k="home.partner.captionAcc" className="pt-photo-caption-acc">Удобное решение для вашего комфорта</T>
               <T k="home.partner.captionMain" className="pt-photo-caption-main">Зарабатывайте больше. Без усилий.</T>
@@ -362,7 +349,7 @@ export default function Home() {
               <T k="home.why.card2text" as="p">Нужен авто в аэропорт в 2 ночи или в отель в полдень? Доставим в любое время, в любую точку Москвы.</T>
             </div>
             <div className="why-photo">
-              <img src="https://images.unsplash.com/photo-1583121274602-3e2820c69888?w=1200&auto=format&fit=crop&q=80" alt="" />
+              <img src="/cars/mercedes_g63.webp" alt="" loading="lazy" />
             </div>
             <div className="why-card why-dark">
               <div className="why-num">03</div>
