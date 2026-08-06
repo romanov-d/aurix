@@ -51,7 +51,15 @@ const fieldLabel = 'text-xs text-muted-foreground mb-1.5';
 
 
 export function LkPage() {
-  const [tab, setTab] = useState('overview');
+  // Вкладка может прийти из URL: /admin/me?tab=documents (переход с сайта,
+  // напр. «Загрузить документы» со страницы авто) или из хеша #documents.
+  const [tab, setTab] = useState(() => {
+    if (typeof window === 'undefined') return 'overview';
+    const p = new URLSearchParams(window.location.search).get('tab');
+    const h = window.location.hash.replace('#', '').trim();
+    const want = p || h;
+    return TABS.some(([k]) => k === want) ? want : 'overview';
+  });
   const [user, setUser] = useState(null);
   const [bookings, setBookings] = useState([]);
   const [favIds, setFavIds] = useState([]);

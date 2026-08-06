@@ -35,8 +35,13 @@ function RedirectToPanel() {
 }
 
 // ЛК клиента переехал в новую панель (Metronic, /admin → /me).
+// Хеш вида /account#documents переводим в ?tab=documents — иначе при
+// window.location.replace он теряется и клиент попадает не на ту вкладку.
 function RedirectToLk() {
-  useEffect(() => { window.location.replace('/admin/me'); }, []);
+  useEffect(() => {
+    const tab = window.location.hash.replace('#', '').trim();
+    window.location.replace(tab ? `/admin/me?tab=${encodeURIComponent(tab)}` : '/admin/me');
+  }, []);
   return <div style={{ minHeight: '70vh' }} />;
 }
 

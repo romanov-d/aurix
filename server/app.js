@@ -109,7 +109,7 @@ const SITE_BASE = (process.env.SITE_URL || 'https://aurixmotors.ru').replace(/\/
 app.get('/sitemap.xml', async (_req, res, next) => {
   try {
     const staticPaths = ['/', '/catalog', '/long-term', '/tariffs', '/photo', '/club',
-      '/terms', '/privacy', '/requisites', '/blog', '/contacts'];
+      '/rent-out', '/terms', '/privacy', '/requisites', '/blog', '/contacts'];
     let urls = staticPaths.map((p) => `${SITE_BASE}${p}`);
     try {
       const cars = await many(`SELECT id FROM cars WHERE status = 'published'`);
