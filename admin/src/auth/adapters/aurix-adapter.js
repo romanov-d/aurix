@@ -3,6 +3,17 @@ import { api } from '@/lib/aurix-api';
 // Адаптер авторизации поверх нашего Express-бэка (JWT в httpOnly-cookie).
 // Тот же интерфейс, что ждёт auth-провайдер Metronic. Заменяет Supabase.
 
+// Аватар-заглушка: инлайновый SVG (data:), без запросов к внешним сервисам.
+function initialAvatar(name) {
+  const letter = (name || 'A').trim().charAt(0).toUpperCase() || 'A';
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">` +
+    `<rect width="128" height="128" fill="#D4AF37"/>` +
+    `<text x="50%" y="50%" dy=".35em" text-anchor="middle" fill="#000" ` +
+    `font-family="Inter, Arial, sans-serif" font-size="60" font-weight="700">${letter}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 // Наш пользователь → форма user, которую читает UI Metronic (шапка/дропдаун).
 function mapUser(u) {
   if (!u) return null;
@@ -18,9 +29,9 @@ function mapUser(u) {
     role: u.role,
     is_admin: u.role === 'admin',
     is_active: true,
-    pic:
-      u.avatar_url ||
-      `https://ui-avatars.com/api/?name=${encodeURIComponent(name || 'A')}&background=D4AF37&color=000`,
+    // Без внешних CDN (ui-avatars.com в РФ не грузится → битая картинка):
+    // заглушка — инлайновый SVG-кружок с инициалом.
+    pic: u.avatar_url || initialAvatar(name || u.email || 'A'),
   };
 }
 

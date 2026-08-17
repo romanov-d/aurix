@@ -15,12 +15,32 @@ const bookSchema = z.object({
   return_city: z.string().optional(),
   with_driver: z.boolean().default(false),
   with_delivery: z.boolean().default(false),
+  // 'rent' — обычная посуточная аренда, 'photo' — почасовая съёмка
+  kind: z.enum(['rent', 'photo']).default('rent'),
 });
 
 function getDayPrice(car, days) {
   if (days >= 30 && car.price_30) return car.price_30;
   if (days >= 6 && car.price_6_12) return car.price_6_12;
   return car.price_per_day;
+}
+
+// Фотосессия: почасовой тариф car.photo_rate. Подача считается как +1 час,
+// но от PHOTO_FREE_DELIVERY_HOURS часов съёмки она бесплатна.
+export const PHOTO_MIN_HOURS = 1;
+export const PHOTO_MAX_HOURS = 12;
+export const PHOTO_FREE_DELIVERY_HOURS = 3;
+
+export function photoHours(fromDt, toDt) {
+  const ms = new Date(toDt).getTime() - new Date(fromDt).getTime();
+  const h = Math.ceil(ms / (1000 * 60 * 60));
+  return h < PHOTO_MIN_HOURS ? PHOTO_MIN_HOURS : h;
+}
+
+export function photoTotal(car, hours, withDelivery) {
+  const rate = car.photo_rate || 0;
+  const delivery = withDelivery && hours < PHOTO_FREE_DELIVERY_HOURS ? rate : 0;
+  return rate * hours + delivery;
 }
 
 router.post('/', async (req, res, next) => {
@@ -67,20 +87,32 @@ router.post('/', async (req, res, next) => {
       return res.status(400).json({ error: 'Автомобиль занят на выбранные даты' });
     }
 
-    // Calculate duration in days (naive: 1 day minimum)
-    const d1 = new Date(body.from_dt);
-    const d2 = new Date(body.to_dt);
-    const ms = d2.getTime() - d1.getTime();
-    let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-    if (days < 1) days = 1;
+    let total;
+    if (body.kind === 'photo') {
+      // Съёмка — почасовой тариф. Машины без photo_rate так бронировать нельзя.
+      if (!car.photo_rate) {
+        return res.status(400).json({ error: 'Этот автомобиль недоступен для фотосессии' });
+      }
+      const hours = photoHours(body.from_dt, body.to_dt);
+      if (hours > PHOTO_MAX_HOURS) {
+        return res.status(400).json({ error: `Съёмка бронируется не более чем на ${PHOTO_MAX_HOURS} часов — на более долгую аренду оформите обычную бронь` });
+      }
+      total = photoTotal(car, hours, body.with_delivery);
+    } else {
+      // Calculate duration in days (naive: 1 day minimum)
+      const d1 = new Date(body.from_dt);
+      const d2 = new Date(body.to_dt);
+      const ms = d2.getTime() - d1.getTime();
+      let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+      if (days < 1) days = 1;
 
-    // Calculate total price using tiered rates (mirrors frontend logic)
-    const dayPrice = getDayPrice(car, days);
-    const total = days * dayPrice;
+      // Calculate total price using tiered rates (mirrors frontend logic)
+      total = days * getDayPrice(car, days);
+    }
 
     const { rows } = await q(
-      `INSERT INTO bookings (car_id, user_id, from_dt, to_dt, pickup_city, return_city, with_driver, with_delivery, total, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending')
+      `INSERT INTO bookings (car_id, user_id, from_dt, to_dt, pickup_city, return_city, with_driver, with_delivery, total, kind, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'pending')
        RETURNING *`,
       [
         body.car_id,
@@ -91,7 +123,8 @@ router.post('/', async (req, res, next) => {
         body.return_city || null,
         body.with_driver,
         body.with_delivery,
-        total
+        total,
+        body.kind
       ]
     );
 
@@ -106,6 +139,7 @@ router.post('/', async (req, res, next) => {
       car_name: car.name,
       from_dt: body.from_dt,
       to_dt: body.to_dt,
+      kind: body.kind,
       total,
     }).catch(() => {});
 
@@ -178,10 +212,19 @@ router.patch('/:id', async (req, res, next) => {
       // Пересчитываем сумму по тем же ступенчатым тарифам, что и при создании
       const car = await one(`SELECT * FROM cars WHERE id = $1`, [booking.car_id]);
       if (car) {
-        const ms = new Date(updates.to_dt).getTime() - new Date(booking.from_dt).getTime();
-        let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
-        if (days < 1) days = 1;
-        const total = days * getDayPrice(car, days);
+        let total;
+        if (booking.kind === 'photo') {
+          const hours = photoHours(booking.from_dt, updates.to_dt);
+          if (hours > PHOTO_MAX_HOURS) {
+            return res.status(400).json({ error: `Съёмка бронируется не более чем на ${PHOTO_MAX_HOURS} часов` });
+          }
+          total = photoTotal(car, hours, booking.with_delivery);
+        } else {
+          const ms = new Date(updates.to_dt).getTime() - new Date(booking.from_dt).getTime();
+          let days = Math.ceil(ms / (1000 * 60 * 60 * 24));
+          if (days < 1) days = 1;
+          total = days * getDayPrice(car, days);
+        }
         params.push(total);
         setClauses.push(`total = $${params.length}`);
       }

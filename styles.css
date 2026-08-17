@@ -705,6 +705,12 @@ footer{background:#080808;border-top:1px solid var(--line);padding:64px 0 24px;m
 .detail-side{background:var(--bg-1);border:1px solid var(--line);padding:32px}
 .detail-side h1{font-family:'Inter',sans-serif;font-size:34px;letter-spacing:.04em}
 .detail-side .submeta{color:var(--muted);font-size:12px;letter-spacing:.18em;text-transform:uppercase;margin:8px 0 24px}
+/* Переключатель «Аренда / Фотосессия» в карточке авто */
+.book-mode-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px;margin-bottom:18px;border:1px solid var(--line);border-radius:var(--r-md,10px);background:var(--bg-0,#0b0b0b)}
+.book-mode-tab{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 8px;border:none;border-radius:calc(var(--r-md,10px) - 4px);background:transparent;color:#bdbdbd;font-family:'Inter',sans-serif;font-size:13px;font-weight:500;letter-spacing:.02em;cursor:pointer;transition:.18s}
+.book-mode-tab i{font-size:16px}
+.book-mode-tab:hover{color:#fff}
+.book-mode-tab.active{background:var(--gold);color:#000}
 .price-block{background:var(--bg-1);border:1px solid var(--line);padding:18px 20px;margin-bottom:20px}
 .price-block .row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px;color:#cfcfcf}
 .price-block .row:not(:last-child){border-bottom:1px dashed var(--line)}
@@ -1271,6 +1277,8 @@ footer{background:var(--bg-1);border-top:0}
 .acc-user{display:flex;align-items:center;gap:14px;padding-bottom:18px;border-bottom:1px solid var(--bg-3) !important;margin-bottom:14px}
 .acc-avatar-wrapper{position:relative;width:54px;height:54px;border-radius:50%;overflow:hidden;flex-shrink:0;background:var(--bg-3)}
 .acc-avatar{width:100%;height:100%;display:block;object-fit:cover}
+/* Заглушка вместо внешнего аватар-CDN: кружок с инициалом */
+.acc-avatar-initial{display:grid;place-items:center;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:var(--bg-1);font-family:'Inter',sans-serif;font-size:22px;font-weight:700;user-select:none}
 .avatar-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.65);display:flex;align-items:center;justify-content:center;color:var(--head);font-size:18px;opacity:0;cursor:pointer;transition:opacity 0.2s ease}
 .acc-avatar-wrapper:hover .avatar-overlay, .avatar-overlay.loading{opacity:1}
 @keyframes spin { 100% { transform: rotate(360deg); } }

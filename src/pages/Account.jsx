@@ -118,7 +118,10 @@ export default function Account() {
   const firstName = user?.name?.split(' ')[0] || 'Гость';
   const memberSince = user?.created_at ? new Date(user.created_at).getFullYear() : new Date().getFullYear();
   const tierLabel = user?.role === 'admin' ? 'Администратор' : user?.role === 'partner' ? 'Партнёр' : `Участник · с ${memberSince}`;
-  const avatar = user?.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'A')}&background=random&color=fff&size=128`;
+  // Внешние CDN не используем (ui-avatars.com в РФ не грузится → битая картинка):
+  // нет своей аватарки — рисуем кружок с инициалом.
+  const avatar = user?.avatar_url || null;
+  const avatarInitial = (user?.name || 'A').charAt(0).toUpperCase();
 
   const handleAvatarChange = async (e) => {
     const file = e.target.files[0];
@@ -186,7 +189,9 @@ export default function Account() {
           </div>
           <div className="acc-user">
             <div className="acc-avatar-wrapper">
-              <img className="acc-avatar" src={avatar} alt={user?.name || ''} />
+              {avatar
+                ? <img className="acc-avatar" src={avatar} alt={user?.name || ''} />
+                : <div className="acc-avatar acc-avatar-initial" aria-hidden="true">{avatarInitial}</div>}
               <label htmlFor="avatar-upload" className={`avatar-overlay ${uploading ? 'loading' : ''}`} title="Сменить аватар">
                 <i className={uploading ? "ph ph-spinner-gap spin" : "ph ph-camera"} />
               </label>
@@ -266,7 +271,7 @@ export default function Account() {
                   {activeBookings.length > 0 ? activeBookings.map(b => (
                     <div className="acc-block" key={b.id}>
                       <div className="acc-block-head">
-                        <h3>Активное бронирование #{b.id}</h3>
+                        <h3>{b.kind === 'photo' ? 'Фотосессия' : 'Активное бронирование'} #{b.id}</h3>
                       </div>
                       <div className="booking-active">
                         <div className="img"><img src={b.car.image_url} alt={b.car.name} /></div>
@@ -321,7 +326,10 @@ export default function Account() {
                           <td>
                             <div className="car-cell">
                               <img src={b.car.image_url} alt={b.car.name} style={{ width: 60, height: 40, objectFit: 'cover', borderRadius: 4 }} />
-                              <div><b>{b.car.name}</b></div>
+                              <div>
+                                <b>{b.car.name}</b>
+                                {b.kind === 'photo' && <div style={{ fontSize: 11, color: 'var(--gold)', marginTop: 2 }}>фотосессия</div>}
+                              </div>
                             </div>
                           </td>
                           <td>{formatShortDate(b.from_dt)} — {formatShortDate(b.to_dt)}</td>

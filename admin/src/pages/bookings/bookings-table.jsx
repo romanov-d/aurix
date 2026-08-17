@@ -58,6 +58,14 @@ const fmtDateTime = (iso) => {
   return d.toLocaleString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
 };
 
+// Только время — конец почасовой брони (фотосессии) в тот же день
+const fmtTime = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return '—';
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+};
+
 // Сколько времени прошло с момента (таймер ожидания заявки)
 const fmtElapsed = (iso) => {
   if (!iso) return '';
@@ -354,7 +362,12 @@ export function BookingsTable() {
         accessorFn: (row) => row.car?.name,
         header: ({ column }) => <DataGridColumnHeader title="Автомобиль" column={column} />,
         cell: ({ row }) => (
-          <span className="text-foreground font-normal">{row.original.car?.name || row.original.car_id}</span>
+          <div className="flex flex-col items-start gap-0.5">
+            <span className="text-foreground font-normal">{row.original.car?.name || row.original.car_id}</span>
+            {row.original.kind === 'photo' && (
+              <Badge size="sm" variant="warning" appearance="light">фотосессия</Badge>
+            )}
+          </div>
         ),
         enableSorting: true,
         size: 200,
@@ -363,9 +376,13 @@ export function BookingsTable() {
         id: 'period',
         accessorFn: (row) => row.from_dt,
         header: ({ column }) => <DataGridColumnHeader title="Период" column={column} />,
+        // Почасовая съёмка укладывается в один день — без времени период выглядел
+        // бы как «17 авг — 17 авг», поэтому для неё показываем часы.
         cell: ({ row }) => (
           <span className="text-secondary-foreground font-normal whitespace-nowrap">
-            {fmtDate(row.original.from_dt)} — {fmtDate(row.original.to_dt)}
+            {row.original.kind === 'photo'
+              ? `${fmtDateTime(row.original.from_dt)} — ${fmtTime(row.original.to_dt)}`
+              : `${fmtDate(row.original.from_dt)} — ${fmtDate(row.original.to_dt)}`}
           </span>
         ),
         enableSorting: true,

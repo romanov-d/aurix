@@ -328,6 +328,10 @@ const SCHEMA_STATEMENTS = [
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_at TIMESTAMPTZ`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS cancelled_by TEXT`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'site'`,
+  // ── Тип брони: обычная аренда посуточно или почасовая съёмка ──
+  // 'photo' считается по photo_rate за час, длится один день, подача
+  // бесплатна от 3 часов (иначе +1 час по тарифу).
+  `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'rent'`,
   // ── Доп. данные клиента ──
   `ALTER TABLE users ADD COLUMN IF NOT EXISTS dob DATE`,
   // NB: исторически «паспорт 1-я стр.», с 2026-07 переиспользуется под ОБОРОТНУЮ сторону

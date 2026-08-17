@@ -315,10 +315,12 @@ export default function Home() {
             </div>
           </div>
           <div className="dl-right">
+            {/* Яндекс-виджет, как на «Контактах»: Google Maps в РФ грузится
+                нестабильно и блок карты остаётся пустым */}
             <iframe
               className="dl-map"
               title="Карта"
-              src="https://maps.google.com/maps?q=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C+%D0%9E%D0%BB%D0%B8%D0%BC%D0%BF%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B9+%D0%BF%D1%80%D0%BE%D1%81%D0%BF%D0%B5%D0%BA%D1%82+12&t=&z=15&ie=UTF8&iwloc=&output=embed"
+              src="https://yandex.ru/map-widget/v1/?text=%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0%2C%20%D0%9E%D0%BB%D0%B8%D0%BC%D0%BF%D0%B8%D0%B9%D1%81%D0%BA%D0%B8%D0%B9%20%D0%BF%D1%80%D0%BE%D1%81%D0%BF%D0%B5%D0%BA%2C%2012&z=15"
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
             />

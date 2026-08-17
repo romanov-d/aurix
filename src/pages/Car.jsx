@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useParams, useNavigate } from 'react-router-dom';
+import { Link, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import CarCard from '../components/CarCard.jsx';
 import { getCar, listCars } from '../api/cars.js';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -9,20 +9,50 @@ import DateRangePicker from '../components/DateRangePicker.jsx';
 import { TelegramIcon } from '../components/BrandIcons.jsx';
 import { reachGoal } from '../api/metrika.js';
 
+const padNum = (n) => String(n).padStart(2, '0');
+const dayKey = (d) => `${d.getFullYear()}-${padNum(d.getMonth() + 1)}-${padNum(d.getDate())}`;
+
 // Интервалы занятых броней → плоский список дней 'YYYY-MM-DD'.
 // Полуоткрыто [from; to): день возврата свободен для новой выдачи (как на сервере).
 function expandBusyRanges(ranges) {
-  const pad = (n) => String(n).padStart(2, '0');
-  const key = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const out = [];
   for (const r of ranges) {
     if (!r?.from_dt || !r?.to_dt) continue;
     const d = new Date(r.from_dt); d.setHours(0, 0, 0, 0);
     const end = new Date(r.to_dt); end.setHours(0, 0, 0, 0);
-    for (; d < end; d.setDate(d.getDate() + 1)) out.push(key(d));
+    // Почасовая бронь (съёмка) начинается и заканчивается в один день —
+    // полуоткрытый цикл дал бы ноль дней, и день выглядел бы свободным.
+    // Для посуточной аренды такой день занят целиком.
+    if (d.getTime() === end.getTime()) { out.push(dayKey(d)); continue; }
+    for (; d < end; d.setDate(d.getDate() + 1)) out.push(dayKey(d));
   }
   return out;
 }
+
+// Занятые ЧАСЫ конкретного дня (минуты от полуночи) — чтобы в один день
+// помещалось несколько съёмок: 09:00–13:00 не мешает 14:00–18:00.
+// Посуточная аренда закрывает день целиком (0–1440).
+function busyIntervalsForDay(ranges, dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0);
+  const dayEnd = new Date(y, m - 1, d + 1, 0, 0, 0, 0);
+  const out = [];
+  for (const r of ranges) {
+    if (!r?.from_dt || !r?.to_dt) continue;
+    const from = new Date(r.from_dt);
+    const to = new Date(r.to_dt);
+    if (to <= dayStart || from >= dayEnd) continue;
+    const startMin = from <= dayStart ? 0 : from.getHours() * 60 + from.getMinutes();
+    const endMin = to >= dayEnd ? 24 * 60 : to.getHours() * 60 + to.getMinutes();
+    if (endMin > startMin) out.push([startMin, endMin]);
+  }
+  return out.sort((a, b) => a[0] - b[0]);
+}
+
+const overlapsBusy = (intervals, startMin, endMin) =>
+  intervals.some(([s, e]) => startMin < e && endMin > s);
+
+const fmtMin = (min) => `${padNum(Math.floor(min / 60) % 24)}:${padNum(min % 60)}`;
 
 // Скелетон страницы машины (повторяет реальную раскладку detail)
 function CarDetailSkeleton() {
@@ -79,9 +109,14 @@ function CarDetailSkeleton() {
   );
 }
 
+// Фотосессия: подача считается как +1 час по тарифу, но от 3 часов съёмки — бесплатно.
+const PHOTO_FREE_DELIVERY_HOURS = 3;
+const PHOTO_MAX_HOURS = 12;
+
 export default function Car() {
   const { id } = useParams();
   const nav = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuth();
   const { favorites, toggleFavorite } = useFavorites();
   
@@ -108,7 +143,12 @@ export default function Car() {
   const [needDelivery, setNeedDelivery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [busyDates, setBusyDates] = useState([]); // занятые дни для календаря брони
+  const [busyRanges, setBusyRanges] = useState([]); // сырые интервалы занятых броней
+
+  // ── Фотосессия: один день + время начала + длительность в часах ──
+  const [photoDate, setPhotoDate] = useState(toDateStr(tomorrow));
+  const [photoTime, setPhotoTime] = useState('12:00');
+  const [photoHours, setPhotoHours] = useState(2);
 
   const fromDt = `${fromDate}T${fromTime}`;
   const toDt = `${toDate}T${toTime}`;
@@ -146,9 +186,24 @@ export default function Car() {
 
     // Занятые даты (оплаченные/выданные брони) — раскрываем интервалы в дни
     api(`/cars/${id}/busy`)
-      .then((data) => setBusyDates(expandBusyRanges(data?.ranges || [])))
-      .catch(() => setBusyDates([]));
+      .then((data) => setBusyRanges(Array.isArray(data?.ranges) ? data.ranges : []))
+      .catch(() => setBusyRanges([]));
   }, [id]);
+
+  // Если выбранное время съёмки попало на чужую бронь (например, день сменили) —
+  // сдвигаем на ближайший свободный старт, чтобы форма не открывалась «занятой».
+  useEffect(() => {
+    if (searchParams.get('mode') !== 'photo') return;
+    const intervals = busyIntervalsForDay(busyRanges, photoDate);
+    if (!intervals.length) return;
+    const startMin = Number(photoTime.slice(0, 2)) * 60;
+    if (!overlapsBusy(intervals, startMin, startMin + photoHours * 60)) return;
+    const free = TIMES.find(t => {
+      const s = Number(t.slice(0, 2)) * 60;
+      return !overlapsBusy(intervals, s, s + photoHours * 60);
+    });
+    if (free) setPhotoTime(free);
+  }, [busyRanges, photoDate, photoHours, photoTime, searchParams]);
 
   if (loading) return <CarDetailSkeleton />;
   
@@ -177,7 +232,7 @@ export default function Car() {
     const dd = new Date(today); dd.setHours(0, 0, 0, 0);
     for (; dd < closedUntil; dd.setDate(dd.getDate() + 1)) closedBusy.push(toDateStr(dd));
   }
-  const allBusyDates = closedBusy.length ? [...busyDates, ...closedBusy] : busyDates;
+  const busyDates = expandBusyRanges(busyRanges);
 
   // Calc days
   const d1 = new Date(fromDt);
@@ -195,6 +250,63 @@ export default function Car() {
   const dayPrice = getDayPrice(car, days);
   const total = (dayPrice || 0) * days;
 
+  // ── Режим страницы: обычная аренда или фотосессия (?mode=photo) ──
+  const photoRate = car.photo_rate || 0;
+  const photoAvailable = photoRate > 0;
+  const isPhoto = photoAvailable && searchParams.get('mode') === 'photo';
+  const setMode = (m) => {
+    const next = new URLSearchParams(searchParams);
+    if (m === 'photo') next.set('mode', 'photo'); else next.delete('mode');
+    setSearchParams(next, { replace: true });
+    setError('');
+  };
+
+  // Подача: считается как +1 час по тарифу, от 3 часов съёмки — бесплатно
+  const photoDeliveryFree = photoHours >= PHOTO_FREE_DELIVERY_HOURS;
+  const photoDeliveryCost = needDelivery && !photoDeliveryFree ? photoRate : 0;
+  const photoTotal = photoRate * photoHours + photoDeliveryCost;
+  const photoFromDt = `${photoDate}T${photoTime}`;
+  const photoToDate = new Date(photoFromDt);
+  photoToDate.setHours(photoToDate.getHours() + photoHours);
+
+  // ── Занятость для календаря ──
+  // Аренда посуточно: любой занятый день закрыт целиком.
+  // Съёмка: день закрывают только посуточные брони; чужая съёмка занимает лишь
+  // свои часы, поэтому 09:00–13:00 и 14:00–18:00 в один день сосуществуют.
+  // День закрываем, только если в нём не осталось ни одного свободного часа.
+  const dayBusyDates = isPhoto
+    ? (() => {
+        const hardDays = expandBusyRanges(busyRanges.filter(r => r.kind !== 'photo'));
+        const photoDays = new Set(
+          busyRanges.filter(r => r.kind === 'photo').map(r => dayKey(new Date(r.from_dt)))
+        );
+        const full = [];
+        for (const day of photoDays) {
+          if (hardDays.includes(day)) continue;
+          const intervals = busyIntervalsForDay(busyRanges, day);
+          // Есть ли хоть один час из сетки времени, куда влезет минимальная съёмка
+          const hasSlot = TIMES.some(t => {
+            const startMin = Number(t.slice(0, 2)) * 60;
+            return !overlapsBusy(intervals, startMin, startMin + 60);
+          });
+          if (!hasSlot) full.push(day);
+        }
+        return [...hardDays, ...full];
+      })()
+    : busyDates;
+  const allBusyDates = closedBusy.length ? [...dayBusyDates, ...closedBusy] : dayBusyDates;
+
+  // Часы выбранного дня съёмки: какие старты свободны под выбранную длительность
+  const photoDayIntervals = isPhoto ? busyIntervalsForDay(busyRanges, photoDate) : [];
+  const photoStartMin = Number(photoTime.slice(0, 2)) * 60;
+  const photoEndMin = photoStartMin + photoHours * 60;
+  const isPhotoSlotFree = (startMin, hours = photoHours) =>
+    !overlapsBusy(photoDayIntervals, startMin, startMin + hours * 60);
+  const photoSlotTaken = isPhoto && !isPhotoSlotFree(photoStartMin);
+  const photoBusyLabel = photoDayIntervals.length
+    ? photoDayIntervals.map(([s, e]) => `${fmtMin(s)}–${fmtMin(e)}`).join(', ')
+    : '';
+
   const handleBook = async (e) => {
     e.preventDefault();
     if (!user) {
@@ -206,14 +318,22 @@ export default function Car() {
       setError('Чтобы забронировать, сначала пройдите верификацию: загрузите документы в личном кабинете.');
       return;
     }
+    const startDt = isPhoto ? photoFromDt : fromDt;
+    const endDate = isPhoto ? photoToDate : new Date(toDt);
+
     // Возврат не может быть раньше получения
-    if (new Date(toDt) <= new Date(fromDt)) {
-      setError('Дата возврата должна быть позже даты получения.');
+    if (endDate <= new Date(startDt)) {
+      setError(isPhoto ? 'Укажите длительность съёмки.' : 'Дата возврата должна быть позже даты получения.');
+      return;
+    }
+    // Съёмка не должна наехать на уже занятые часы этого дня
+    if (isPhoto && photoSlotTaken) {
+      setError(`В это время авто занято (${photoBusyLabel}). Выберите другое время или длительность.`);
       return;
     }
     // Машина закрыта — не даём отправить бронь с датой раньше открытия
-    if (isClosed && new Date(fromDt) < closedUntil) {
-      setError(`Автомобиль сейчас в аренде — будет доступен с ${closedLabel}. Выберите более позднюю дату начала.`);
+    if (isClosed && new Date(startDt) < closedUntil) {
+      setError(`Автомобиль сейчас в аренде — будет доступен с ${closedLabel}. Выберите более позднюю дату${isPhoto ? ' съёмки' : ' начала'}.`);
       return;
     }
     setError('');
@@ -224,14 +344,15 @@ export default function Car() {
         method: 'POST',
         body: {
           car_id: car.id,
-          from_dt: new Date(fromDt).toISOString(),
-          to_dt: new Date(toDt).toISOString(),
+          kind: isPhoto ? 'photo' : 'rent',
+          from_dt: new Date(startDt).toISOString(),
+          to_dt: endDate.toISOString(),
           pickup_city: city,
           with_driver: false,
           with_delivery: needDelivery
         }
       });
-      reachGoal('booking'); // цель Метрики: оформлена бронь
+      reachGoal(isPhoto ? 'photo_booking' : 'booking'); // цель Метрики: оформлена бронь
       nav('/account');
     } catch (e) {
       setError(e.message || 'Ошибка бронирования');
@@ -266,7 +387,10 @@ export default function Car() {
         <div className="container">
           <div className="breadcrumbs">
             <Link to="/">Главная</Link><span className="sep">/</span>
-            <Link to="/catalog">Автопарк</Link><span className="sep">/</span>
+            {isPhoto
+              ? <Link to="/photo">Аренда для фото</Link>
+              : <Link to="/catalog">Автопарк</Link>}
+            <span className="sep">/</span>
             <span>{car.name}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -364,7 +488,11 @@ export default function Car() {
             ) : reviews.map(r => (
               <div key={r.id} style={{ background: 'var(--bg-2)', padding: 20, borderRadius: 12 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                  <img src={r.user_avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(r.user_name || 'A')}&background=random&color=fff`} alt="" style={{ width: 40, height: 40, borderRadius: '50%' }} />
+                  {/* Без внешних CDN (ui-avatars.com в РФ не грузится → битая
+                      картинка): нет своей аватарки — рисуем кружок с инициалом */}
+                  {r.user_avatar
+                    ? <img src={r.user_avatar} alt="" style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }} />
+                    : <div className="rv-mob-ava" style={{ width: 40, height: 40, fontSize: 16 }} aria-hidden="true">{(r.user_name || 'A').charAt(0).toUpperCase()}</div>}
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 15 }}>{r.user_name}</div>
                     <div style={{ display: 'flex', gap: 2, color: 'var(--gold)', marginTop: 4 }}>
@@ -383,15 +511,46 @@ export default function Car() {
           <h1>{car.name}</h1>
           <div className="submeta">{car.year} · {car.body} · {car.color || 'Чёрный'}</div>
 
-          <div className="price-block">
-            <div className="row"><span>1–5 суток</span><b>{car.price_per_day?.toLocaleString('ru-RU')} ₽</b></div>
-            <div className="row"><span>6–12 суток</span><b>{car.price_6_12 ? `${car.price_6_12.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
-            <div className="row"><span>от 13 суток</span><b style={{ color: '#bdbdbd', fontSize: 13 }}>договорная</b></div>
-            <div className="row"><span>от 30 суток</span><b>{car.price_30 ? `${car.price_30.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
-            <div className="row"><span>Залог</span><b style={{ fontSize: 14, color: '#fff' }}>{car.deposit ? `${car.deposit.toLocaleString('ru-RU')} ₽` : '—'}</b></div>
-            <div className="row"><span>Лимит пробега</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.mileage_limit || 250} км/сут</b></div>
-            <div className="row"><span>Перекат</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.overmileage_rate || '—'} ₽/км</b></div>
-          </div>
+          {/* Переключатель сценария: посуточная аренда ↔ почасовая съёмка.
+              Показываем только у машин с почасовым тарифом (photo_rate). */}
+          {photoAvailable && (
+            <div className="book-mode-tabs">
+              <button
+                type="button"
+                className={`book-mode-tab${isPhoto ? '' : ' active'}`}
+                onClick={() => setMode('rent')}
+              >
+                <i className="ph-fill ph-car-profile" /> Аренда
+              </button>
+              <button
+                type="button"
+                className={`book-mode-tab${isPhoto ? ' active' : ''}`}
+                onClick={() => setMode('photo')}
+              >
+                <i className="ph-fill ph-camera" /> Фотосессия
+              </button>
+            </div>
+          )}
+
+          {isPhoto ? (
+            <div className="price-block">
+              <div className="row"><span>Съёмка, 1 час</span><b>{photoRate.toLocaleString('ru-RU')} ₽</b></div>
+              <div className="row"><span>Минимальная аренда</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>1 час</b></div>
+              <div className="row"><span>Подача авто</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>1 час по тарифу</b></div>
+              <div className="row"><span>От 3 часов съёмки</span><b style={{ fontSize: 13, color: 'var(--gold)' }}>подача бесплатно</b></div>
+              <div className="row"><span>Залог</span><b style={{ fontSize: 14, color: '#fff' }}>{car.deposit ? `${car.deposit.toLocaleString('ru-RU')} ₽` : '—'}</b></div>
+            </div>
+          ) : (
+            <div className="price-block">
+              <div className="row"><span>1–5 суток</span><b>{car.price_per_day?.toLocaleString('ru-RU')} ₽</b></div>
+              <div className="row"><span>6–12 суток</span><b>{car.price_6_12 ? `${car.price_6_12.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
+              <div className="row"><span>от 13 суток</span><b style={{ color: '#bdbdbd', fontSize: 13 }}>договорная</b></div>
+              <div className="row"><span>от 30 суток</span><b>{car.price_30 ? `${car.price_30.toLocaleString('ru-RU')} ₽` : 'договорная'}</b></div>
+              <div className="row"><span>Залог</span><b style={{ fontSize: 14, color: '#fff' }}>{car.deposit ? `${car.deposit.toLocaleString('ru-RU')} ₽` : '—'}</b></div>
+              <div className="row"><span>Лимит пробега</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.mileage_limit || 250} км/сут</b></div>
+              <div className="row"><span>Перекат</span><b style={{ fontSize: 13, color: '#bdbdbd' }}>{car.overmileage_rate || '—'} ₽/км</b></div>
+            </div>
+          )}
 
           {isClosed && (
             <div style={{ background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', color: '#bdbdbd', borderRadius: 10, padding: '10px 14px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
@@ -399,44 +558,100 @@ export default function Car() {
               Ближайшие даты заняты. Свободные даты — с <b>{closedLabel}</b>.
             </div>
           )}
-          <div className="field" style={{ marginBottom: 12 }}>
-            <label>Даты аренды</label>
-            <DateRangePicker
-              from={fromDate}
-              to={toDate}
-              minDate={bookMinDate}
-              busyDates={allBusyDates}
-              variant="sidebar"
-              onChange={({ from, to }) => {
-                if (from) {
-                  setFromDate(from);
-                  // не оставляем перевёрнутый диапазон, пока не выбрана новая дата возврата
-                  if (!to && from > toDate) setToDate(from);
-                }
-                if (to) setToDate(to);
-              }}
-            />
-          </div>
-          {/* gridTemplateColumns/display НЕ задаём инлайном — иначе перебивают
-              медиазапрос и на 801–1100px сайдбар остаётся в 2 колонки */}
-          <div className="form-row" style={{ gap: 12 }}>
-            <div className="field">
-              <label>Время получения</label>
-              <select value={fromTime} onChange={e => setFromTime(e.target.value)}>
-                {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="field">
-              <label>Время возврата</label>
-              <select value={toTime} onChange={e => setToTime(e.target.value)}>
-                {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-          <div className="field" style={{ marginTop: 14 }}>
-            <label>Адрес подачи</label>
-            <input placeholder="г. Москва, ул. Пушкина, д. 1" value={city} onChange={e => setCity(e.target.value)} />
-          </div>
+          {isPhoto ? (
+            <>
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label>В какой день хотите арендовать авто для фотосессии?</label>
+                <DateRangePicker
+                  from={photoDate}
+                  to={photoDate}
+                  single
+                  singleLabel="Выбрать день съёмки"
+                  minDate={bookMinDate}
+                  busyDates={allBusyDates}
+                  variant="sidebar"
+                  onChange={({ from }) => { if (from) setPhotoDate(from); }}
+                />
+              </div>
+              <div className="form-row" style={{ gap: 12 }}>
+                <div className="field">
+                  <label>Начало съёмки</label>
+                  {/* Часы, занятые другой съёмкой в этот же день, недоступны —
+                      но сам день остаётся открытым для съёмки в свободные часы */}
+                  <select value={photoTime} onChange={e => setPhotoTime(e.target.value)}>
+                    {TIMES.map(t => {
+                      const taken = !isPhotoSlotFree(Number(t.slice(0, 2)) * 60);
+                      return <option key={t} value={t} disabled={taken}>{t}{taken ? ' — занято' : ''}</option>;
+                    })}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Длительность</label>
+                  <select value={photoHours} onChange={e => setPhotoHours(Number(e.target.value))}>
+                    {Array.from({ length: PHOTO_MAX_HOURS }, (_, i) => i + 1).map(h => {
+                      const taken = !isPhotoSlotFree(photoStartMin, h);
+                      return (
+                        <option key={h} value={h} disabled={taken}>
+                          {h} ч{taken ? ' — занято' : (h >= PHOTO_FREE_DELIVERY_HOURS ? ' · подача бесплатно' : '')}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              </div>
+              {photoBusyLabel && (
+                <div style={{ marginTop: 10, padding: '10px 14px', background: 'rgba(255,255,255,.04)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 8, fontSize: 13, color: '#bdbdbd', lineHeight: 1.6 }}>
+                  <i className="ph ph-clock" style={{ marginRight: 6 }} />
+                  В этот день авто уже занято: <b>{photoBusyLabel}</b>. Остальные часы свободны.
+                </div>
+              )}
+              <div className="field" style={{ marginTop: 14 }}>
+                <label>Адрес съёмки</label>
+                <input placeholder="г. Москва, ул. Пушкина, д. 1" value={city} onChange={e => setCity(e.target.value)} />
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label>Даты аренды</label>
+                <DateRangePicker
+                  from={fromDate}
+                  to={toDate}
+                  minDate={bookMinDate}
+                  busyDates={allBusyDates}
+                  variant="sidebar"
+                  onChange={({ from, to }) => {
+                    if (from) {
+                      setFromDate(from);
+                      // не оставляем перевёрнутый диапазон, пока не выбрана новая дата возврата
+                      if (!to && from > toDate) setToDate(from);
+                    }
+                    if (to) setToDate(to);
+                  }}
+                />
+              </div>
+              {/* gridTemplateColumns/display НЕ задаём инлайном — иначе перебивают
+                  медиазапрос и на 801–1100px сайдбар остаётся в 2 колонки */}
+              <div className="form-row" style={{ gap: 12 }}>
+                <div className="field">
+                  <label>Время получения</label>
+                  <select value={fromTime} onChange={e => setFromTime(e.target.value)}>
+                    {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Время возврата</label>
+                  <select value={toTime} onChange={e => setToTime(e.target.value)}>
+                    {TIMES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="field" style={{ marginTop: 14 }}>
+                <label>Адрес подачи</label>
+                <input placeholder="г. Москва, ул. Пушкина, д. 1" value={city} onChange={e => setCity(e.target.value)} />
+              </div>
+            </>
+          )}
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 16, cursor: 'pointer', fontSize: 14, color: '#bdbdbd' }}>
             <input
@@ -445,24 +660,43 @@ export default function Car() {
               onChange={e => setNeedDelivery(e.target.checked)}
               style={{ accentColor: 'var(--gold)', width: 16, height: 16 }}
             />
-            Нужна подача и забор авто
+            {isPhoto ? 'Нужна подача авто на локацию' : 'Нужна подача и забор авто'}
           </label>
           {needDelivery && (
             <div style={{ marginTop: 10, padding: '12px 14px', background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)', borderRadius: 8, fontSize: 13, color: '#bdbdbd', lineHeight: 1.6 }}>
-              Стоимость подачи и забора рассчитывается индивидуально. Менеджер свяжется с вами для уточнения деталей после оформления заявки.
+              {isPhoto
+                ? (photoDeliveryFree
+                    ? 'Съёмка от 3 часов — подача автомобиля бесплатная.'
+                    : `Подача считается как 1 час аренды (+${photoRate.toLocaleString('ru-RU')} ₽). При съёмке от 3 часов подача бесплатная.`)
+                : 'Стоимость подачи и забора рассчитывается индивидуально. Менеджер свяжется с вами для уточнения деталей после оформления заявки.'}
             </div>
           )}
 
-          <div className="price-block" style={{ marginTop: 20 }}>
-            <div className="row"><span>{days} суток × {dayPrice?.toLocaleString('ru-RU')}</span><span>{isNegotiated ? '—' : `${total.toLocaleString('ru-RU')} ₽`}</span></div>
-            {isNegotiated ? (
-              <div className="row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
-                <span style={{ fontSize: 13, color: 'var(--gold)', lineHeight: 1.5 }}>От 13 до 29 дней — цена договорная. Позвоните нам.</span>
-              </div>
-            ) : (
-              <div className="row"><span style={{ fontSize: 15 }}>Итого</span><b style={{ fontSize: 24 }}>{total.toLocaleString('ru-RU')} ₽</b></div>
-            )}
-          </div>
+          {isPhoto ? (
+            <div className="price-block" style={{ marginTop: 20 }}>
+              <div className="row"><span>{photoHours} ч × {photoRate.toLocaleString('ru-RU')} ₽</span><span>{(photoRate * photoHours).toLocaleString('ru-RU')} ₽</span></div>
+              {needDelivery && (
+                <div className="row">
+                  <span>Подача авто</span>
+                  <span style={{ color: photoDeliveryFree ? 'var(--gold)' : undefined }}>
+                    {photoDeliveryFree ? 'бесплатно' : `${photoRate.toLocaleString('ru-RU')} ₽`}
+                  </span>
+                </div>
+              )}
+              <div className="row"><span style={{ fontSize: 15 }}>Итого</span><b style={{ fontSize: 24 }}>{photoTotal.toLocaleString('ru-RU')} ₽</b></div>
+            </div>
+          ) : (
+            <div className="price-block" style={{ marginTop: 20 }}>
+              <div className="row"><span>{days} суток × {dayPrice?.toLocaleString('ru-RU')}</span><span>{isNegotiated ? '—' : `${total.toLocaleString('ru-RU')} ₽`}</span></div>
+              {isNegotiated ? (
+                <div className="row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
+                  <span style={{ fontSize: 13, color: 'var(--gold)', lineHeight: 1.5 }}>От 13 до 29 дней — цена договорная. Позвоните нам.</span>
+                </div>
+              ) : (
+                <div className="row"><span style={{ fontSize: 15 }}>Итого</span><b style={{ fontSize: 24 }}>{total.toLocaleString('ru-RU')} ₽</b></div>
+              )}
+            </div>
+          )}
 
           {user && !user.is_verified && user.role !== 'admin' && (
             <div style={{ marginTop: 14, padding: '12px 14px', background: 'rgba(251,113,133,0.08)', border: 'none', borderRadius: 8, fontSize: 13, color: '#fda4af', lineHeight: 1.6 }}>
@@ -474,9 +708,19 @@ export default function Car() {
 
           {error && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 14, textAlign: 'center' }}>{error}</div>}
 
-          <button onClick={handleBook} disabled={isSubmitting || isNegotiated} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14, opacity: isNegotiated ? 0.45 : 1 }}>
-            {isSubmitting ? 'Оформление...' : isNegotiated ? 'Уточните цену по телефону' : (user ? 'Забронировать' : 'Войти для бронирования')}
-          </button>
+          {/* В режиме фотосессии «договорная цена» посуточной аренды не применяется */}
+          {(() => {
+            const blocked = isPhoto ? photoSlotTaken : isNegotiated;
+            return (
+              <button onClick={handleBook} disabled={isSubmitting || blocked} className="btn btn-filled" style={{ width: '100%', padding: 16, marginTop: 14, opacity: blocked ? 0.45 : 1 }}>
+                {isSubmitting
+                  ? 'Оформление...'
+                  : blocked
+                    ? (isPhoto ? 'Это время занято' : 'Уточните цену по телефону')
+                    : (user ? (isPhoto ? 'Забронировать съёмку' : 'Забронировать') : 'Войти для бронирования')}
+              </button>
+            );
+          })()}
           <a
             href={`https://t.me/aurixmotors?text=${encodeURIComponent(`Здравствуйте! Интересует ${car.name} на сайте AURIX MOTORS — можно подробнее?`)}`}
             target="_blank"

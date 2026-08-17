@@ -51,6 +51,8 @@ export default function DateRangePicker({
   minDate,
   busyDates = [], // массив 'YYYY-MM-DD' — занятые дни (оплаченные/выданные брони)
   variant = 'default', // 'default' | 'hero' | 'sidebar'
+  single = false, // выбор ОДНОГО дня (фотосессия): клик по дате сразу закрывает
+  singleLabel = 'Выбрать дату',
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [hoverDate, setHoverDate] = useState(null);
@@ -105,6 +107,14 @@ export default function DateRangePicker({
 
   function handleDayClick(date) {
     if (date < minD || isBusyDay(date)) return;
+    if (single) {
+      // Один день: from == to, диапазон не набираем
+      onChange({ from: toStr(date), to: toStr(date) });
+      setPicking(false);
+      setHoverDate(null);
+      setIsOpen(false);
+      return;
+    }
     if (!picking || !fromDate) {
       onChange({ from: toStr(date), to: null });
       setPicking(true);
@@ -145,6 +155,7 @@ export default function DateRangePicker({
 
   function hasRange() { return from && to; }
   function getLabel() {
+    if (single) return from ? fmtShort(from) : null;
     if (hasRange()) return `${fmtShort(from)} — ${fmtShort(to)}`;
     if (from) return `${fmtShort(from)} — ...`;
     return null;
@@ -176,8 +187,8 @@ export default function DateRangePicker({
       ) : (
         <button className={`drp-trigger${isSidebar ? ' drp-trigger-sidebar' : ''}`} onClick={() => setIsOpen(v => !v)}>
           <i className="ph-fill ph-calendar-blank" />
-          <span>{getLabel() || 'Выбрать даты'}</span>
-          {hasRange() && (
+          <span>{getLabel() || (single ? singleLabel : 'Выбрать даты')}</span>
+          {hasRange() && !single && (
             <span className="drp-clear-btn" onClick={clearDates}>
               <i className="ph ph-x" />
             </span>
@@ -244,7 +255,11 @@ export default function DateRangePicker({
           </div>
 
           <div className="drp-footer">
-            {picking
+            {single
+              ? (from
+                  ? <span className="drp-hint drp-hint-ok"><i className="ph-fill ph-check-circle" /> {fmtShort(from)}</span>
+                  : <span className="drp-hint">Выберите день съёмки</span>)
+              : picking
               ? <span className="drp-hint"><i className="ph-fill ph-arrow-right" /> Выберите дату возврата</span>
               : hasRange()
                 ? <span className="drp-hint drp-hint-ok"><i className="ph-fill ph-check-circle" /> {fmtShort(from)} — {fmtShort(to)}</span>

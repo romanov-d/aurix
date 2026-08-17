@@ -131,8 +131,10 @@ router.get('/:id', async (req, res, next) => {
 router.get('/:id/busy', async (req, res, next) => {
   try {
     if (!DB_AVAILABLE) return res.json({ ranges: [] });
+    // kind нужен фронту: посуточная бронь закрывает дни целиком, а почасовая
+    // съёмка — только свои часы (в тот же день возможна вторая съёмка).
     const ranges = await many(
-      `SELECT from_dt, to_dt FROM bookings
+      `SELECT from_dt, to_dt, kind FROM bookings
        WHERE car_id = $1 AND status IN ('booked','active') AND to_dt >= CURRENT_DATE
        ORDER BY from_dt`,
       [req.params.id]

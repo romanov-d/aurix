@@ -46,7 +46,7 @@ export default function PhotoRental() {
           </div>
           <div className="services-grid" style={{ marginBottom: 56 }}>
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-calendar-check" /></div><T k="photo.how.step1Title" as="h3">1. Выберите авто и время</T><T k="photo.how.step1Text" as="p">Любой автомобиль из списка ниже. Минимальная аренда — 1 час. Возможна съёмка день в день — уточните у менеджера.</T></div>
-            <div className="service"><div className="ico-wrap"><i className="ph-fill ph-map-pin" /></div><T k="photo.how.step2Title" as="h3">2. Подача к месту съёмки</T><T k="photo.how.step2Text" as="p">Привезём автомобиль в любую точку Москвы и МО — студия, парк, набережная, площадка мероприятия.</T></div>
+            <div className="service"><div className="ico-wrap"><i className="ph-fill ph-map-pin" /></div><T k="photo.how.step2Title" as="h3">2. Подача к месту съёмки</T><T k="photo.how.step2Text" as="p">Привезём автомобиль в любую точку Москвы и МО — студия, парк, набережная, площадка мероприятия. Подача считается как 1 час по тарифу, а при съёмке от 3 часов — бесплатно.</T></div>
             <div className="service"><div className="ico-wrap"><i className="ph-fill ph-camera" /></div><T k="photo.how.step3Title" as="h3">3. Снимайте</T><T k="photo.how.step3Text" as="p">Машина в вашем распоряжении на время съёмки. Фотограф, свет, декор — на ваше усмотрение. Поездки — по договорённости.</T></div>
           </div>
 
@@ -62,7 +62,9 @@ export default function PhotoRental() {
           ) : (
             <div className="catalog-grid" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))' }}>
               {cars.map(car => (
-                <Link key={car.id} to={`/car/${car.id}`} className="card">
+                // ?mode=photo — карточка ведёт на бронь СЪЁМКИ (день + часы),
+                // а не на обычную посуточную аренду
+                <Link key={car.id} to={`/car/${car.id}?mode=photo`} className="card">
                   <div className="card-img">
                     <img src={car.image_url || car.img} alt={car.name} loading="lazy" decoding="async" />
                   </div>
@@ -86,7 +88,9 @@ export default function PhotoRental() {
             <T k="photo.terms.title" as="h3" style={{ margin: '0 0 14px', fontFamily: "'Inter', sans-serif", fontSize: 20, fontWeight: 600, color: '#fff' }}>Условия</T>
             <ul style={{ color: '#bdbdbd', fontSize: 14, lineHeight: 2, fontFamily: "'Inter', sans-serif", paddingLeft: 18, margin: 0 }}>
               <T k="photo.terms.item1" as="li">Тариф действует для статичной съёмки без пробега; поездки в кадре — по договорённости.</T>
-              <T k="photo.terms.item2" as="li">Подача и возврат по Москве оплачиваются отдельно в зависимости от адреса.</T>
+              <T k="photo.terms.item0" as="li">Минимальная аренда — 1 час. Подача автомобиля считается как ещё 1 час по тарифу.</T>
+              <T k="photo.terms.item5" as="li">При съёмке от 3 часов подача автомобиля — бесплатно.</T>
+              <T k="photo.terms.item2" as="li">Подача — по Москве и МО; для удалённых адресов условия уточняет менеджер.</T>
               <T k="photo.terms.item3" as="li">Залог обязателен и возвращается сразу после завершения съёмки.</T>
               <li><T k="photo.terms.item4Pre">Бронь подтверждает менеджер — </T><Link to="/contacts" style={{ color: 'var(--gold)' }}><T k="photo.terms.item4Link">напишите нам</T></Link><T k="photo.terms.item4Post"> или оставьте заявку на странице авто.</T></li>
             </ul>
