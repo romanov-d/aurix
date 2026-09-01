@@ -917,4 +917,68 @@ router.patch('/settings', async (req, res, next) => {
   }
 });
 
+// ───────────── Заявки с формы «Оставьте заявку» ─────────────
+// Обращения посетителей без регистрации: имя+телефон, воронка статусов.
+// Отдельно от bookings — там полноценные брони верифицированных клиентов.
+
+router.get('/contact-requests', async (req, res, next) => {
+  try {
+    const items = await many(
+      `SELECT * FROM contact_requests ORDER BY created_at DESC LIMIT 500`
+    );
+    res.json(items);
+  } catch (e) {
+    next(e);
+  }
+});
+
+const contactPatchSchema = z.object({
+  status: z.enum(['new', 'in_progress', 'done', 'rejected']).optional(),
+  manager: z.string().max(100).nullable().optional(),
+  notes: z.string().max(2000).nullable().optional(),
+});
+
+router.patch('/contact-requests/:id', async (req, res, next) => {
+  try {
+    const body = contactPatchSchema.parse(req.body || {});
+    const fields = [];
+    const params = [];
+    for (const key of ['status', 'manager', 'notes']) {
+      if (body[key] !== undefined) {
+        params.push(body[key] === '' ? null : body[key]);
+        fields.push(`${key} = $${params.length}`);
+      }
+    }
+    if (!fields.length) {
+      const cur = await one(`SELECT * FROM contact_requests WHERE id = $1`, [req.params.id]);
+      if (!cur) return res.status(404).json({ error: 'Заявка не найдена' });
+      return res.json(cur);
+    }
+    params.push(req.params.id);
+    const { rows } = await q(
+      `UPDATE contact_requests SET ${fields.join(', ')} WHERE id = $${params.length} RETURNING *`,
+      params
+    );
+    if (!rows[0]) return res.status(404).json({ error: 'Заявка не найдена' });
+    logAudit(req, 'contact_request', String(req.params.id), 'update', body);
+    res.json(rows[0]);
+  } catch (e) {
+    if (e instanceof z.ZodError) return res.status(400).json({ error: 'Bad input', detail: e.errors });
+    next(e);
+  }
+});
+
+router.delete('/contact-requests/:id', async (req, res, next) => {
+  try {
+    // Хелпер q() отдаёт только { rows } — rowCount из него не получить,
+    // поэтому факт удаления проверяем через RETURNING.
+    const { rows } = await q(`DELETE FROM contact_requests WHERE id = $1 RETURNING id`, [req.params.id]);
+    if (!rows.length) return res.status(404).json({ error: 'Заявка не найдена' });
+    logAudit(req, 'contact_request', String(req.params.id), 'delete');
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
 export default router;

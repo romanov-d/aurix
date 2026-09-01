@@ -208,6 +208,24 @@ const SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_balance_tx_user ON balance_transactions(user_id)`,
   // Когда бронь вошла в текущий этап воронки — для таймера «сколько висит на этапе».
+  // ВАЖНО: bookings создаётся ЗДЕСЬ, до всех ALTER TABLE bookings и до таблиц,
+  // которые на неё ссылаются (rental_charges, deposit_movements). Раньше CREATE
+  // стоял ниже своих ALTER — на боевой базе это незаметно (таблица давно есть),
+  // а на ЧИСТОЙ базе ensureSchema падал с relation "bookings" does not exist,
+  // то есть поднять проект на новой БД было нельзя.
+  `CREATE TABLE IF NOT EXISTS bookings (
+    id           BIGSERIAL PRIMARY KEY,
+    car_id       TEXT NOT NULL REFERENCES cars(id) ON DELETE RESTRICT,
+    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    from_dt      TIMESTAMPTZ NOT NULL,
+    to_dt        TIMESTAMPTZ NOT NULL,
+    pickup_city  TEXT,
+    return_city  TEXT,
+    with_driver  BOOLEAN NOT NULL DEFAULT FALSE,
+    total        INTEGER NOT NULL,
+    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled','booked')),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS stage_changed_at TIMESTAMPTZ DEFAULT NOW()`,
   // Блок 1: залог и удержания по аренде
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS deposit_amount   INTEGER NOT NULL DEFAULT 0`,
@@ -265,29 +283,12 @@ const SCHEMA_STATEMENTS = [
     reason     TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`,
-  `CREATE TABLE IF NOT EXISTS bookings (
-    id           BIGSERIAL PRIMARY KEY,
-    car_id       TEXT NOT NULL REFERENCES cars(id) ON DELETE RESTRICT,
-    user_id      BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    from_dt      TIMESTAMPTZ NOT NULL,
-    to_dt        TIMESTAMPTZ NOT NULL,
-    pickup_city  TEXT,
-    return_city  TEXT,
-    with_driver  BOOLEAN NOT NULL DEFAULT FALSE,
-    total        INTEGER NOT NULL,
-    status       TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','completed','cancelled','booked')),
-    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
-  )`,
   `ALTER TABLE bookings ADD COLUMN IF NOT EXISTS with_delivery BOOLEAN NOT NULL DEFAULT FALSE`,
   // Статус 'booked' — бронь оплачена: даты заняты, авто ещё не выдано.
   // Расширяем CHECK на существующих БД (инлайновый называется bookings_status_check).
   `ALTER TABLE bookings DROP CONSTRAINT IF EXISTS bookings_status_check`,
   `ALTER TABLE bookings ADD CONSTRAINT bookings_status_check
      CHECK (status IN ('pending','active','completed','cancelled','booked'))`,
-  // Новая воронка: легаси-этап 'prepay' → 'paid'; оплаченные/у менеджера
-  // получают «занятый» статус 'booked' (раньше были 'pending').
-  `UPDATE bookings SET stage = 'paid' WHERE stage = 'prepay'`,
-  `UPDATE bookings SET status = 'booked' WHERE status = 'pending' AND stage IN ('paid','manager')`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_car ON bookings(car_id)`,
   `CREATE INDEX IF NOT EXISTS idx_bookings_user ON bookings(user_id)`,
   `CREATE TABLE IF NOT EXISTS favorites (
@@ -398,7 +399,34 @@ const SCHEMA_STATEMENTS = [
     sort_order INTEGER NOT NULL DEFAULT 0,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_by BIGINT
-  )`
+  )`,
+  // ── Заявки с формы «Оставьте заявку» ──
+  // Раньше заявка жила только в Telegram/почте: если канал не настроен или
+  // отвалился, обращение пропадало молча (клиент при этом видел «успешно
+  // отправлено»). Теперь заявка сначала пишется сюда, а уведомления — уже
+  // поверх сохранённой записи. Это же даёт менеджеру раздел в админке.
+  `CREATE TABLE IF NOT EXISTS contact_requests (
+    id         BIGSERIAL PRIMARY KEY,
+    name       TEXT NOT NULL,
+    phone      TEXT NOT NULL,
+    car        TEXT,
+    message    TEXT,
+    status     TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new','in_progress','done','rejected')),
+    manager    TEXT,
+    notes      TEXT,
+    source     TEXT NOT NULL DEFAULT 'site',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_contact_requests_created ON contact_requests(created_at DESC)`,
+  `CREATE INDEX IF NOT EXISTS idx_contact_requests_status ON contact_requests(status)`,
+  // ── Разовые миграции ДАННЫХ — строго в конце ──
+  // Они читают колонки (stage, status), которые добавляются выше по списку.
+  // Раньше стояли до `ALTER TABLE bookings ADD COLUMN stage` и на чистой базе
+  // роняли ensureSchema с column "stage" does not exist.
+  // Новая воронка: легаси-этап 'prepay' → 'paid'; оплаченные/у менеджера
+  // получают «занятый» статус 'booked' (раньше были 'pending').
+  `UPDATE bookings SET stage = 'paid' WHERE stage = 'prepay'`,
+  `UPDATE bookings SET status = 'booked' WHERE status = 'pending' AND stage IN ('paid','manager')`
 ];
 
 // Перевод FK на cars(id) в ON UPDATE CASCADE (чтобы можно было менять ID машины).

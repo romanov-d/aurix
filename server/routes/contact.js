@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { q } from '../db.js';
 import { sendContactRequestEmail } from '../email.js';
 import { sendContactRequestTelegram } from '../telegram.js';
 import { rateLimit } from '../middleware/rateLimit.js';
@@ -23,6 +24,23 @@ router.post('/', rateLimit({ windowMs: 10 * 60 * 1000, max: 5 }), async (req, re
     }
     const { name, phone, car, message } = parsed.data;
 
+    // СНАЧАЛА сохраняем заявку — уведомления это лишь доставка. Telegram может
+    // быть не настроен, почта — отвалиться; заявка не должна зависеть от них
+    // (раньше при обоих молчащих каналах обращение терялось совсем, а клиент
+    // видел «успешно отправлено»). Запись сразу видна менеджеру в админке.
+    let saved = null;
+    try {
+      const { rows } = await q(
+        `INSERT INTO contact_requests (name, phone, car, message)
+         VALUES ($1, $2, $3, $4) RETURNING *`,
+        [name, phone, car || null, message || null]
+      );
+      saved = rows[0];
+    } catch (e) {
+      // База недоступна — не роняем заявку, пробуем хотя бы доставить каналами
+      console.error('[contact] не удалось сохранить заявку в БД:', e.message);
+    }
+
     // Шлём в оба канала (Telegram + почта). Сбой одного не должен терять заявку.
     const results = await Promise.allSettled([
       sendContactRequestTelegram({ name, phone, car, message }),
@@ -33,6 +51,12 @@ router.post('/', rateLimit({ windowMs: 10 * 60 * 1000, max: 5 }), async (req, re
         console.error(`[contact] канал ${i === 0 ? 'telegram' : 'email'} не сработал:`, r.reason?.message || r.reason);
       }
     });
+
+    // Если и БД не ответила, и оба канала не доставили — врать клиенту «успешно»
+    // нельзя: пусть позвонит сам, вместо молча потерянного обращения.
+    if (!saved && results.every((r) => r.status === 'rejected')) {
+      return res.status(500).json({ error: 'Не удалось отправить заявку. Позвоните нам, пожалуйста.' });
+    }
 
     res.json({ ok: true, message: 'Заявка успешно отправлена!' });
   } catch (e) {

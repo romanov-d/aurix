@@ -81,6 +81,7 @@ import {
 } from '@/pages/public-profile';
 import { AllProductsPage, DashboardPage } from '@/pages/store-admin';
 import { BookingsPage } from '@/pages/bookings';
+import { LeadsPage } from '@/pages/leads';
 import { ClientsPage, ClientCardPage } from '@/pages/clients';
 import { AurixDashboardPage } from '@/pages/dashboard';
 import { SettingsPage } from '@/pages/settings';
@@ -120,6 +121,7 @@ export function AppRoutingSetup() {
           <Route element={<RequireAdmin />}>
             <Route path="/aurix" element={<AurixDashboardPage />} />
             <Route path="/bookings" element={<BookingsPage />} />
+            <Route path="/leads" element={<LeadsPage />} />
             <Route path="/fleet" element={<CarsPage />} />
             <Route path="/fleet/:id" element={<CarDetailPage />} />
             <Route path="/clients" element={<ClientsPage />} />

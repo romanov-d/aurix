@@ -84,6 +84,7 @@ export const MENU_SIDEBAR = [
     icon: PhCalendarCheck,
     children: [
       { title: 'Брони', path: '/bookings' },
+      { title: 'Заявки', path: '/leads' },
       { title: 'Автопарк', path: '/fleet' },
     ],
   },
