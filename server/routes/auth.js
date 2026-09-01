@@ -5,6 +5,7 @@ import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
 import { recordConsent, CONSENT } from '../consent.js';
+import { DOC_KINDS } from '../docs-storage.js';
 import { sendCodeEmail, sendNewUserEmail, resendConfigured } from '../email.js';
 import { sendNewUserTelegram } from '../telegram.js';
 import { pushToSalebot } from '../salebot.js';
@@ -111,10 +112,11 @@ function publicUser(u) {
     email_verified: u.email_verified ?? false,
     points: u.points ?? 0,
     dob: u.dob ?? null,
-    passport_url: u.passport_url ?? null,
-    license_url: u.license_url ?? null,
-    passport_page_url: u.passport_page_url ?? null,
-    registration_url: u.registration_url ?? null,
+    // Сканы документов клиенту больше не отдаём — только отметку, что именно
+    // загружено. Сам файл выдаётся отдельным запросом с проверкой прав.
+    documents: Object.fromEntries(
+      DOC_KINDS.map((k) => [k, Array.isArray(u.doc_kinds) ? u.doc_kinds.includes(k) : false])
+    ),
     created_at: u.created_at,
   };
 }

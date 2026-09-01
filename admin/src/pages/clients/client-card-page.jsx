@@ -15,10 +15,10 @@ import { Input } from '@/components/ui/input';
 
 const ROLES = [['user', 'Клиент'], ['partner', 'Партнёр'], ['admin', 'Админ']];
 const DOCS = [
-  ['passport_url', 'Паспорт — основной разворот'],
-  ['registration_url', 'Паспорт — прописка'],
-  ['license_url', 'Права — лицевая сторона'],
-  ['passport_page_url', 'Права — оборотная сторона'],
+  ['passport', 'Паспорт — основной разворот'],
+  ['registration', 'Паспорт — прописка'],
+  ['license_front', 'Права — лицевая сторона'],
+  ['license_back', 'Права — оборотная сторона'],
 ];
 
 const fmtMoney = (n) => (n || n === 0 ? Number(n).toLocaleString('ru-RU') : '0') + ' ₽';
@@ -34,21 +34,17 @@ const fmtDate = (iso) => {
   return isNaN(d) ? '—' : d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short', year: '2-digit' });
 };
 
-function viewDoc(url) {
-  if (!url) return;
+// Документ забираем отдельным запросом с сессионной cookie и показываем через
+// blob: расшифрованный файл живёт только в памяти вкладки и не кешируется.
+async function viewDoc(userId, kind) {
   try {
-    if (url.startsWith('data:')) {
-      const [meta, b64] = url.split(',');
-      const mime = (meta.match(/data:(.*?);/) || [])[1] || 'application/octet-stream';
-      const bin = atob(b64);
-      const arr = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-      window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
-    } else {
-      window.open(url, '_blank');
-    }
-  } catch {
+    const res = await fetch(`/api/admin/users/${userId}/documents/${kind}`, { credentials: 'include' });
+    if (!res.ok) throw new Error('Не удалось открыть документ');
+    const url = URL.createObjectURL(await res.blob());
     window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) {
+    alert(e.message || 'Не удалось открыть документ');
   }
 }
 
@@ -235,9 +231,11 @@ export function ClientCardPage() {
                   <div className="mt-4">
                     <div className={fieldLabel}>Документы</div>
                     <div className="flex flex-wrap gap-2">
+                      {/* Скан приходит не в профиле, а отдельным запросом:
+                          каждое открытие пишется в журнал действий. */}
                       {DOCS.map(([f, name]) =>
-                        u[f] ? (
-                          <Button key={f} size="sm" variant="outline" onClick={() => viewDoc(u[f])}>
+                        (u.doc_kinds || []).includes(f) ? (
+                          <Button key={f} size="sm" variant="outline" onClick={() => viewDoc(u.id, f)}>
                             {name} <ArrowSquareOut className="size-3.5 ms-1" />
                           </Button>
                         ) : (

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
-import { many, q } from '../db.js';
+import { many, one, q } from '../db.js';
 import { recordConsent, CONSENT } from '../consent.js';
+import {
+  DOC_KINDS, parseDataUrl, saveEncrypted, readDecrypted, removeFile, storageReady,
+} from '../docs-storage.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -10,39 +13,16 @@ router.get('/', (req, res) => {
   res.json({ user: req.user });
 });
 
-const DOC_FIELDS = ['passport_url', 'license_url', 'passport_page_url', 'registration_url'];
+// Документы через PATCH /me больше не принимаются: у них отдельные эндпоинты
+// ниже (шифрование, проверка типа, журнал согласий). Здесь — только профиль.
 
 router.patch('/', async (req, res, next) => {
   try {
-    const { name, phone, email, avatar_url, dob,
-            passport_url, license_url, passport_page_url, registration_url } = req.body;
+    const { name, phone, email, avatar_url, dob } = req.body;
 
-    // Серверный лимит на размер загрузок (клиентское сжатие можно обойти).
-    const MAX_UPLOAD = 6 * 1024 * 1024; // ~6 МБ base64/url
-    for (const [k, v] of Object.entries({ avatar_url, passport_url, license_url, passport_page_url, registration_url })) {
-      if (typeof v === 'string' && v.length > MAX_UPLOAD) {
-        return res.status(413).json({ error: `Файл «${k}» слишком большой` });
-      }
-    }
-
-    // Документы можно редактировать только до прохождения верификации
-    const docChange = { passport_url, license_url, passport_page_url, registration_url };
-    const editingDocs = DOC_FIELDS.some(f => docChange[f] !== undefined);
-    if (editingDocs && req.user.is_verified) {
-      return res.status(403).json({ error: 'Документы уже проверены и заблокированы. Для изменений обратитесь к менеджеру.' });
-    }
-    // Сканы паспорта и прав — чувствительные данные с отдельной целью обработки
-    // (допуск к управлению), поэтому на них нужна отдельная галочка.
-    if (editingDocs && req.body.docs_consent !== true) {
-      return res.status(400).json({
-        code: 'DOCS_CONSENT_REQUIRED',
-        error: 'Требуется согласие на обработку данных документов',
-      });
-    }
-    if (editingDocs) {
-      recordConsent(req, {
-        kind: CONSENT.DOCS, userId: req.user.id, subject: req.user.email, source: 'documents',
-      }).catch(() => {});
+    // Серверный лимит на размер аватара (клиентское сжатие можно обойти)
+    if (typeof avatar_url === 'string' && avatar_url.length > 6 * 1024 * 1024) {
+      return res.status(413).json({ error: 'Файл «avatar_url» слишком большой' });
     }
 
     const fields = [];
@@ -60,10 +40,6 @@ router.patch('/', async (req, res, next) => {
       fields.push(`email = $${idx++}`); values.push(clean);
     }
     if (avatar_url !== undefined) { fields.push(`avatar_url = $${idx++}`); values.push(avatar_url); }
-    if (passport_url !== undefined) { fields.push(`passport_url = $${idx++}`); values.push(passport_url); }
-    if (license_url !== undefined) { fields.push(`license_url = $${idx++}`); values.push(license_url); }
-    if (passport_page_url !== undefined) { fields.push(`passport_page_url = $${idx++}`); values.push(passport_page_url); }
-    if (registration_url !== undefined) { fields.push(`registration_url = $${idx++}`); values.push(registration_url); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'Нет полей для обновления' });
@@ -71,15 +47,123 @@ router.patch('/', async (req, res, next) => {
 
     values.push(req.user.id);
     const { rows } = await q(
-      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx} RETURNING id, email, name, phone, avatar_url, role, points, is_verified, dob, passport_url, license_url, passport_page_url, registration_url, created_at`,
+      `UPDATE users SET ${fields.join(', ')} WHERE id = $${idx}
+       RETURNING id, email, name, phone, avatar_url, role, points, is_verified, dob, created_at`,
       values
     );
 
-    res.json({ user: rows[0] });
+    const kinds = await many(
+      `SELECT kind FROM user_documents WHERE user_id = $1`, [req.user.id]
+    );
+    const documents = Object.fromEntries(
+      DOC_KINDS.map((k) => [k, kinds.some((r) => r.kind === k)])
+    );
+
+    res.json({ user: { ...rows[0], documents } });
   } catch (e) {
     if (e && e.code === '23505') {
       return res.status(400).json({ error: 'Этот email уже используется' });
     }
+    next(e);
+  }
+});
+
+// ───────────────────── Документы клиента ─────────────────────
+
+// Загрузка/замена скана. До верификации клиент может заменять файлы сам,
+// после — только через менеджера (иначе проверенный документ можно подменить).
+router.post('/documents', async (req, res, next) => {
+  try {
+    const { kind, data, docs_consent } = req.body || {};
+    if (!DOC_KINDS.includes(kind)) {
+      return res.status(400).json({ error: 'Неизвестный тип документа' });
+    }
+    if (docs_consent !== true) {
+      return res.status(400).json({
+        code: 'DOCS_CONSENT_REQUIRED',
+        error: 'Требуется согласие на обработку данных документов',
+      });
+    }
+    if (req.user.is_verified) {
+      return res.status(403).json({
+        error: 'Документы уже проверены и заблокированы. Для изменений обратитесь к менеджеру.',
+      });
+    }
+    if (!storageReady()) {
+      console.error('[docs] загрузка отклонена: DOCS_ENCRYPTION_KEY не задан');
+      return res.status(503).json({
+        error: 'Загрузка документов временно недоступна. Пожалуйста, свяжитесь с менеджером.',
+      });
+    }
+
+    const parsed = parseDataUrl(data);
+    if (parsed.error) return res.status(400).json({ error: parsed.error });
+
+    const saved = await saveEncrypted(parsed.buffer);
+
+    // Старый файл удаляем только после успешной записи нового
+    const prev = await one(
+      `SELECT filename FROM user_documents WHERE user_id = $1 AND kind = $2`,
+      [req.user.id, kind]
+    );
+    await q(
+      `INSERT INTO user_documents (user_id, kind, filename, mime, bytes, sha256)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       ON CONFLICT (user_id, kind) DO UPDATE
+         SET filename = EXCLUDED.filename, mime = EXCLUDED.mime,
+             bytes = EXCLUDED.bytes, sha256 = EXCLUDED.sha256, created_at = NOW()`,
+      [req.user.id, kind, saved.filename, parsed.mime, saved.bytes, saved.sha256]
+    );
+    if (prev?.filename && prev.filename !== saved.filename) await removeFile(prev.filename);
+
+    recordConsent(req, {
+      kind: CONSENT.DOCS, userId: req.user.id, subject: req.user.email, source: 'documents',
+    }).catch(() => {});
+
+    res.status(201).json({ ok: true, kind });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Выдача файла владельцу. Отдаём расшифрованным потоком, без кеширования:
+// документ не должен осесть в кеше браузера или прокси.
+router.get('/documents/:kind', async (req, res, next) => {
+  try {
+    const { kind } = req.params;
+    if (!DOC_KINDS.includes(kind)) return res.status(404).json({ error: 'Не найдено' });
+    const doc = await one(
+      `SELECT filename, mime FROM user_documents WHERE user_id = $1 AND kind = $2`,
+      [req.user.id, kind]
+    );
+    if (!doc) return res.status(404).json({ error: 'Документ не загружен' });
+    const buf = await readDecrypted(doc.filename);
+    res.setHeader('Content-Type', doc.mime);
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(buf);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Удаление своего документа — пока клиент не верифицирован
+router.delete('/documents/:kind', async (req, res, next) => {
+  try {
+    const { kind } = req.params;
+    if (!DOC_KINDS.includes(kind)) return res.status(404).json({ error: 'Не найдено' });
+    if (req.user.is_verified) {
+      return res.status(403).json({ error: 'Документы уже проверены — обратитесь к менеджеру' });
+    }
+    const { rows } = await q(
+      `DELETE FROM user_documents WHERE user_id = $1 AND kind = $2 RETURNING filename`,
+      [req.user.id, kind]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Документ не загружен' });
+    await removeFile(rows[0].filename);
+    res.json({ ok: true });
+  } catch (e) {
     next(e);
   }
 });

@@ -26,9 +26,14 @@ export async function loadUser(req, _res, next) {
   try {
     const payload = jwt.verify(token, JWT_SECRET);
     const u = await one(
-      `SELECT id, email, phone, name, avatar_url, role, points, is_verified, email_verified,
-              passport_url, license_url, passport_page_url, registration_url, dob, created_at
-       FROM users WHERE id = $1`,
+      // ВАЖНО: сканы документов здесь НЕ выбираем. Раньше четыре base64-поля
+      // тянулись на каждый запрос (мегабайты на ровном месте) и уезжали клиенту
+      // в /me. Теперь берём только перечень загруженных видов документов.
+      `SELECT u.id, u.email, u.phone, u.name, u.avatar_url, u.role, u.points,
+              u.is_verified, u.email_verified, u.dob, u.created_at,
+              COALESCE((SELECT array_agg(d.kind ORDER BY d.kind)
+                        FROM user_documents d WHERE d.user_id = u.id), '{}') AS doc_kinds
+       FROM users u WHERE u.id = $1`,
       [payload.uid]
     );
     if (u) req.user = u;

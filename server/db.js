@@ -1,6 +1,9 @@
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 import { FLEET } from '../src/data/fleet.js';
+import {
+  storageReady, parseDataUrl, saveEncrypted, removeFile, LEGACY_COLUMN_TO_KIND,
+} from './docs-storage.js';
 
 const { Pool } = pg;
 
@@ -111,6 +114,7 @@ export function init() {
       migrateForeignKeys().catch((e) => console.warn('[db] FK migration skipped:', e.message));
       migrateBookingOverlapGuard().catch((e) => console.warn('[db] overlap guard skipped:', e.message));
       backfillCashback().catch((e) => console.warn('[db] cashback backfill skipped:', e.message));
+      migrateDocumentsToStorage().catch((e) => console.warn('[docs] перенос пропущен:', e.message));
       seedContent().catch((e) => console.warn('[db] content seed skipped:', e.message));
     })().catch((e) => {
       console.error('[db] init failed:', e);
@@ -439,6 +443,22 @@ const SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_consents_user ON consents(user_id)`,
   `CREATE INDEX IF NOT EXISTS idx_consents_kind ON consents(kind, created_at DESC)`,
+  // ── Сканы документов ──
+  // В базе только метаданные: сам файл лежит зашифрованным на диске
+  // (server/docs-storage.js). Раньше base64 хранился прямо в users.*_url —
+  // паспорта попадали в каждый дамп базы и тянулись при каждом запросе профиля.
+  `CREATE TABLE IF NOT EXISTS user_documents (
+    id         BIGSERIAL PRIMARY KEY,
+    user_id    BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    kind       TEXT NOT NULL,
+    filename   TEXT NOT NULL,
+    mime       TEXT NOT NULL,
+    bytes      INTEGER NOT NULL,
+    sha256     TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, kind)
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_user_documents_user ON user_documents(user_id)`,
   // ── Разовые миграции ДАННЫХ — строго в конце ──
   // Они читают колонки (stage, status), которые добавляются выше по списку.
   // Раньше стояли до `ALTER TABLE bookings ADD COLUMN stage` и на чистой базе
@@ -499,6 +519,59 @@ export async function migrateBookingOverlapGuard() {
        WHERE (status IN ('booked','active'))`
   );
   console.log('[db] bookings_no_overlap EXCLUDE constraint applied (booked/active)');
+}
+
+// Перенос сканов документов из base64 в users.*_url в зашифрованное хранилище.
+// Идемпотентно и безопасно: колонку обнуляем ТОЛЬКО после того, как файл
+// записан и успешно прочитан обратно (saveEncrypted сам сверяет побайтово).
+// Если ключ шифрования не задан — не трогаем ничего, документы остаются
+// в базе как были, миграция выполнится на следующем старте.
+export async function migrateDocumentsToStorage() {
+  if (!storageReady()) {
+    console.warn('[docs] DOCS_ENCRYPTION_KEY не задан — перенос документов отложен');
+    return;
+  }
+  const columns = Object.keys(LEGACY_COLUMN_TO_KIND);
+  const where = columns.map((c) => `${c} IS NOT NULL`).join(' OR ');
+  const { rows } = await pool.query(
+    `SELECT id, ${columns.join(', ')} FROM users WHERE ${where}`
+  );
+  if (!rows.length) return;
+
+  let moved = 0;
+  for (const row of rows) {
+    for (const column of columns) {
+      const dataUrl = row[column];
+      if (!dataUrl) continue;
+      const kind = LEGACY_COLUMN_TO_KIND[column];
+      const parsed = parseDataUrl(dataUrl);
+      if (parsed.error) {
+        // Не удаляем то, что не смогли разобрать: пусть лучше останется
+        // в базе, чем потеряется. Разбираем такие случаи руками.
+        console.warn(`[docs] user ${row.id}/${column}: ${parsed.error} — оставлено в базе`);
+        continue;
+      }
+      try {
+        const saved = await saveEncrypted(parsed.buffer);
+        const ins = await pool.query(
+          `INSERT INTO user_documents (user_id, kind, filename, mime, bytes, sha256)
+           VALUES ($1,$2,$3,$4,$5,$6)
+           ON CONFLICT (user_id, kind) DO NOTHING
+           RETURNING id`,
+          [row.id, kind, saved.filename, parsed.mime, saved.bytes, saved.sha256]
+        );
+        if (!ins.rows.length) {
+          // Документ уже перенесён раньше — только что записанный файл лишний
+          await removeFile(saved.filename);
+        }
+        await pool.query(`UPDATE users SET ${column} = NULL WHERE id = $1`, [row.id]);
+        moved++;
+      } catch (e) {
+        console.error(`[docs] user ${row.id}/${column}: перенос не удался — ${e.message}`);
+      }
+    }
+  }
+  if (moved) console.log(`[docs] перенесено документов в зашифрованное хранилище: ${moved}`);
 }
 
 export async function ensureSchema() {

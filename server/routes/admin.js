@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { many, q, one, getCashbackPercent, invalidateContentCache } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
 import { logAudit } from '../audit.js';
+import { DOC_KINDS, readDecrypted, removeFile } from '../docs-storage.js';
 
 const router = Router();
 router.use(requireRole('admin'));
@@ -697,12 +698,17 @@ router.delete('/cars/:id/photos/:photoId', async (req, res, next) => {
 });
 
 // Users
-const USER_LIST_COLS = `id, email, name, phone, role, is_verified, points, manager, dob, admin_note,
-  passport_url, license_url, passport_page_url, registration_url, created_at`;
+// Сканы документов в списке НЕ выбираем: раньше эти четыре base64-поля
+// выгружались для всех клиентов разом. Вместо них — перечень загруженных видов,
+// сам файл выдаётся отдельным эндпоинтом по одному.
+const USER_LIST_COLS = `u.id, u.email, u.name, u.phone, u.role, u.is_verified, u.points,
+  u.manager, u.dob, u.admin_note, u.created_at,
+  COALESCE((SELECT array_agg(d.kind ORDER BY d.kind)
+            FROM user_documents d WHERE d.user_id = u.id), '{}') AS doc_kinds`;
 
 router.get('/users', async (req, res, next) => {
   try {
-    const items = await many(`SELECT ${USER_LIST_COLS} FROM users ORDER BY created_at DESC`);
+    const items = await many(`SELECT ${USER_LIST_COLS} FROM users u ORDER BY u.created_at DESC`);
     res.json(items);
   } catch (e) {
     next(e);
@@ -729,7 +735,7 @@ router.post('/users', async (req, res, next) => {
 
     const hash = bcrypt.hashSync(body.password || (Math.random().toString(36).slice(2) + 'Aurix!'), 10);
     const { rows } = await q(
-      `INSERT INTO users (email, name, phone, password_hash, role, is_verified, manager, admin_note)
+      `INSERT INTO users AS u (email, name, phone, password_hash, role, is_verified, manager, admin_note)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING ${USER_LIST_COLS}`,
       [body.email.toLowerCase(), body.name, body.phone, hash, body.role, body.is_verified,
        body.manager || null, body.admin_note || null]
@@ -767,7 +773,7 @@ router.patch('/users/:id', async (req, res, next) => {
     if (!sets.length) return res.status(400).json({ error: 'Нечего обновлять' });
 
     vals.push(req.params.id);
-    const { rows } = await q(`UPDATE users SET ${sets.join(', ')} WHERE id = $${idx} RETURNING ${USER_LIST_COLS}`, vals);
+    const { rows } = await q(`UPDATE users AS u SET ${sets.join(', ')} WHERE u.id = $${idx} RETURNING ${USER_LIST_COLS}`, vals);
     if (!rows.length) return res.status(404).json({ error: 'Not found' });
     logAudit(req, 'user', req.params.id, 'update', body);
     res.json(rows[0]);
@@ -794,7 +800,7 @@ router.post('/users/:id/points', async (req, res, next) => {
 
     await q(`UPDATE users SET points = COALESCE(points,0) + $1 WHERE id = $2`, [amount, req.params.id]);
     await q(`INSERT INTO user_points (user_id, amount, reason) VALUES ($1,$2,$3)`, [req.params.id, amount, reason]);
-    const fresh = await one(`SELECT ${USER_LIST_COLS} FROM users WHERE id = $1`, [req.params.id]);
+    const fresh = await one(`SELECT ${USER_LIST_COLS} FROM users u WHERE u.id = $1`, [req.params.id]);
     logAudit(req, 'user', req.params.id, 'points', { amount, reason });
     res.json(fresh);
   } catch (e) {
@@ -807,10 +813,11 @@ router.post('/users/:id/points', async (req, res, next) => {
 router.get('/users/:id', async (req, res, next) => {
   try {
     const user = await one(
-      `SELECT id, email, name, phone, role, is_verified, points, manager, dob, admin_note,
-              passport_url, license_url, passport_page_url, registration_url, created_at,
-              money_balance, deposit_balance
-       FROM users WHERE id = $1`,
+      `SELECT u.id, u.email, u.name, u.phone, u.role, u.is_verified, u.points, u.manager,
+              u.dob, u.admin_note, u.created_at, u.money_balance, u.deposit_balance,
+              COALESCE((SELECT array_agg(d.kind ORDER BY d.kind)
+                        FROM user_documents d WHERE d.user_id = u.id), '{}') AS doc_kinds
+       FROM users u WHERE u.id = $1`,
       [req.params.id]
     );
     if (!user) return res.status(404).json({ error: 'Пользователь не найден' });
@@ -975,6 +982,50 @@ router.delete('/contact-requests/:id', async (req, res, next) => {
     const { rows } = await q(`DELETE FROM contact_requests WHERE id = $1 RETURNING id`, [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Заявка не найдена' });
     logAudit(req, 'contact_request', String(req.params.id), 'delete');
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
+});
+
+// ───────────── Документы клиента (для менеджера) ─────────────
+// Файл отдаётся по одному и только админу; каждый просмотр пишется в журнал
+// действий — по нему видно, кто и когда открывал чей паспорт.
+
+router.get('/users/:id/documents/:kind', async (req, res, next) => {
+  try {
+    const { id, kind } = req.params;
+    if (!DOC_KINDS.includes(kind)) return res.status(404).json({ error: 'Не найдено' });
+    const doc = await one(
+      `SELECT filename, mime FROM user_documents WHERE user_id = $1 AND kind = $2`,
+      [id, kind]
+    );
+    if (!doc) return res.status(404).json({ error: 'Документ не загружен' });
+    const buf = await readDecrypted(doc.filename);
+    logAudit(req, 'user_document', `${id}/${kind}`, 'view');
+    res.setHeader('Content-Type', doc.mime);
+    res.setHeader('Cache-Control', 'no-store, private');
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.send(buf);
+  } catch (e) {
+    next(e);
+  }
+});
+
+// Удаление документа менеджером — например, по требованию клиента об удалении
+// данных или по истечении срока хранения.
+router.delete('/users/:id/documents/:kind', async (req, res, next) => {
+  try {
+    const { id, kind } = req.params;
+    if (!DOC_KINDS.includes(kind)) return res.status(404).json({ error: 'Не найдено' });
+    const { rows } = await q(
+      `DELETE FROM user_documents WHERE user_id = $1 AND kind = $2 RETURNING filename`,
+      [id, kind]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Документ не загружен' });
+    await removeFile(rows[0].filename);
+    logAudit(req, 'user_document', `${id}/${kind}`, 'delete');
     res.json({ ok: true });
   } catch (e) {
     next(e);

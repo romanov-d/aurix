@@ -36,10 +36,10 @@ const fmtDateTime = (iso) => {
 
 const STATUS_RU = { pending: 'Ожидает', booked: 'Забронирована', active: 'В аренде', completed: 'Завершена', cancelled: 'Отменена' };
 const DOCS = [
-  ['passport_url', 'Паспорт — основной разворот'],
-  ['registration_url', 'Паспорт — прописка'],
-  ['license_url', 'Права — лицевая сторона'],
-  ['passport_page_url', 'Права — оборотная сторона'],
+  ['passport', 'Паспорт — основной разворот'],
+  ['registration', 'Паспорт — прописка'],
+  ['license_front', 'Права — лицевая сторона'],
+  ['license_back', 'Права — оборотная сторона'],
 ];
 const TABS = [
   ['overview', 'Обзор'], ['bookings', 'Бронирования'], ['history', 'История'],
@@ -108,7 +108,26 @@ export function LkPage() {
     if (!file) return;
     const data = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
     if (dataUrlBytes(data) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите PDF поменьше или фото.'); return; }
-    patchMe({ [field]: data });
+    if (!confirm('Загрузка документа означает согласие на обработку данных документов (паспорт и водительское удостоверение) для допуска к управлению автомобилем. Продолжить?')) return;
+    try {
+      await api.post('/me/documents', { kind: field, data, docs_consent: true });
+      api.get('/auth/me').then((d) => d?.user && setUser(d.user)).catch(() => {});
+    } catch (err) {
+      alert(err.message || 'Не удалось загрузить документ');
+    }
+  };
+
+  // Скан приходит отдельным запросом — в профиле его больше нет
+  const openDoc = async (kind) => {
+    try {
+      const res = await fetch(`/api/me/documents/${kind}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Не удалось открыть документ');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      alert(e.message || 'Не удалось открыть документ');
+    }
   };
   const uploadAvatar = async (e) => {
     const file = e.target.files?.[0]; e.target.value = '';
@@ -345,14 +364,14 @@ export function LkPage() {
                 <div key={f} className="rounded-lg bg-zinc-800/40 p-4 flex items-center justify-between">
                   <div>
                     <div className="text-sm font-medium">{name}</div>
-                    <div className={`text-xs ${user[f] ? 'text-green-500' : 'text-muted-foreground'}`}>{user[f] ? '✓ Загружено' : 'Требуется загрузить'}</div>
+                    <div className={`text-xs ${user.documents?.[f] ? 'text-green-500' : 'text-muted-foreground'}`}>{user.documents?.[f] ? '✓ Загружено' : 'Требуется загрузить'}</div>
                   </div>
                   <div className="flex items-center gap-2">
-                    {user[f] && <Button size="sm" variant="outline" onClick={() => window.open(user[f], '_blank')}><ArrowSquareOut className="size-4" /></Button>}
+                    {user.documents?.[f] && <Button size="sm" variant="outline" onClick={() => openDoc(f)}><ArrowSquareOut className="size-4" /></Button>}
                     {!user.is_verified && (
                       <label className="inline-flex cursor-pointer">
                         <input type="file" accept="image/*,.pdf" className="hidden" onChange={(e) => uploadDoc(f, e)} />
-                        <span className="inline-flex items-center h-8 px-3 rounded-md border border-input text-sm">{user[f] ? 'Заменить' : 'Загрузить'}</span>
+                        <span className="inline-flex items-center h-8 px-3 rounded-md border border-input text-sm">{user.documents?.[f] ? 'Заменить' : 'Загрузить'}</span>
                       </label>
                     )}
                   </div>

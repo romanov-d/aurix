@@ -66,7 +66,7 @@ export default function Account() {
     try {
       const data = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
       if (dataUrlBytes(data) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите PDF поменьше или фото.'); return; }
-      await api('/me', { method: 'PATCH', body: { [field]: data, docs_consent: true } });
+      await api('/me/documents', { method: 'POST', body: { kind: field, data, docs_consent: true } });
       await refresh();
     } catch (err) {
       alert(err.message || 'Ошибка загрузки документа');
@@ -75,20 +75,20 @@ export default function Account() {
     }
   };
 
-  const viewDoc = (url) => {
-    if (!url) return;
+  // Документ больше не лежит в объекте пользователя — забираем его отдельным
+  // запросом с cookie-сессией и показываем через blob. Ссылку сразу отзываем,
+  // чтобы расшифрованный файл не висел в памяти вкладки.
+  const viewDoc = async (kind) => {
     try {
-      if (url.startsWith('data:')) {
-        const [meta, b64] = url.split(',');
-        const mime = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/jpeg';
-        const bin = atob(b64);
-        const arr = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-        window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
-      } else {
-        window.open(url, '_blank');
-      }
-    } catch { window.open(url, '_blank'); }
+      const res = await fetch(`/api/me/documents/${kind}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Не удалось открыть документ');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      alert(e.message || 'Не удалось открыть документ');
+    }
   };
 
   const saveProfile = async (e) => {
@@ -235,7 +235,7 @@ export default function Account() {
 
         <main className="acc-content">
           {user && !user.is_verified && (
-            (user.passport_url || user.license_url || user.passport_page_url || user.registration_url) ? (
+            (user.documents && Object.values(user.documents).some(Boolean)) ? (
               <div className="acc-verify-banner pending">
                 <i className="ph-fill ph-clock-countdown" />
                 <div>
@@ -494,12 +494,13 @@ export default function Account() {
                   )}
                   <div className="doc-list">
                     {[
-                      { field: 'passport_url', icon: 'ph-identification-card', label: 'Паспорт — основной разворот' },
-                      { field: 'registration_url', icon: 'ph-house', label: 'Паспорт — прописка' },
-                      { field: 'license_url', icon: 'ph-car', label: 'Права — лицевая сторона' },
-                      { field: 'passport_page_url', icon: 'ph-car', label: 'Права — оборотная сторона' },
+                      { field: 'passport', icon: 'ph-identification-card', label: 'Паспорт — основной разворот' },
+                      { field: 'registration', icon: 'ph-house', label: 'Паспорт — прописка' },
+                      { field: 'license_front', icon: 'ph-car', label: 'Права — лицевая сторона' },
+                      { field: 'license_back', icon: 'ph-car', label: 'Права — оборотная сторона' },
                     ].map(d => {
-                      const url = user?.[d.field];
+                      // Сам файл сюда больше не приходит — только признак загрузки
+                      const url = user?.documents?.[d.field];
                       const busy = docUploading === d.field;
                       const locked = user?.is_verified;
                       return (
@@ -512,7 +513,7 @@ export default function Account() {
                             </small>
                           </div>
                           {url && (
-                            <button type="button" onClick={() => viewDoc(url)} className="dl" title="Посмотреть" style={{ marginRight: 6, background: 'none', border: 0, cursor: 'pointer' }}>
+                            <button type="button" onClick={() => viewDoc(d.field)} className="dl" title="Посмотреть" style={{ marginRight: 6, background: 'none', border: 0, cursor: 'pointer' }}>
                               <i className="ph-fill ph-eye" />
                             </button>
                           )}

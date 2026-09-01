@@ -69,20 +69,18 @@ export default function Admin() {
   const [showAddUser, setShowAddUser] = useState(false);
   const [showAddBooking, setShowAddBooking] = useState(false);
 
-  const viewDoc = (url) => {
-    if (!url) return;
+  // Скан лежит в зашифрованном хранилище — забираем отдельным запросом.
+  // Каждое открытие фиксируется в журнале действий на сервере.
+  const viewDoc = async (userId, kind) => {
     try {
-      if (url.startsWith('data:')) {
-        const [meta, b64] = url.split(',');
-        const mime = (meta.match(/data:(.*?);base64/) || [])[1] || 'image/jpeg';
-        const bin = atob(b64);
-        const arr = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-        window.open(URL.createObjectURL(new Blob([arr], { type: mime })), '_blank');
-      } else {
-        window.open(url, '_blank');
-      }
-    } catch { window.open(url, '_blank'); }
+      const res = await fetch(`/api/admin/users/${userId}/documents/${kind}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Не удалось открыть документ');
+      const url = URL.createObjectURL(await res.blob());
+      window.open(url, '_blank');
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      alert(e.message || 'Не удалось открыть документ');
+    }
   };
 
   const openClient = async (id) => {
@@ -634,7 +632,7 @@ export default function Admin() {
     const u = client.user;
     const inp = { width: '100%', background: 'var(--bg-2)', border: '1px solid #2a2a2a', color: 'var(--head)', padding: '10px 12px', borderRadius: 8, fontSize: 14, fontFamily: 'inherit' };
     const save = (patch) => saveClientCard(patch).catch(e => alert(e.message));
-    const docs = [['passport_url', 'Паспорт — основной разворот'], ['registration_url', 'Паспорт — прописка'], ['license_url', 'Права — лицевая сторона'], ['passport_page_url', 'Права — оборотная сторона']];
+    const docs = [['passport', 'Паспорт — основной разворот'], ['registration', 'Паспорт — прописка'], ['license_front', 'Права — лицевая сторона'], ['license_back', 'Права — оборотная сторона']];
     return (
       <div>
         {backBtn(() => setClient(null), 'Назад к пользователям')}
@@ -665,7 +663,7 @@ export default function Admin() {
               </div>
               <div style={{ ...lbl, marginBottom: 8 }}>Документы</div>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
-                {docs.map(([f, name]) => u[f] ? <button key={f} type="button" className="btn btn-sm" onClick={() => viewDoc(u[f])}>{name} ↗</button> : <span key={f} className="tag cancel">{name}: нет</span>)}
+                {docs.map(([f, name]) => (u.doc_kinds || []).includes(f) ? <button key={f} type="button" className="btn btn-sm" onClick={() => viewDoc(u.id, f)}>{name} ↗</button> : <span key={f} className="tag cancel">{name}: нет</span>)}
               </div>
               <div style={{ ...lbl, marginBottom: 8 }}>История бронирований ({client.bookings.length})</div>
               {client.bookings.length ? (
