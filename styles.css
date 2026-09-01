@@ -2197,3 +2197,28 @@ html{scroll-behavior:smooth}
   .req-block{padding:22px 20px}
   .req-row{grid-template-columns:1fr;gap:4px}
 }
+
+/* ── Согласие на cookie ──
+   Плашка снизу, в общей палитре сайта (тёмный фон, золотой акцент).
+   На мобильных кнопки уходят в столбик и растягиваются на всю ширину. */
+.cookie-banner{position:fixed;left:0;right:0;bottom:0;z-index:9000;background:rgba(10,10,10,.97);border-top:1px solid var(--line);backdrop-filter:blur(10px);animation:cookieUp .35s ease}
+@keyframes cookieUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cookie-banner-inner{max-width:1280px;margin:0 auto;padding:20px 24px;display:flex;align-items:center;gap:28px}
+.cookie-banner-text b{display:block;color:var(--head);font-family:'Inter',sans-serif;font-size:15px;font-weight:600;margin-bottom:6px}
+.cookie-banner-text p{color:#bdbdbd;font-size:13px;line-height:1.65;margin:0;max-width:820px}
+.cookie-banner-text a{color:var(--gold);text-decoration:underline}
+.cookie-banner-actions{display:flex;gap:10px;flex-shrink:0;margin-left:auto}
+@media (max-width:860px){
+  .cookie-banner-inner{flex-direction:column;align-items:stretch;gap:16px;padding:18px 16px}
+  .cookie-banner-actions{margin-left:0}
+  .cookie-banner-actions .btn{flex:1;justify-content:center}
+  .cookie-banner-text p{font-size:12.5px}
+}
+
+/* Подпись «редакция от …» под заголовком правовых страниц */
+.legal-meta{color:var(--muted);font-size:12px;line-height:1.6;margin-top:14px;max-width:720px}
+
+/* Галочка согласия в формах — единый вид на всех страницах */
+.consent-check{display:flex;align-items:flex-start;gap:10px;margin-top:16px;cursor:pointer;font-size:12.5px;line-height:1.6;color:#bdbdbd}
+.consent-check input{accent-color:var(--gold);width:15px;height:15px;margin-top:2px;flex-shrink:0;cursor:pointer}
+.consent-check a{color:var(--gold);text-decoration:underline}

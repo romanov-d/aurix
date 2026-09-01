@@ -82,7 +82,7 @@ function CarDetailSkeleton() {
           </div>
         </div>
 
-        <aside className="detail-side">
+        <aside className="detail-side ym-hide-content">
           {line({ width: '70%', height: 28 })}
           {line({ width: '45%', height: 14, marginTop: 12 })}
           <div className="price-block" style={{ marginTop: 20 }}>
@@ -143,6 +143,7 @@ export default function Car() {
   const [needDelivery, setNeedDelivery] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [bookConsent, setBookConsent] = useState(false);
   const [busyRanges, setBusyRanges] = useState([]); // сырые интервалы занятых броней
 
   // ── Фотосессия: один день + время начала + длительность в часах ──
@@ -326,6 +327,10 @@ export default function Car() {
       setError(isPhoto ? 'Укажите длительность съёмки.' : 'Дата возврата должна быть позже даты получения.');
       return;
     }
+    if (!bookConsent) {
+      setError('Отметьте согласие на обработку персональных данных.');
+      return;
+    }
     // Съёмка не должна наехать на уже занятые часы этого дня
     if (isPhoto && photoSlotTaken) {
       setError(`В это время авто занято (${photoBusyLabel}). Выберите другое время или длительность.`);
@@ -345,6 +350,7 @@ export default function Car() {
         body: {
           car_id: car.id,
           kind: isPhoto ? 'photo' : 'rent',
+          consent: true,
           from_dt: new Date(startDt).toISOString(),
           to_dt: endDate.toISOString(),
           pickup_city: city,
@@ -705,6 +711,19 @@ export default function Car() {
               <Link to="/account#documents" style={{ color: 'var(--gold)', textDecoration: 'underline', whiteSpace: 'nowrap' }}>Загрузить документы&nbsp;→</Link>
             </div>
           )}
+
+          <label className="consent-check">
+            <input
+              type="checkbox"
+              checked={bookConsent}
+              onChange={(e) => setBookConsent(e.target.checked)}
+            />
+            <span>
+              Я даю <Link to="/consent#pdn" target="_blank">согласие на обработку персональных данных</Link>{' '}
+              для оформления брони и ознакомлен с{' '}
+              <Link to="/privacy" target="_blank">Политикой обработки</Link>.
+            </span>
+          </label>
 
           {error && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 14, textAlign: 'center' }}>{error}</div>}
 

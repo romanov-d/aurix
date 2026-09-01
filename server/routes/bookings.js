@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { q, one } from '../db.js';
 import { requireAuth } from '../middleware/auth.js';
 import { pushToSalebot } from '../salebot.js';
+import { recordConsent, CONSENT } from '../consent.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -17,6 +18,11 @@ const bookSchema = z.object({
   with_delivery: z.boolean().default(false),
   // 'rent' — обычная посуточная аренда, 'photo' — почасовая съёмка
   kind: z.enum(['rent', 'photo']).default('rent'),
+  // Подтверждение согласия при оформлении брони: цель обработки здесь другая
+  // (заключение договора аренды), поэтому подтверждаем её отдельно от регистрации.
+  consent: z.literal(true, {
+    errorMap: () => ({ message: 'Требуется согласие на обработку персональных данных' }),
+  }),
 });
 
 function getDayPrice(car, days) {
@@ -127,6 +133,10 @@ router.post('/', async (req, res, next) => {
         body.kind
       ]
     );
+
+    recordConsent(req, {
+      kind: CONSENT.PDN, userId: req.user.id, subject: req.user.email, source: 'booking',
+    }).catch(() => {});
 
     // Подкрепляем данные брони в SaleBot для рассылок (не блокируем ответ)
     pushToSalebot('booking', {

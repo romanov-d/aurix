@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { one, q } from '../db.js';
 import { signToken, COOKIE_NAME, COOKIE_OPTS, requireAuth } from '../middleware/auth.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { recordConsent, CONSENT } from '../consent.js';
 import { sendCodeEmail, sendNewUserEmail, resendConfigured } from '../email.js';
 import { sendNewUserTelegram } from '../telegram.js';
 import { pushToSalebot } from '../salebot.js';
@@ -82,6 +83,19 @@ const registerSchema = z.object({
   name: z.string().min(2).max(80),
   phone: z.string().min(5, 'Укажите телефон').max(30),
   password: z.string().min(6).max(120),
+  // Галочка на форме регистрации. Согласие обязательно, факт пишем в consents.
+  consent: z.literal(true, {
+    errorMap: () => ({ message: 'Требуется согласие на обработку персональных данных' }),
+  }),
+  // Трансграничная передача — ОТДЕЛЬНОЕ согласие (ст. 12 152-ФЗ), его нельзя
+  // «зашивать» в общее. Сейчас обязательно: письма с кодом подтверждения уходят
+  // через зарубежный сервис. Переезд почты на российского провайдера уберёт
+  // и эту галочку, и необходимость уведомлять РКН о трансгране.
+  cross_border_consent: z.literal(true, {
+    errorMap: () => ({ message: 'Требуется согласие на трансграничную передачу для отправки писем' }),
+  }),
+  // Рекламные рассылки — добровольное согласие, услуги от него не зависят
+  marketing_consent: z.boolean().optional().default(false),
 });
 
 const loginSchema = z.object({
@@ -121,6 +135,13 @@ router.post('/register', registerLimiter, async (req, res, next) => {
       [body.email.toLowerCase(), body.name, body.phone || null, hash]
     );
     const user = rows[0];
+
+    // Согласия фиксируем сразу после создания учётной записи
+    await recordConsent(req, { kind: CONSENT.PDN, userId: user.id, subject: user.email, source: 'register' });
+    await recordConsent(req, { kind: CONSENT.CROSS_BORDER, userId: user.id, subject: user.email, source: 'register' });
+    if (body.marketing_consent) {
+      await recordConsent(req, { kind: CONSENT.MARKETING, userId: user.id, subject: user.email, source: 'register' });
+    }
 
     // Код подтверждения email (не блокирует вход; используется для подтверждения почты)
     await issueCode(user.id, user.email, 'verify');

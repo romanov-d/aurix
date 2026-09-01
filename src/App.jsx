@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/Header.jsx';
 import Footer from './components/Footer.jsx';
+import CookieBanner from './components/CookieBanner.jsx';
 import Preloader from './components/Preloader.jsx';
 import Home from './pages/Home.jsx'; // главная — eager, чтобы лендинг был мгновенным
 import { ymHit } from './api/metrika.js';
@@ -13,6 +14,8 @@ const LongTerm = lazy(() => import('./pages/LongTerm.jsx'));
 const Club = lazy(() => import('./pages/Club.jsx'));
 const Terms = lazy(() => import('./pages/Terms.jsx'));
 const Privacy = lazy(() => import('./pages/Privacy.jsx'));
+const Consent = lazy(() => import('./pages/Consent.jsx'));
+const Cookies = lazy(() => import('./pages/Cookies.jsx'));
 const Requisites = lazy(() => import('./pages/Requisites.jsx'));
 const Blog = lazy(() => import('./pages/Blog.jsx'));
 const BlogPost = lazy(() => import('./pages/BlogPost.jsx'));
@@ -92,6 +95,8 @@ export default function App() {
         <Route path="/club" element={<Club />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
+        <Route path="/consent" element={<Consent />} />
+        <Route path="/cookies" element={<Cookies />} />
         <Route path="/requisites" element={<Requisites />} />
         <Route path="/blog" element={<Blog />} />
         <Route path="/blog/:id" element={<BlogPost />} />
@@ -115,6 +120,7 @@ export default function App() {
       </Suspense>
       </div>
       {!noFooter && <Footer />}
+      <CookieBanner />
     </AuthProvider>
   );
 }

@@ -4,6 +4,7 @@ import { q } from '../db.js';
 import { sendContactRequestEmail } from '../email.js';
 import { sendContactRequestTelegram } from '../telegram.js';
 import { rateLimit } from '../middleware/rateLimit.js';
+import { recordConsent, CONSENT } from '../consent.js';
 
 const router = Router();
 
@@ -14,6 +15,11 @@ const contactSchema = z.object({
   phone: z.string().trim().min(5, 'Укажите телефон').max(30),
   car: z.string().trim().max(120).optional().nullable(),
   message: z.string().trim().max(2000).optional().nullable(),
+  // Согласие на обработку ПДн обязательно: отправитель заявки не зарегистрирован
+  // и другого места, где он мог бы его дать, нет.
+  consent: z.literal(true, {
+    errorMap: () => ({ message: 'Требуется согласие на обработку персональных данных' }),
+  }),
 });
 
 router.post('/', rateLimit({ windowMs: 10 * 60 * 1000, max: 5 }), async (req, res, next) => {
@@ -23,6 +29,9 @@ router.post('/', rateLimit({ windowMs: 10 * 60 * 1000, max: 5 }), async (req, re
       return res.status(400).json({ error: 'Проверьте поля формы', detail: parsed.error.issues });
     }
     const { name, phone, car, message } = parsed.data;
+
+    // Факт согласия фиксируем до всего остального
+    await recordConsent(req, { kind: CONSENT.PDN, subject: phone, source: 'contact_form' });
 
     // СНАЧАЛА сохраняем заявку — уведомления это лишь доставка. Telegram может
     // быть не настроен, почта — отвалиться; заявка не должна зависеть от них

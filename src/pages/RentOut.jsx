@@ -16,12 +16,18 @@ export default function RentOut() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
+  const [consent, setConsent] = useState(false);
+
   const handleChange = (e) => setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!user) {
       nav('/login');
+      return;
+    }
+    if (!consent) {
+      setError('Отметьте согласие на обработку персональных данных');
       return;
     }
     setLoading(true);
@@ -109,6 +115,13 @@ export default function RentOut() {
               
               {error && <div style={{ color: '#ef4444', fontSize: 14, marginTop: 10, textAlign: 'center' }}>{error}</div>}
               
+              <label className="consent-check">
+                <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+                <span>
+                  Я даю <Link to="/consent#pdn" target="_blank">согласие на обработку персональных данных</Link>{' '}
+                  и ознакомлен с <Link to="/privacy" target="_blank">Политикой обработки</Link>.
+                </span>
+              </label>
               <div className="form-actions" style={{ marginTop: 24 }}>
                 <T k="rentout.form.note" as="p" className="note">Нажимая «Отправить», вы принимаете условия партнерской программы AURIX MOTORS.</T>
                 <button type="submit" disabled={loading} className="btn btn-filled">{loading ? <T k="rentout.form.submitting">Отправка...</T> : <T k="rentout.form.submit">Отправить заявку</T>}</button>

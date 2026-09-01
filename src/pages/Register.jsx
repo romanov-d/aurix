@@ -7,7 +7,11 @@ export default function Register() {
   const { register, verifyEmailCode, resendEmailCode } = useAuth();
   const nav = useNavigate();
   const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' });
+  // Три отдельных согласия: обработка ПДн и трансграничная передача обязательны
+  // (без второй не отправить письмо с кодом), рассылки — по желанию.
   const [consent, setConsent] = useState(false);
+  const [crossBorder, setCrossBorder] = useState(false);
+  const [marketing, setMarketing] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [step, setStep] = useState('form'); // 'form' | 'code'
@@ -22,9 +26,13 @@ export default function Register() {
     if (form.password.length < 6) return setError('Пароль минимум 6 символов');
     if (form.password !== form.confirm) return setError('Пароли не совпадают');
     if (!consent) return setError('Необходимо согласие на обработку персональных данных');
+    if (!crossBorder) return setError('Необходимо согласие на трансграничную передачу — без него мы не сможем отправить письмо с кодом');
     setSubmitting(true);
     try {
-      const res = await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
+      const res = await register({
+        name: form.name, email: form.email, phone: form.phone, password: form.password,
+        consent: true, cross_border_consent: true, marketing_consent: marketing,
+      });
       if (res.needsEmailVerify) setStep('code'); // аккаунт создан, подтвердим почту кодом
       else window.location.assign('/admin/me');
     } catch (err) {
@@ -102,7 +110,25 @@ export default function Register() {
               </label>
               <label className="auth-consent">
                 <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-                <span>Я согласен на <Link to="/privacy" target="_blank">обработку персональных данных</Link> и принимаю <Link to="/terms" target="_blank">условия</Link>.</span>
+                <span>
+                  Я даю <Link to="/consent#pdn" target="_blank">согласие на обработку персональных данных</Link>,
+                  ознакомлен с <Link to="/privacy" target="_blank">Политикой обработки</Link> и принимаю{' '}
+                  <Link to="/terms" target="_blank">условия</Link>.
+                </span>
+              </label>
+              <label className="auth-consent">
+                <input type="checkbox" checked={crossBorder} onChange={(e) => setCrossBorder(e.target.checked)} />
+                <span>
+                  Я даю <Link to="/consent#cross-border" target="_blank">согласие на трансграничную передачу</Link>{' '}
+                  данных для отправки писем и уведомлений.
+                </span>
+              </label>
+              <label className="auth-consent">
+                <input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />
+                <span>
+                  Хочу получать <Link to="/consent#marketing" target="_blank">новости и специальные предложения</Link>.
+                  Необязательно, можно отписаться в любой момент.
+                </span>
               </label>
               {error && <div className="auth-error">{error}</div>}
               <button className="auth-cta" type="submit" disabled={submitting}>

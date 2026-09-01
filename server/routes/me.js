@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth.js';
 import { many, q } from '../db.js';
+import { recordConsent, CONSENT } from '../consent.js';
 
 const router = Router();
 router.use(requireAuth);
@@ -29,6 +30,19 @@ router.patch('/', async (req, res, next) => {
     const editingDocs = DOC_FIELDS.some(f => docChange[f] !== undefined);
     if (editingDocs && req.user.is_verified) {
       return res.status(403).json({ error: 'Документы уже проверены и заблокированы. Для изменений обратитесь к менеджеру.' });
+    }
+    // Сканы паспорта и прав — чувствительные данные с отдельной целью обработки
+    // (допуск к управлению), поэтому на них нужна отдельная галочка.
+    if (editingDocs && req.body.docs_consent !== true) {
+      return res.status(400).json({
+        code: 'DOCS_CONSENT_REQUIRED',
+        error: 'Требуется согласие на обработку данных документов',
+      });
+    }
+    if (editingDocs) {
+      recordConsent(req, {
+        kind: CONSENT.DOCS, userId: req.user.id, subject: req.user.email, source: 'documents',
+      }).catch(() => {});
     }
 
     const fields = [];

@@ -33,7 +33,9 @@ export default function Footer() {
             <h5>Правовая информация</h5>
             <ul>
               <li><Link to="/terms">Условия и положения</Link></li>
-              <li><Link to="/privacy">Политика конфиденциальности</Link></li>
+              <li><Link to="/privacy">Обработка персональных данных</Link></li>
+              <li><Link to="/consent">Согласия</Link></li>
+              <li><Link to="/cookies">Файлы cookie</Link></li>
               <li><Link to="/requisites">Реквизиты</Link></li>
               <li><Link to="/blog">Блог</Link></li>
             </ul>

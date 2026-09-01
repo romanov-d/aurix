@@ -50,14 +50,23 @@ export default function Account() {
     if (user) setProfileForm({ name: user.name || '', phone: user.phone || '', email: user.email || '', dob: (user.dob || '').slice(0, 10) });
   }, [user]);
 
+  // Отдельное согласие на обработку данных документов: цель у них своя
+  // (допуск к управлению), и данные чувствительнее обычных контактных.
+  const [docsConsent, setDocsConsent] = useState(false);
+
   const handleDocChange = async (field, e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (!docsConsent) {
+      alert('Сначала отметьте согласие на обработку данных документов.');
+      e.target.value = '';
+      return;
+    }
     setDocUploading(field);
     try {
       const data = await fileToCompressedDataUrl(file, { maxSize: 2200, quality: 0.82 });
       if (dataUrlBytes(data) > 8 * 1024 * 1024) { alert('Файл слишком большой даже после сжатия. Пришлите PDF поменьше или фото.'); return; }
-      await api('/me', { method: 'PATCH', body: { [field]: data } });
+      await api('/me', { method: 'PATCH', body: { [field]: data, docs_consent: true } });
       await refresh();
     } catch (err) {
       alert(err.message || 'Ошибка загрузки документа');
@@ -469,6 +478,19 @@ export default function Account() {
                       <i className="ph-fill ph-info" style={{ marginRight: 6 }} />
                       Загрузите документы для верификации. До её прохождения вы можете заменять и редактировать файлы. Без верификации бронирование недоступно.
                     </div>
+                  )}
+                  {!user?.is_verified && (
+                    <label className="consent-check" style={{ padding: '0 24px 4px' }}>
+                      <input
+                        type="checkbox"
+                        checked={docsConsent}
+                        onChange={(e) => setDocsConsent(e.target.checked)}
+                      />
+                      <span>
+                        Я даю <Link to="/consent#docs" target="_blank">согласие на обработку данных документов</Link>{' '}
+                        (паспорт и водительское удостоверение) для допуска к управлению автомобилем.
+                      </span>
+                    </label>
                   )}
                   <div className="doc-list">
                     {[

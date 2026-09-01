@@ -10,6 +10,7 @@ export default function Contacts() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [consent, setConsent] = useState(false);
 
   const handleChange = (k) => (e) => {
     setForm({ ...form, [k]: e.target.value });
@@ -22,6 +23,10 @@ export default function Contacts() {
       setError('Имя и телефон обязательны для заполнения');
       return;
     }
+    if (!consent) {
+      setError('Отметьте согласие на обработку персональных данных');
+      return;
+    }
     setLoading(true);
     setError('');
     setSuccess(false);
@@ -29,11 +34,12 @@ export default function Contacts() {
     try {
       await api('/contact', {
         method: 'POST',
-        body: form,
+        body: { ...form, consent: true },
       });
       reachGoal('contact'); // цель Метрики: отправлена заявка с формы
       setSuccess(true);
       setForm({ name: '', phone: '', car: '', message: '' });
+      setConsent(false);
     } catch (err) {
       setError(err.message || 'Произошла ошибка при отправке заявки');
     } finally {
@@ -90,7 +96,7 @@ export default function Contacts() {
             </div>
 
             <div>
-              <form className="form-card contacts-form" onSubmit={onSubmit} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+              <form className="form-card contacts-form ym-hide-content" onSubmit={onSubmit} style={{ height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 <T k="contacts.form.title" as="h3" style={{ color: 'var(--gold)', fontSize: 22, marginBottom: 18, fontWeight: 600 }}>Оставьте заявку</T>
                 
                 {success && (
@@ -145,6 +151,18 @@ export default function Contacts() {
                     disabled={loading}
                   />
                 </div>
+                <label className="consent-check">
+                  <input
+                    type="checkbox"
+                    checked={consent}
+                    onChange={(e) => setConsent(e.target.checked)}
+                    disabled={loading}
+                  />
+                  <span>
+                    Я даю <Link to="/consent#pdn" target="_blank">согласие на обработку персональных данных</Link>{' '}
+                    и ознакомлен с <Link to="/privacy" target="_blank">Политикой обработки</Link>.
+                  </span>
+                </label>
                 <div className="form-actions" style={{ marginTop: 8 }}>
                   <T k="contacts.form.note" as="p" className="note">Перезвоним в течение 5 минут</T>
                   <button className="btn btn-filled" type="submit" disabled={loading}>

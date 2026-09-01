@@ -23,18 +23,9 @@
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
 <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
 <link rel="stylesheet" href="/styles.css">
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=111101844', 'ym');
-
-    ym(111101844, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
-<!-- /Yandex.Metrika counter -->
+<!-- Yandex.Metrika: счётчик НЕ инициализируется здесь. До согласия на
+     аналитические cookie никакие сторонние скрипты не грузятся — Метрику
+     подключает src/components/CookieBanner.jsx после нажатия «Принять все». -->
 <!-- Вовлечённость (UAObserver): пока пользователь реально взаимодействует со
      страницей, каждые uao_settings.interval секунд активности шлём в Метрику
      цель <ym_period_goal_prefix><накопленные_секунды> (ym_prefix90, ym_prefix180, …)
@@ -205,7 +196,6 @@
 </script>
 </head>
 <body>
-<noscript><div><img src="https://mc.yandex.ru/watch/111101844" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
 <!-- Предохранитель загрузки. Если после деплоя index.html ссылается на входной
@@ -238,17 +228,7 @@
     }, 10000);
   })();
 </script>
-<!-- SaleBot онлайн-чат — грузим ПОСЛЕ загрузки страницы, чтобы не висел на прелоадере -->
-<script>
-  window.addEventListener('load', function () {
-    setTimeout(function () {
-      var s = document.createElement('script');
-      s.src = 'https://salebot.pro/js/chatbot.js?v=1';
-      s.charset = 'utf-8';
-      s.onload = function () { if (window.ChatBotPro) ChatBotPro.init({ guid: '21ec42b990aa10366a5b3b81480e78' }); };
-      document.body.appendChild(s);
-    }, 2000);
-  });
-</script>
+<!-- SaleBot онлайн-чат подключается из CookieBanner.jsx после согласия
+     на cookie: сторонний скрипт не должен стартовать раньше выбора посетителя. -->
 </body>
 </html>

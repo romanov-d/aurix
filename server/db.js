@@ -419,6 +419,26 @@ const SCHEMA_STATEMENTS = [
   )`,
   `CREATE INDEX IF NOT EXISTS idx_contact_requests_created ON contact_requests(created_at DESC)`,
   `CREATE INDEX IF NOT EXISTS idx_contact_requests_status ON contact_requests(status)`,
+  // ── Журнал согласий ──
+  // Доказывать факт согласия обязан оператор, поэтому фиксируем КАЖДОЕ:
+  // что именно принято (kind), какая редакция документа (doc_version),
+  // откуда (source), когда, с какого IP и браузера. Пользователь может быть
+  // не зарегистрирован (заявка с сайта) — тогда user_id пустой, а контакт
+  // сохраняется в subject.
+  `CREATE TABLE IF NOT EXISTS consents (
+    id          BIGSERIAL PRIMARY KEY,
+    user_id     BIGINT REFERENCES users(id) ON DELETE SET NULL,
+    subject     TEXT,
+    kind        TEXT NOT NULL,
+    doc_version TEXT NOT NULL,
+    source      TEXT,
+    granted     BOOLEAN NOT NULL DEFAULT TRUE,
+    ip          TEXT,
+    user_agent  TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_consents_user ON consents(user_id)`,
+  `CREATE INDEX IF NOT EXISTS idx_consents_kind ON consents(kind, created_at DESC)`,
   // ── Разовые миграции ДАННЫХ — строго в конце ──
   // Они читают колонки (stage, status), которые добавляются выше по списку.
   // Раньше стояли до `ALTER TABLE bookings ADD COLUMN stage` и на чистой базе
