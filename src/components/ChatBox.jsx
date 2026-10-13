@@ -58,7 +58,8 @@ export default function ChatBox({ threadId, selfRole, loadMessages, onSend, onRe
       } catch { /* */ }
       finally { if (alive) setLoaded(true); }
     })();
-    const timer = setInterval(() => alive && poll(), 12000); // страховка
+    // Опрос — основной транспорт (на Workers нет SSE), поэтому чаще
+    const timer = setInterval(() => alive && poll(), 5000);
 
     // SSE — мгновенная доставка
     let es;

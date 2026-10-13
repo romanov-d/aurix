@@ -1,0 +1,42 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aurix",
+  "main": "worker/index.js",
+  // node:http-сервер (под ним живёт Express) требует этот флаг; с датой
+  // от 2025-09-01 он включается сам, но оставляем явно — так виднее.
+  "compatibility_date": "2026-10-13",
+  "compatibility_flags": ["nodejs_compat", "enable_nodejs_http_server_modules"],
+  "assets": {
+    // Сюда складываются обе сборки: dist сайта и admin/dist в подкаталог admin
+    "directory": "./public_build",
+    "binding": "ASSETS",
+    // Все запросы идут через Worker. Иначе существующие файлы (главная, чанки)
+    // платформа отдаёт ДО него, и общие правила — редирект на https, заголовки —
+    // к ним не применяются. Сами файлы всё равно отдаёт ASSETS, просто вызов
+    // проходит через наш обработчик.
+    "run_worker_first": true,
+    // Ассеты отдают ТОЛЬКО существующие файлы. SPA-фолбэк делает Worker:
+    // площадок две (сайт и админка), у каждой свой index.html, а встроенный
+    // режим умеет подставлять лишь один — корневой.
+    "not_found_handling": "none"
+  },
+  // Домен в зоне Cloudflare: DNS-запись создаётся и поддерживается автоматически.
+  // До переезда A-запись указывала на удалённый VPS, то есть на чужую машину.
+  "routes": [
+    { "pattern": "aurixmotors.ru", "custom_domain": true },
+    { "pattern": "www.aurixmotors.ru", "custom_domain": true }
+  ],
+  "observability": {
+    "enabled": true,
+    "logs": { "enabled": true, "head_sampling_rate": 1 },
+    "traces": { "enabled": true, "head_sampling_rate": 0.1 }
+  },
+  "r2_buckets": [
+    { "binding": "DOCS", "bucket_name": "aurix-docs", "preview_bucket_name": "aurix-docs-preview" }
+  ],
+  "vars": {
+    "SITE_URL": "https://aurixmotors.ru",
+    "EMAIL_FROM": "AURIX MOTORS <noreply@aurixmotors.ru>",
+    "CONTACT_EMAIL": "info@aurixmotors.ru"
+  }
+}
