@@ -16,12 +16,14 @@
 <link rel="icon" type="image/svg+xml" href="/letter.svg">
 <link rel="apple-touch-icon" href="/letter.svg">
 <meta name="theme-color" content="#000000">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/regular/style.css">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/fill/style.css">
-<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css">
+<!-- Шрифты и иконки раздаются со своего домена. Раньше это были четыре
+     render-blocking запроса к fonts.googleapis.com и unpkg.com: браузер не
+     рисует страницу, пока они не ответят, а в России оба домена отдаются
+     плохо — отсюда белый экран на десятки секунд. Теперь внешних
+     зависимостей при загрузке нет вообще. Начертание duotone выброшено:
+     в коде оно не используется. -->
+<link rel="stylesheet" href="/fonts/inter.css">
+<link rel="stylesheet" href="/icons/phosphor.css">
 <link rel="stylesheet" href="/styles.css">
 <!-- Yandex.Metrika: счётчик НЕ инициализируется здесь. До согласия на
      аналитические cookie никакие сторонние скрипты не грузятся — Метрику
