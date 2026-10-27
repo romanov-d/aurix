@@ -43,6 +43,21 @@ describe('раздача сайта и API', () => {
     expect(res.status).toBe(404);
   });
 
+  it('отсутствующий файл вне /assets тоже 404, а не HTML', async () => {
+    // Шрифт или иконка, которых нет, должны честно отдавать 404: подмена на
+    // index.html маскирует битую ссылку и ломает загрузку ресурса молча.
+    for (const p of ['/icons/Phosphor.svg', '/fonts/нет-такого.woff2', '/cars/нет.webp']) {
+      const res = await SELF.fetch('https://example.com' + p);
+      expect(res.status, p).toBe(404);
+    }
+  });
+
+  it('маршрут без расширения по-прежнему отдаёт одностраничку', async () => {
+    const res = await SELF.fetch('https://example.com/catalog/porsche');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+  });
+
   it('неизвестный /api отдаёт JSON, а не страницу', async () => {
     const res = await SELF.fetch('https://example.com/api/нет-такого');
     expect(res.status).toBe(404);

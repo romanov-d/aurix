@@ -117,7 +117,12 @@ app.all('*', async (c) => {
   const direct = await c.env.ASSETS.fetch(new Request(url, c.req.raw));
   if (direct.status !== 404) return direct;
 
-  if (url.pathname.includes('/assets/')) return direct;        // честный 404 для чанков
+  // Любой путь с расширением — это запрос файла, а не маршрут одностраничке.
+  // Подменять его на index.html нельзя: браузер получит HTML вместо шрифта или
+  // скрипта и либо молча его отбросит, либо упадёт с «Importing a module script
+  // failed». Раньше правило распространялось только на /assets/, из-за чего
+  // отсутствующий файл в /icons/ или /fonts/ отвечал 200 с разметкой.
+  if (/\.[a-z0-9]{2,5}$/i.test(url.pathname)) return direct;
   const isAdmin = url.pathname === '/admin' || url.pathname.startsWith('/admin/');
   const indexPath = isAdmin ? '/admin/index.html' : '/index.html';
 
