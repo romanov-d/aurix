@@ -200,34 +200,80 @@
 <body>
 <div id="root"></div>
 <script type="module" src="/src/main.jsx"></script>
-<!-- Предохранитель загрузки. Если после деплоя index.html ссылается на входной
-     чанк /assets/index-*.js, которого уже нет на сервере (хеши сменились), то
-     этот <script type="module"> молча падает с 404: React не стартует, а
-     vite:preloadError/ErrorBoundary (они ловят только ленивые чанки) не
-     срабатывают → белый экран без восстановления. Здесь ловим этот случай:
-     если через 10 с #root пуст — один раз перезагружаемся с обходом кеша;
-     если и это не помогло — показываем сообщение вместо белого экрана. -->
+<!-- Предохранитель загрузки.
+     Ловит случай, когда index.html ссылается на входной чанк /assets/index-*.js,
+     которого уже нет на сервере (сменились хеши после выкатки): <script type="module">
+     молча падает с 404, React не стартует, и пользователь видит белый экран.
+
+     Раньше здесь стоял таймер на 10 секунд: если #root пуст — перезагрузить.
+     На плохом маршруте (например, трафик из России уходит в Гонконг) приложение
+     не успевает смонтироваться за 10 секунд, и предохранитель перезагружал
+     страницу прямо посреди загрузки — обнуляя всё скачанное. Вторая попытка
+     тоже не успевала, и человек получал сообщение об ошибке на работающем сайте.
+     Медленному соединению это делало строго хуже.
+
+     Теперь решение принимается по факту, а не по таймеру: ловим ошибку загрузки
+     самого скрипта, а перед перезагрузкой проверяем запросом, действительно ли
+     входной чанк недоступен. Медленная загрузка просто доводится до конца. -->
 <script>
   (function () {
     var KEY = 'aurix-boot-reload';
+    var scriptFailed = false;
+
     function mounted() { var r = document.getElementById('root'); return r && r.children.length > 0; }
-    setTimeout(function () {
+
+    // Настоящий сигнал поломки: браузер не смог загрузить модуль входа.
+    window.addEventListener('error', function (e) {
+      var t = e && e.target;
+      if (t && t.tagName === 'SCRIPT' && t.src && t.src.indexOf('/assets/') !== -1) scriptFailed = true;
+    }, true);
+
+    function entryUrl() {
+      var s = document.querySelector('script[type="module"][src*="/assets/"]');
+      return s && s.src;
+    }
+
+    function showFallback() {
+      var r = document.getElementById('root');
+      if (!r || mounted()) return;
+      r.innerHTML = '<div style="max-width:520px;margin:60px auto;padding:24px;text-align:center;color:#eee;font-family:system-ui,sans-serif">'
+        + '<h2 style="color:#E7C063">Не удалось загрузить сайт</h2>'
+        + '<p style="color:#aaa">Вышло обновление. Нажмите, чтобы загрузить свежую версию.</p>'
+        + '<button onclick="try{sessionStorage.removeItem(\'aurix-boot-reload\')}catch(e){};location.reload()" '
+        + 'style="margin-top:12px;background:#E7C063;color:#1a1407;border:0;padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer">Обновить</button></div>';
+    }
+
+    function check() {
       if (mounted()) { try { sessionStorage.removeItem(KEY); } catch (e) {} return; }
+
+      var url = entryUrl();
+      if (!url) { showFallback(); return; }
+
+      // Доступен ли входной чанк на самом деле. Если да — значит просто медленно,
+      // и перезагружать нельзя: это обнулит уже скачанное.
+      fetch(url, { method: 'HEAD', cache: 'no-store' })
+        .then(function (res) {
+          if (res.ok && !scriptFailed) return;          // грузится, просто долго
+          retryOnce();
+        })
+        .catch(function () { if (scriptFailed) retryOnce(); });
+    }
+
+    function retryOnce() {
       var tried = 0; try { tried = +sessionStorage.getItem(KEY) || 0; } catch (e) {}
       if (tried < 1) {
         try { sessionStorage.setItem(KEY, '1'); } catch (e) {}
-        // index.html отдаётся с no-store, поэтому обычный reload берёт свежий
-        // index.html с актуальными хешами чанков — обход кеша не нужен.
         location.reload();
       } else {
-        var r = document.getElementById('root');
-        if (r) r.innerHTML = '<div style="max-width:520px;margin:60px auto;padding:24px;text-align:center;color:#eee;font-family:system-ui,sans-serif">'
-          + '<h2 style="color:#E7C063">Не удалось загрузить сайт</h2>'
-          + '<p style="color:#aaa">Вышло обновление. Нажмите, чтобы загрузить свежую версию.</p>'
-          + '<button onclick="try{sessionStorage.removeItem(\'aurix-boot-reload\')}catch(e){};location.reload()" '
-          + 'style="margin-top:12px;background:#E7C063;color:#1a1407;border:0;padding:12px 24px;border-radius:10px;font-weight:600;cursor:pointer">Обновить</button></div>';
+        showFallback();
       }
-    }, 10000);
+    }
+
+    // Отсчёт начинаем только после полной загрузки страницы, а не с момента
+    // разбора разметки: иначе таймер конкурирует с самой загрузкой.
+    window.addEventListener('load', function () { setTimeout(check, 8000); });
+    // Если load так и не наступил (висящий ресурс) — проверяем через минуту.
+    setTimeout(function () { if (!mounted()) check(); }, 60000);
   })();
 </script>
 <!-- SaleBot онлайн-чат подключается из CookieBanner.jsx после согласия
